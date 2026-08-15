@@ -49,6 +49,8 @@ pub enum GitMirrorStoreError {
     },
     #[error("Git mirror record not found for Deve commit {deve_commit_id}")]
     MissingRecord { deve_commit_id: String },
+    #[error("Git mirror commit object id is invalid for Deve commit {deve_commit_id}")]
+    InvalidGitCommitId { deve_commit_id: String },
 }
 
 impl From<GitMirrorStoreError> for String {

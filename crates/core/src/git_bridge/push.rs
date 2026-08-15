@@ -22,7 +22,7 @@ use std::path::Path;
 
 mod target;
 #[cfg(test)]
-use target::validate_push_name;
+use target::{sanitize_remote_url, validate_push_name};
 
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct GitMirrorPushOptions {
@@ -84,7 +84,10 @@ pub fn push_mirror(
         Ok(_) => {
             report.pushed = true;
         }
-        Err(reason) => report.blockers.push(blocker("git_command", reason)),
+        Err(_) => report.blockers.push(blocker(
+            "git_command",
+            "Git push command failed; inspect credential, network, and remote configuration",
+        )),
     }
     Ok(report)
 }
@@ -120,8 +123,19 @@ fn collect_preflight_blockers(db: &Database, repo_root: &Path, report: &mut GitM
         ("deve_source_control", ensure_source_control_clean(db)),
         ("git_worktree", ensure_git_worktree_clean(repo_root)),
     ] {
-        if let Err(reason) = result {
-            report.blockers.push(blocker(location, reason));
+        if result.is_err() {
+            report.blockers.push(blocker(
+                location,
+                match location {
+                    "notegit_protection" => {
+                        "Git push preflight failed: .notegit protection is not ready"
+                    }
+                    "deve_source_control" => {
+                        "Git push preflight failed: Deve Source Control is not clean"
+                    }
+                    _ => "Git push preflight failed: Git worktree is not clean or unavailable",
+                },
+            ));
         }
     }
 
@@ -131,7 +145,10 @@ fn collect_preflight_blockers(db: &Database, repo_root: &Path, report: &mut GitM
             "git_history_mapping",
             "Git push mirror requires Git HEAD; run `deve_cli ngit export` first",
         )),
-        Err(reason) => report.blockers.push(blocker("git_worktree", reason)),
+        Err(_) => report.blockers.push(blocker(
+            "git_worktree",
+            "Git push preflight failed: Git HEAD is unavailable",
+        )),
     }
 }
 
@@ -167,14 +184,21 @@ fn collect_mapping_blockers(records: &[GitMirrorRecord], report: &mut GitMirrorP
         ));
         return;
     };
-    if latest.git_commit_id.as_deref() != Some(head) {
+    let Some(latest_git_commit_id) = latest
+        .git_commit_id
+        .as_deref()
+        .and_then(git_cmd::normalize_object_id)
+    else {
         report.blockers.push(blocker(
             "git_history_mapping",
-            format!(
-                "Git push mirror refuses stale Git HEAD {head}; latest mirrored Deve commit {} maps to {}",
-                latest.deve_commit_id,
-                latest.git_commit_id.as_deref().unwrap_or("-")
-            ),
+            "Git push mirror refuses invalid durable Git object identity; run mirror repair first",
+        ));
+        return;
+    };
+    if latest_git_commit_id != head {
+        report.blockers.push(blocker(
+            "git_history_mapping",
+            "Git push mirror refuses stale Git HEAD; latest mirrored Deve commit does not map to current Git HEAD",
         ));
     }
 }

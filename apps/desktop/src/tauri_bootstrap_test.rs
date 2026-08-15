@@ -20,3 +20,18 @@ fn native_session_cookie() -> DesktopNativeSessionCookie {
     )
     .expect("cookie")
 }
+
+#[test]
+fn desktop_cookie_install_failure_returns_false_without_panic() {
+    assert!(
+        crate::tauri_bootstrap::native_session_cookie_install_succeeded::<
+            (),
+            std::convert::Infallible,
+        >(Ok(()))
+    );
+    assert!(
+        !crate::tauri_bootstrap::native_session_cookie_install_succeeded::<(), _>(Err(
+            std::io::Error::other("fixture failure")
+        ))
+    );
+}

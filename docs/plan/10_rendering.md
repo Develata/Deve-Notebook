@@ -506,6 +506,7 @@ Diff renderer 也是 projection-only adapter：它可以按 byte range 从 typed
 职责：
 
 - snapshot / history / ack / reject contract
+- backend 从两个 Markdown 内容计算 UTF-16 patch 时，任一位置或长度超过 wire `u32` 范围必须返回 typed error；不得用空 patch 伪装“无差异”。
 
 ## 13. Refactor Target
 

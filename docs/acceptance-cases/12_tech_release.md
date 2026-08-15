@@ -409,6 +409,7 @@
     - run: cargo test -p deve_mobile --features native-packaging -- --nocapture
   assertions:
     - native_assert: desktop_local_backend_default_starts_controlled_loopback_service true
+    - native_assert: desktop_cookie_install_failure_returns_false_without_panic true
     - native_assert: desktop_native_session_smoke_stops_local_service_after_probe true
     - native_assert: desktop_native_session_smoke_uses_temporary_data_root true
     - native_assert: mobile_local_backend_default_uses_embedded_loopback_service true

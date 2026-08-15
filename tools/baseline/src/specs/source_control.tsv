@@ -507,3 +507,32 @@ contains	crates/core/src/source_control/commit_authority.rs	pub enum CommitAutho
 contains	apps/cli/src/server/handlers/source_control/commits.rs	ServerMessage::ExternalApplyAck
 contains	apps/cli/src/server/repo_mutation/publication.rs	pub(crate) fn external_apply_recovery
 absent	crates/core/src/protocol/server.rs	ExternalApplyContentFact
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-001	cargo test -p deve_core compute_diff_position_overflow_fails_closed -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-001	api_assert: utf16_diff_overflow_returns_typed_error true
+contains	crates/core/src/state/diff.rs	fn compute_diff_position_overflow_fails_closed
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cargo test -p deve_core git_push_report_redacts_remote_credentials_and_command_detail -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cargo test -p deve_core git_object_id_normalization_rejects_public_report_injection -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cargo test -p deve_core git_push_report_rejects_corrupt_durable_object_id_without_projection -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cargo test -p deve_core mark_committed_rejects_invalid_git_object_id_without_persisting_it -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cargo test -p deve_cli ngit_push_public_error_does_not_expose_internal_detail -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cargo test -p deve_core commit_diff_reconstructs_only_through_requested_waterline -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cargo test -p deve_core commit_diff_structure_delete_uses_children_index -- --nocapture
+contains	crates/core/src/git_bridge/push/tests.rs	fn git_push_report_redacts_remote_credentials_and_command_detail
+contains	crates/core/src/git_bridge/git_cmd.rs	fn git_object_id_normalization_rejects_public_report_injection
+contains	crates/core/src/git_bridge/push/tests.rs	fn git_push_report_rejects_corrupt_durable_object_id_without_projection
+contains	crates/core/src/git_bridge/store/tests.rs	fn mark_committed_rejects_invalid_git_object_id_without_persisting_it
+contains	apps/cli/src/commands/ngit.rs	fn ngit_push_public_error_does_not_expose_internal_detail
+contains	crates/core/src/ledger/ops/query.rs	fn commit_diff_reconstructs_only_through_requested_waterline
+contains	crates/core/src/source_control/commit_diff_paths.rs	fn commit_diff_structure_delete_uses_children_index
+contains	crates/core/src/source_control/commit_diff.rs	fn unchanged_commit_diff_status_is_absent_instead_of_renamed
+contains	crates/core/src/source_control/staging/target/tests.rs	fn doc_scoped_unstage_uses_staged_doc_index_without_deserializing_unrelated_rows
+cargo_test_lib	deve_core	compute_diff_position_overflow_fails_closed
+cargo_test_lib	deve_core	git_push_report_redacts_remote_credentials_and_command_detail
+cargo_test_lib	deve_core	git_object_id_normalization_rejects_public_report_injection
+cargo_test_lib	deve_core	git_push_report_rejects_corrupt_durable_object_id_without_projection
+cargo_test_lib	deve_core	mark_committed_rejects_invalid_git_object_id_without_persisting_it
+cargo_test_lib	deve_cli	ngit_push_public_error_does_not_expose_internal_detail
+cargo_test_lib	deve_core	commit_diff_reconstructs_only_through_requested_waterline
+cargo_test_lib	deve_core	commit_diff_structure_delete_uses_children_index
+cargo_test_lib	deve_core	unchanged_commit_diff_status_is_absent_instead_of_renamed
+cargo_test_lib	deve_core	doc_scoped_unstage_uses_staged_doc_index_without_deserializing_unrelated_rows

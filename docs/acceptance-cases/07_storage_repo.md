@@ -95,6 +95,7 @@
     - run: cargo test -p deve_core --lib consumer_failure_preserves_primary_and_cleanup -- --nocapture
     - run: cargo test -p deve_core --lib worker_panic_becomes_typed_failure_and_stops_backend -- --nocapture
     - run: cargo test -p deve_core --lib cleanup_panic_becomes_typed_shutdown_failure -- --nocapture
+    - run: cargo test -p deve_core --lib repo_watcher_bounded_shutdown_returns_without_drop_join -- --nocapture
     - run: cargo test -p deve_core --lib terminal_failure_is_visible_before_cleanup_completes -- --nocapture
     - run: cargo test -p deve_core watcher_drop_is_a_synchronous_cleanup_safety_net -- --nocapture
     - run: cargo test -p deve_core --test watcher_platform_fs watcher_directory_removal_rescans_tracked_descendants -- --nocapture
@@ -140,6 +141,7 @@
     - api_assert: startup_real_fs_preexisting_and_post_cut_changes_reach_pending true
     - api_assert: worker_failure_is_typed_and_generation_guarded true
     - api_assert: shutdown_reconciles_final_state_before_join true
+    - api_assert: process_shutdown_deadline_consumes_watcher_handle_without_unbounded_drop_join true
     - cli_assert: standalone_watch_terminal_failure_closes_handles_in_reverse_and_exits_nonzero true
     - api_assert: watcher_refresh_adapter_maps_all_domain_fields true
     - api_assert: server_shutdown_preserves_background_primary_and_watcher_failure true
@@ -499,10 +501,16 @@
     - run: cargo test -p deve_cli --lib run_webdav_push_uses_webdav_provider_after_workspace_gate -- --nocapture
     - run: cargo test -p deve_cli --lib run_s3_push_uses_s3_provider_after_workspace_gate -- --nocapture
     - run: cargo test -p deve_cli --lib collect_markdown_projection_files_uploads_only_markdown_projection_files -- --nocapture
+    - run: cargo test -p deve_cli --lib projection_push_source_rejects_single_and_total_payload_over_budget -- --nocapture
+    - run: cargo test -p deve_cli --lib projection_push_source_rejects_file_growth_after_enumeration -- --nocapture
+    - run: cargo test -p deve_cli --lib projection_push_source_rejects_same_length_file_replacement -- --nocapture
+    - run: cargo test -p deve_cli --lib projection_push_source_rejects_same_inode_same_length_overwrite -- --nocapture
   assertions:
     - cli_assert: remote_projection_push_uploads_markdown_files_only true
     - cli_assert: remote_projection_push_skips_internal_reserved_paths true
     - cli_assert: remote_projection_push_writes_no_ledger_source_control_or_git_mirror true
+    - cli_assert: remote_projection_push_enforces_shared_capture_budgets_before_upload true
+    - cli_assert: remote_projection_push_revalidates_open_handle_identity_and_content_before_upload true
 
 - case_id: STORE-019
   goal: Remote Import Prepare 将远端输入封存为 immutable manifest/blob/candidate，不预写 workspace 或 authority。

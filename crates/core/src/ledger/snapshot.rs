@@ -57,9 +57,8 @@ pub fn try_save_snapshot(
         data.insert(seq, content.as_bytes())?;
         index.insert(doc_id.as_u128(), seq)?;
     }
+    prune_snapshots_in_txn(&write_txn, doc_id, depth)?;
     write_txn.commit()?;
-
-    prune_snapshots(db, doc_id, depth)?;
     Ok(SnapshotSaveOutcome::Saved)
 }
 
@@ -97,8 +96,11 @@ pub fn load_latest_snapshot(db: &Database, doc_id: DocId) -> Result<Option<(u64,
 }
 
 /// Prune old snapshots if they exceed the configured depth.
-fn prune_snapshots(db: &Database, doc_id: DocId, depth: usize) -> Result<()> {
-    let write_txn = db.begin_write()?;
+fn prune_snapshots_in_txn(
+    write_txn: &redb::WriteTransaction,
+    doc_id: DocId,
+    depth: usize,
+) -> Result<()> {
     {
         let mut snapshots = Vec::new();
         {
@@ -125,6 +127,5 @@ fn prune_snapshots(db: &Database, doc_id: DocId, depth: usize) -> Result<()> {
             }
         }
     }
-    write_txn.commit()?;
     Ok(())
 }

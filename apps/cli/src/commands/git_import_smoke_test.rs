@@ -218,7 +218,11 @@ fn ngit_import_export_push_resolved_publish_roundtrip() -> Result<()> {
     )?;
     let report = push_report(&ledger_dir, &projection_base, &repo_root, "origin", &branch)?;
     assert!(!report.pushed, "{report:?}");
-    assert_push_blocker(&report, "git_worktree", "dirty Git worktree");
+    assert_push_blocker(
+        &report,
+        "git_worktree",
+        "Git worktree is not clean or unavailable",
+    );
     assert_push_blocker(&report, "git_history_mapping", "unpublished mirror records");
     assert!(!git_success(
         &remote,
@@ -243,7 +247,11 @@ fn ngit_import_export_push_resolved_publish_roundtrip() -> Result<()> {
     )?;
     let report = push_report(&ledger_dir, &projection_base, &repo_root, "origin", &branch)?;
     assert!(!report.pushed, "{report:?}");
-    assert_push_blocker(&report, "git_worktree", "dirty Git worktree");
+    assert_push_blocker(
+        &report,
+        "git_worktree",
+        "Git worktree is not clean or unavailable",
+    );
     assert!(!git_success(
         &remote,
         &["rev-parse", "--verify", &branch_ref]

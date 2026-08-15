@@ -64,6 +64,7 @@
 ### 6. Remote Projection 与 Remote Import
 
 - Remote Projection 只负责把当前 Markdown Projection Workspace push 到 WebDAV/S3，或把远端内容 streaming 给 project-owned import sink；它不再把 remote 直接 pull/overwrite 到 workspace。
+- push 与 import capture 都执行 2048 文件、单文件 4 MiB、总 payload 64 MiB 的后端预算；单个 Markdown 在枚举后并发增长时也必须在上传前被二次校验并拒绝。
 - Remote Import 以不可变 manifest/blob snapshot 建立独立 session。Prepare 完成前不写 workspace；Review 只显示 backend label、Added/Modified/Unchanged、typed blocker 与 typed diff。
 - 用户只能整 session Apply 或 Discard；没有 checkbox、逐文件选择和 remote Delete。任一 blocker 禁用整个 Apply。
 - Apply 通过 sealed whole-session Ledger transaction提交，事务内先保存“Ledger 已提交、Projection outcome pending”的 durable receipt，随后才执行 Projection writeback。成功收敛为 Written；失败与 durable fault 一起收敛为 Degraded。崩溃/重试从 Ledger 幂等恢复，不重复导入、不回滚 Ledger。

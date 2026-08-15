@@ -12,8 +12,6 @@ use std::time::Duration;
 use tokio::sync::watch;
 use tokio::task::JoinHandle;
 
-const ABORT_JOIN_GRACE: Duration = Duration::from_millis(250);
-
 pub(crate) fn init_observability_runtime() -> anyhow::Result<()> {
     ai_chat::init_chat_stream_handler()?;
     metrics::init_start_time();
@@ -40,17 +38,10 @@ impl BackgroundRuntimeTasks {
                 }
                 Err(_) => {
                     task.abort();
-                    let mut remaining = self.tasks.drain(..).collect::<Vec<_>>();
+                    let remaining = self.tasks.drain(..).collect::<Vec<_>>();
                     for task in &remaining {
                         task.abort();
                     }
-                    remaining.push(task);
-                    let _ = tokio::time::timeout(ABORT_JOIN_GRACE, async move {
-                        for task in remaining.drain(..) {
-                            let _ = task.await;
-                        }
-                    })
-                    .await;
                     first_error.get_or_insert_with(|| {
                         anyhow::anyhow!("server background runtime shutdown timed out")
                     });

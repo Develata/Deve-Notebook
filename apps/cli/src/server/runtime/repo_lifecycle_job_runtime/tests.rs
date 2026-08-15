@@ -402,3 +402,34 @@ async fn explicit_shutdown_closes_admission_and_joins_owned_jobs() {
         .expect("shutdown join")
         .expect("shutdown");
 }
+
+#[tokio::test]
+async fn repo_lifecycle_shutdown_deadline_aborts_owned_worker() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let projection = std::fs::canonicalize(dir.path()).expect("canonical projection");
+    let executor = TestExecutor::blocked();
+    let runtime =
+        RepoLifecycleJobRuntime::start(dir.path(), executor, Arc::new(TestSink::default()))
+            .expect("job runtime");
+    runtime
+        .submit(
+            Uuid::new_v4(),
+            create_intent(&projection, "Bounded shutdown"),
+        )
+        .await
+        .expect("admission");
+
+    let started = std::time::Instant::now();
+    let failure = runtime
+        .shutdown_with_timeout(Duration::from_millis(10))
+        .await
+        .expect_err("blocked lifecycle job must hit the deadline");
+    assert!(matches!(failure, RepoLifecycleJobError::Shutdown(_)));
+    assert!(started.elapsed() < Duration::from_secs(1));
+    assert!(matches!(
+        runtime
+            .submit(Uuid::new_v4(), create_intent(&projection, "Late admission"))
+            .await,
+        Err(RepoLifecycleJobError::AdmissionClosed)
+    ));
+}

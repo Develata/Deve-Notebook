@@ -58,7 +58,7 @@ fn try_apply_content_ops_rejects_out_of_bounds_delta() {
 
 #[test]
 fn compute_diff_uses_utf16_positions() {
-    let ops = crate::state::compute_diff("A😀B", "A😀XB");
+    let ops = crate::state::compute_diff("A😀B", "A😀XB").expect("diff");
     assert_eq!(ops.len(), 1);
     match &ops[0] {
         Op::Insert { pos, content } => {

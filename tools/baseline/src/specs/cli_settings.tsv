@@ -193,7 +193,7 @@ contains	apps/web/src/components/branch_switcher/mod.rs	BranchSwitcher
 contains	apps/web/src/i18n/sidebar.rs	Switch Branch (Ctrl+Shift+K)
 contains	apps/web/src/components/settings.rs	current_boundary_desc
 contains	apps/web/src/components/settings.rs	data-deve-settings-surface="modal"
-contains	apps/web/src/components/settings.rs	max-h-[100dvh]
+contains	apps/web/src/components/settings.rs	max-h-[calc(100dvh-var(--deve-safe-area-top))]
 contains	apps/web/src/components/settings.rs	ev.key() == "Escape"
 contains	apps/web/src/components/settings.rs	AppearanceSection
 contains	apps/web/src/components/settings.rs	EditorBasicsSection
@@ -236,3 +236,19 @@ contains	scripts/smoke-web-runtime-paths.sh	cargo run -p deve_cli --bin deve_cli
 contains	scripts/smoke-web-runtime-paths.sh	--projection-base "$DEVE_WEB_RUNTIME_SMOKE_ROOT/projection-base"
 contains	docs/dev-runbook.md	Settings / Command UI Smoke
 contains	docs/dev-runbook.md	data-deve-settings-surface
+case_contains	docs/acceptance-cases/11_commands_settings.md	CMD-007	cargo test -p deve_cli production_shutdown_signal -- --nocapture
+case_contains	docs/acceptance-cases/11_commands_settings.md	CMD-007	cli_assert: production_serve_selects_sigterm_or_sigint_and_enters_owned_shutdown true
+case_contains	docs/acceptance-cases/11_commands_settings.md	CMD-007	cli_assert: production_serve_transport_and_owned_runtime_shutdown_share_bounded_deadlines true
+contains	apps/cli/src/server/start/shutdown_signal.rs	fn production_shutdown_signal_selects_either_termination_source
+cargo_test_lib	deve_cli	production_shutdown_signal
+contains	apps/cli/src/server/start/transport_shutdown.rs	fn remaining_shutdown_budget
+contains	apps/cli/src/server/start.rs	shutdown_with_timeout
+contains	apps/cli/src/server/start.rs	shutdown_bounded
+contains	apps/cli/src/server/start/transport_shutdown.rs	server transport graceful shutdown deadline exceeded
+cargo_test_lib	deve_cli	server_transport_shutdown_deadline_preempts_in_flight_handler
+cargo_test_lib	deve_cli	repo_lifecycle_shutdown_deadline_aborts_owned_worker
+cargo_test_lib	deve_cli	server_runtime_remaining_shutdown_budget_never_extends_deadline
+cargo_test_lib	deve_cli	server_shutdown_deadline_is_shared_across_transport_and_owner_cleanup
+cargo_test_lib	deve_cli	transport_generations_receive_independent_shutdown_deadlines
+contains	apps/cli/src/server/start.rs	serve_with_shutdown_deadline(listener, launch, shutdown, shutdown_deadline.clone())
+contains	apps/cli/src/server/start.rs	.shutdown_until(shutdown_deadline.begin(SERVER_RUNTIME_SHUTDOWN_TIMEOUT))

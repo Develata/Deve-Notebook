@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-29`
+- `Last Review`: `2026-08-14`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/cli/src/server/p2p/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -811,9 +811,10 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - P2P handler 在收到并接受 `SyncHello` 前，不得处理 `SyncRequest`、`SyncSnapshotRequest`、`SyncPush` 或 `SyncPushSnapshot`；
   握手后的所有 sync frame 必须沿用同一 configured `repo_id`。
 - native in-process runtime **MUST** separate the process-scoped authority runtime from listener/session transport generations. RepoManager、SyncManager、plugin host APIs、watchers、metrics、prewarm 与 P2P connector 只能由一个 owned `EmbeddedServerRuntime` 初始化一次；随机 loopback listener 或 native session 重建不得重复安装或替换这些 authority objects。
-- `EmbeddedServerRuntime` **MUST** own cancellation and join handles for every background task it starts. Axum listener shutdown alone is not a complete runtime shutdown；normal native app exit 必须先停止 active transport generation，再在有界时间内 cancel/join metrics、prewarm、P2P connector，并释放 watcher ownership。
+- `EmbeddedServerRuntime` **MUST** own cancellation and join handles for every background task it starts. Axum listener shutdown alone is not a complete runtime shutdown；normal native app exit 必须先停止 active transport generation，再在一个 process-scoped 总截止时间内 cancel/join metrics、prewarm、P2P connector、repo lifecycle worker，并释放 watcher ownership。各阶段只能消费该总截止时间的剩余量，不得分别获得一份完整 timeout。
+- 独立 `deve serve` 的生产 composition root 必须同时接收平台终止信号：Unix `SIGTERM` / `SIGINT`，以及其它平台的控制台终止事件。任一信号都必须进入现有 transport graceful shutdown，再有界停止 `EmbeddedServerRuntime`；不得以永久 pending future 让 Docker `stop` 绕过 watcher/background/runtime cleanup。信号监听注册或监听本身失败时必须输出固定、无 secret 的诊断并立即进入同一 shutdown 路径，不能继续假装具备受控生命周期。
 - transport generation 可以针对新端口重建 node-role、native-session bridge、allowed-origin router 与 port hint，但必须复用同一 `AppState`。process-scoped runtime fatal failure 必须 fail-closed 并要求 app restart；不得在同一进程中创建第二套 authority runtime。
-- 每个 transport generation 必须拥有其升级后的 WebSocket session cancellation 与 join 边界。listener shutdown 必须先拒绝新 upgrade、通知该 generation 的全部已升级 session 退出，并可抢占当前 in-flight handler future，然后撤销 browser writer grant 并等待 session idle；旧 generation 的 sender/broadcast task、认证状态或 `AppState` 引用不得跨到新 endpoint。transport error 只有在 runtime 明确携带 `sessions_retired=true` 证明时才允许 replacement；任何 shutdown/join/idle 证明失败都必须熔断到 app restart。Mobile 为满足有界 app exit 可以关闭可选 prewarm，但不得 detach 或跳过其他 runtime task 的 cancellation/join；一般 runtime 的 prewarm 也必须协作取消，取消后不得保存部分 snapshot。
+- 每个 transport generation 必须拥有其升级后的 WebSocket session cancellation 与 join 边界。listener shutdown 必须先拒绝新 upgrade、通知该 generation 的全部已升级 session 退出，并可抢占当前 in-flight handler future，然后撤销 browser writer grant 并等待 session idle；Axum graceful wait 本身必须有 deadline，不能在进入 process owner cleanup 前永久等待 in-flight handler。旧 generation 的 sender/broadcast task、认证状态或 `AppState` 引用不得跨到新 endpoint。transport error 只有在 runtime 明确携带 `sessions_retired=true` 证明时才允许 replacement；任何 shutdown/join/idle 证明失败都必须输出固定无 secret 分类并熔断到 app restart。repo lifecycle deadline 到期必须停止 admission、abort owned Tokio worker；watcher deadline 到期必须消费 handle、退休 sender 并把未完成 native join 交给 detached waiter，禁止随后由 `Drop` 再无界阻塞。Mobile 为满足有界 app exit 可以关闭可选 prewarm，但不得静默跳过其他 runtime owner 的 cancellation/join；一般 runtime 的 prewarm 也必须协作取消，取消后不得保存部分 snapshot。
 - `AppState` 必须持有 process-scoped `RepoMutationPublicationGate`，并把 local authority mutation 与
   对应 publication enqueue 作为同一个 repo permit 内的有序阶段；不得把 socket delivery、网络或
   Git mirror 放入临界区。

@@ -189,8 +189,16 @@
     - run: scripts/check-cli-settings-baseline.sh
     - run: cargo test -p deve_cli commands::serve::tests -- --nocapture
     - run: cargo test -p deve_cli --lib commands::serve::support_tests -- --nocapture
+    - run: cargo test -p deve_cli production_shutdown_signal -- --nocapture
+    - run: cargo test -p deve_cli server_transport_shutdown_deadline_preempts_in_flight_handler -- --nocapture
+    - run: cargo test -p deve_cli repo_lifecycle_shutdown_deadline_aborts_owned_worker -- --nocapture
+    - run: cargo test -p deve_cli server_runtime_remaining_shutdown_budget_never_extends_deadline -- --nocapture
+    - run: cargo test -p deve_cli server_shutdown_deadline_is_shared_across_transport_and_owner_cleanup -- --nocapture
+    - run: cargo test -p deve_cli transport_generations_receive_independent_shutdown_deadlines -- --nocapture
   assertions:
     - exit_code_all_eq: 0
+    - cli_assert: production_serve_selects_sigterm_or_sigint_and_enters_owned_shutdown true
+    - cli_assert: production_serve_transport_and_owned_runtime_shutdown_share_bounded_deadlines true
 
 - case_id: CMD-007A
   goal: Embedded browser runtime is available from the CLI server.

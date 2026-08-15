@@ -1,4 +1,7 @@
-use super::{get_staged_for_target, select_entry_for_doc, select_entry_without_doc};
+use super::{
+    get_staged_for_target, get_staged_for_unstage_target_in_txn, select_entry_for_doc,
+    select_entry_without_doc,
+};
 use crate::models::DocId;
 use crate::protocol::ScPathTarget;
 use crate::source_control::{
@@ -235,4 +238,42 @@ fn get_staged_for_target_fails_closed_when_exact_path_and_rename_successor_confl
         err.to_string()
             .contains("Ambiguous staged target: notes/old.md")
     );
+}
+
+#[test]
+fn doc_scoped_unstage_uses_staged_doc_index_without_deserializing_unrelated_rows() {
+    let (_dir, db) = new_db();
+    let doc_id = DocId::new();
+    staging::stage_pending_entry(
+        &db,
+        &PendingFsEntry {
+            path: "notes/target.md".into(),
+            renamed_from: None,
+            doc_id: Some(doc_id),
+            change_type: ChangeStatus::Modified,
+            content_hash: "target".into(),
+            detected_at: 1,
+            has_conflict: false,
+        },
+    )
+    .expect("seed target");
+    let txn = db.begin_write().expect("txn");
+    {
+        let mut table = txn.open_table(staging::STAGED_TABLE).expect("staged table");
+        table
+            .insert("notes/unrelated.md", b"not-json".as_slice())
+            .expect("corrupt unrelated row");
+    }
+    let found = get_staged_for_unstage_target_in_txn(
+        &txn,
+        &ScPathTarget {
+            path: "notes/target.md".into(),
+            doc_id: Some(doc_id),
+            domain: None,
+        },
+    )
+    .expect("indexed lookup")
+    .expect("target");
+    assert_eq!(found.0, "notes/target.md");
+    txn.abort().expect("abort fixture txn");
 }

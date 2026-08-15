@@ -52,6 +52,7 @@
 - `RemoteBrowser` 只接受 HTTPS origin；包含 userinfo、query、fragment 或业务子路径的 URL 必须被拒绝。
 - 文档、ledger、source-control、search 与 repo 写入仍必须经过本地 server/core writer gate。
 - service 端口、session secret 与 P2P token material 不应出现在 URL、日志、Web localStorage 或可见 bootstrap payload。
+- WebView native session cookie 安装失败不得让 Desktop 崩溃，也不得产生假 writer-ready；壳层只记录固定诊断，Web auth probe 收敛到 SessionInvalid/Unauthorized。
 - Desktop host 优先验证显式 `DEVE_GIT_EXECUTABLE`；未配置时可从宿主绝对 PATH entries/PATHEXT 解析并 canonicalize Git。sidecar 只接收该绝对路径或互斥的 `DEVE_GIT_EXECUTABLE_UNAVAILABLE=1`，不继承完整 PATH/PATHEXT，也不在 unavailable 时回退 executable search。
 - 显式 Git 路径无效时不回退；Git 缺失只让 mirror/import/export/push unavailable/out-of-sync，不阻断 LocalBackend、native session 或 NoteGit commit。
 - Windows 已安装包的真实 UI smoke 使用隔离数据根、隔离 WebView2 profile 与 WebView2-assigned ephemeral CDP port 驱动 native WebView；exact diagnostic marker 由 Desktop host 以 programmatic WebView option 注入固定 `--remote-debugging-port=0`，以覆盖 elevated target-host 忽略环境 browser flags 的情况。marker 不接受任意 browser arguments，应用自身的普通启动路径不开放 CDP；该证据不声称覆盖宿主 WebView2 policy 或进程外注入。smoke 必须先证明新鲜数据根以 `BootstrapUnbound(scope_nonce=0)` 启动、没有默认 repo/projection且不声称 writer-ready，再通过 Web typed intent 完成首次 Create 并进入 backend-projected `ready`，随后完成编辑、commit/history、Settings 键盘焦点约束，并确认关闭后无孤儿 sidecar；它仍只提交 UI intent，不能绕过后端 authority。已绑定repo移除后的正式`NoScope`仍必须使用严格递增的非零scope nonce。

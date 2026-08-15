@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-26`
+- `Last Review`: `2026-08-14`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/sync/watcher/`, `crates/core/src/watcher_ignore.rs`, `crates/core/src/writeback/suppressor.rs`, `apps/cli/src/watcher_runtime.rs`, `apps/cli/src/server/runtime/watcher_runtime.rs`
 
@@ -132,9 +132,11 @@ RepoWatcherHandle::repo_id() -> RepoId
 RepoWatcherHandle::generation() -> u64
 RepoWatcherHandle::snapshot() -> RepoWatcherSnapshot
 RepoWatcherHandle::shutdown(self) -> Result<(), WatcherFailure>
+RepoWatcherHandle::shutdown_bounded(self, timeout) -> Result<(), WatcherFailure>
 ```
 
 - `RepoWatcherHandle` 唯一拥有该 repo 的 backend、consumer worker、stop/join 边界与 typed snapshot。正常路径必须显式消费 handle 调用 `shutdown()` 并处理结果；`Drop` 只允许 best-effort 安全网，不能作为正常 lifecycle 或错误报告路径。
+- 独立命令可以使用完整 `shutdown()` 收敛；进程级 server termination 必须使用 `shutdown_bounded()`，先发出同一 shutdown 请求，再只在调用方剩余总截止时间内等待 worker join。截止时间耗尽时必须消费 handle、退休 command sender，并把仍在等待的 join 移交给不阻塞 Tokio runtime/process exit 的 detached join waiter；返回固定 typed shutdown failure，不能因 `Drop` 再进入无界 join，也不能把 timeout 伪装为成功清理。
 - `RepoWatcherSnapshot` 至少携带 `repo_id / generation / worker_state`；公开状态类型固定为 `RepoWatcherWorkerState::{Running, Failed(WatcherFailure)}`。`WatcherFailure { phase, kind, primary, cleanup }` 中的 `primary` 永远保留首因，`cleanup` 只附加 stop/final-scan/join 诊断。
 - prepare/attach/scan/consumer-spawn/Running-handoff 的所有 start failure 必须由 `WatcherStartError` lossless 携带同一个 `WatcherFailure`，禁止丢弃 cleanup 或从字符串重建 taxonomy；supervisor 在调用 core start 前产生的 reservation/busy/invariant error 属于独立 host error，不得伪装为 backend `WatcherFailure`。
 - project-owned `WatcherRefresh` 是 core 到 host 的唯一刷新 callback；host 可把它映射到现有 repo-scoped `FsChangeDetected`，但 core 不依赖 WS message、UI 状态或 server sender。

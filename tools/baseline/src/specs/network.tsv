@@ -218,3 +218,18 @@ contains	apps/web/src/runtime/projection_recovery/editor_cycle.rs	pub struct Pro
 contains	docs/acceptance-cases/06_network.md	case_id: NET-020
 contains	crates/core/src/protocol/frame/tests/epoch_recovery.rs	fn first_public_ws_epoch_is_lockstep()
 contains	crates/core/src/protocol/frame/tests/epoch_recovery.rs	fn historical_development_ws_namespace_is_rejected()
+contains	apps/cli/src/server/start.rs	shutdown_signal::production_shutdown_signal()
+contains	apps/cli/src/server/start/shutdown_signal.rs	server_shutdown_signal_unavailable
+contains	apps/cli/src/server/start/shutdown_signal.rs	fn production_shutdown_signal_selects_either_termination_source
+cargo_test_lib	deve_cli	production_shutdown_signal
+contains	apps/cli/src/server/start/transport_shutdown.rs	fn remaining_shutdown_budget
+contains	apps/cli/src/server/start/transport_shutdown.rs	server transport graceful shutdown deadline exceeded
+contains	apps/cli/src/server/runtime/repo_lifecycle_job_runtime.rs	pub(crate) async fn shutdown_with_timeout
+contains	apps/cli/src/server/runtime/watcher_runtime/supervisor.rs	pub(crate) fn shutdown_bounded
+cargo_test_lib	deve_cli	server_transport_shutdown_deadline_preempts_in_flight_handler
+cargo_test_lib	deve_cli	repo_lifecycle_shutdown_deadline_aborts_owned_worker
+cargo_test_lib	deve_cli	server_runtime_remaining_shutdown_budget_never_extends_deadline
+cargo_test_lib	deve_cli	server_shutdown_deadline_is_shared_across_transport_and_owner_cleanup
+cargo_test_lib	deve_cli	transport_generations_receive_independent_shutdown_deadlines
+contains	apps/cli/src/server/start.rs	serve_with_shutdown_deadline(listener, launch, shutdown, shutdown_deadline.clone())
+contains	apps/cli/src/server/start.rs	.shutdown_until(shutdown_deadline.begin(SERVER_RUNTIME_SHUTDOWN_TIMEOUT))

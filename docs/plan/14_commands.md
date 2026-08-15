@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current MUST / First-Tag Target`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-08-13`
+- `Last Review`: `2026-08-14`
 - `Counterpart Feature`: `docs/features/12_commands.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `apps/cli/src/commands/`, `apps/web/src/context_action/`, `apps/web/src/components/command_palette/`
@@ -41,7 +41,7 @@ Current MUST 硬约束章节（`01_terminology`/`02_positioning`/`03_storage`/`0
     *   `deve repo projection drift --repo <selector> [--root <path>]`: 只读列出 ledger projection 与指定 workspace root 的 unexplained drift；不得写 ledger、workspace、pending 或 staged state。
     *   `deve scan`: 扫描当前已绑定 workspace root 的 repo 并建立索引.
     *   `deve watch`: 监听已绑定 workspace root 的 repo 文件变更；standalone command 直接拥有不可复制的 repo watcher handle 集合，必须观察 terminal worker failure，任一 handle 失败时逆序显式 shutdown 全部 handle 并以非零状态退出。正常退出也必须显式 shutdown；不得依赖全局 watcher registry、按 `RepoId` stop free function 或 `Drop` 静默清理。
-    *   `deve serve`: 启动 HTTP/WebSocket 服务端；零local repo是合法`NoScope` host，watcher `expected=0`为healthy，login/diagnostic/Create可用。repo-local watcher start failure只使该repo readonly；只有typed supervisor/runtime host-fatal才终止服务。全部watcher失败时服务仍保留readonly/export/diagnostic，workspace-dependent mutation返回结构化unavailable。
+    *   `deve serve`: 启动 HTTP/WebSocket 服务端；零local repo是合法`NoScope` host，watcher `expected=0`为healthy，login/diagnostic/Create可用。repo-local watcher start failure只使该repo readonly；只有typed supervisor/runtime host-fatal才终止服务。全部watcher失败时服务仍保留readonly/export/diagnostic，workspace-dependent mutation返回结构化unavailable。独立生产进程接收到 Unix `SIGTERM` / `SIGINT` 或等价平台终止事件时，必须先停止 transport generation，并为 Axum graceful wait 设置 deadline；随后 background task、repo lifecycle 与 watcher owner 必须共享同一总截止时间的剩余量。repo lifecycle 超时必须 abort owned worker；watcher 超时必须消费 handle 并避免 `Drop` 无界 join；任一超时返回固定无 secret fatal 分类并退出，不能继续运行或伪装清理成功。
     *   `deve dump`: 调试工具 (Dump Ops).
     *   `deve export`: 导出 Ledger 为 JSONL；Markdown 导出遇到 degraded projection 时必须要求显式 `--allow-degraded-projection`。
     *   `deve graph`: 输出当前 repo 的只读 `GraphProjection` JSON；默认要求健康 Structure Facts authority，显式 `--allow-degraded-projection` 才允许从 metadata fallback 导出。

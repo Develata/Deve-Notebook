@@ -70,8 +70,13 @@ pub fn mark_committed(
     git_commit_id: &str,
 ) -> GitMirrorStoreResult<GitMirrorRecord> {
     let mut record = required_record(db, deve_commit_id)?;
+    let git_commit_id = super::git_cmd::normalize_object_id(git_commit_id).ok_or_else(|| {
+        GitMirrorStoreError::InvalidGitCommitId {
+            deve_commit_id: deve_commit_id.to_string(),
+        }
+    })?;
     record.state = GitMirrorCommitState::Committed;
-    record.git_commit_id = Some(git_commit_id.to_string());
+    record.git_commit_id = Some(git_commit_id);
     record.last_error = None;
     record.failure_stage = None;
     record.failure_subject = None;

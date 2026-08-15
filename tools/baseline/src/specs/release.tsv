@@ -1409,3 +1409,5 @@ contains	scripts/smoke-mobile-android-remote-browser.sh	mobile-android-remote-br
 contains	scripts/smoke-mobile-android-remote-browser.mjs	mobile-android-remote-browser: ok
 contains	tools/baseline/src/acceptance_matrix/tag_ready/android.rs	Android RemoteBrowser journey is missing required claim
 contains	tools/baseline/src/acceptance_matrix/tag_ready/android.rs	Android writable evidence requires receipt schema 3 typed claims
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-011	desktop_cookie_install_failure_returns_false_without_panic true
+contains	apps/desktop/src/tauri_bootstrap_test.rs	fn desktop_cookie_install_failure_returns_false_without_panic

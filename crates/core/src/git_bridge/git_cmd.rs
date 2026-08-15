@@ -136,11 +136,22 @@ pub(super) fn current_head(repo_root: &Path) -> GitCommandResult<Option<String>>
                 message: err.to_string(),
             })?;
     if output.status.success() {
-        return Ok(Some(
-            String::from_utf8_lossy(&output.stdout).trim().to_string(),
-        ));
+        let raw = String::from_utf8_lossy(&output.stdout);
+        return normalize_object_id(raw.trim()).map(Some).ok_or_else(|| {
+            GitCommandError::InvalidOutput {
+                args: args_label(&args),
+                category: "Git object id",
+            }
+        });
     }
     Ok(None)
+}
+
+pub(super) fn normalize_object_id(value: &str) -> Option<String> {
+    if !matches!(value.len(), 40 | 64) || !value.bytes().all(|byte| byte.is_ascii_hexdigit()) {
+        return None;
+    }
+    Some(value.to_ascii_lowercase())
 }
 
 fn base_command(repo_root: &Path, args: &[&str]) -> GitCommandResult<Command> {
@@ -266,5 +277,20 @@ mod tests {
             resolved,
             fs::canonicalize(executable).expect("canonical file")
         );
+    }
+
+    #[test]
+    fn git_object_id_normalization_rejects_public_report_injection() {
+        let sha1 = "0123456789ABCDEF0123456789ABCDEF01234567";
+        assert_eq!(normalize_object_id(sha1), Some(sha1.to_ascii_lowercase()));
+        assert!(normalize_object_id(&"a".repeat(64)).is_some());
+        for invalid in [
+            "abc123",
+            "0123456789abcdef0123456789abcdef0123456g",
+            "0123456789abcdef0123456789abcdef01234567\nsecret",
+            "C:\\private\\0123456789abcdef0123456789abcdef01234567",
+        ] {
+            assert_eq!(normalize_object_id(invalid), None, "{invalid:?}");
+        }
     }
 }

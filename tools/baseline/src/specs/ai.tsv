@@ -166,3 +166,8 @@ contains	apps/cli/src/server/ai_chat/providers/tests.rs	openai_responses_complet
 case_contains	docs/acceptance-cases/10_plugins.md	AI-011	server_assert: truncated_provider_streams_fail_before_success_projection true
 case_contains	docs/acceptance-cases/10_plugins.md	AI-011	server_assert: done_without_protocol_terminal_fails_closed true
 contains	apps/cli/src/server/agent_bridge/policy.rs	is_native_ai_provider_ready()
+case_contains	docs/acceptance-cases/10_plugins.md	AI-008	cargo test -p deve_core skill_manager -- --nocapture
+case_contains	docs/acceptance-cases/10_plugins.md	AI-008	server_assert: skill_lookup_rejects_path_traversal_and_symlink_escape true
+contains	crates/core/src/skill/mod.rs	fn skill_manager_rejects_path_traversal_and_symlink_escape
+contains	crates/core/src/skill/mod.rs	open_regular_file_read(path, "skill file")
+cargo_test_lib	deve_core	skill_manager

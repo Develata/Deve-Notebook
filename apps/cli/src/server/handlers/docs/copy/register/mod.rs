@@ -72,7 +72,7 @@ pub(super) fn prepare_registration(
             .get_tracked_docid_in_local_repo(&ctx.scope.repo_name, &source_path)?
             .ok_or_else(|| anyhow::anyhow!("Source doc not tracked: {source_path}"))?;
         let content = reconstructed_content(ctx, source_doc_id)?;
-        let patch = state::compute_diff("", &content);
+        let patch = state::compute_diff("", &content)?;
         files.push(CopyFilePlan {
             destination_path: map_dest_rel(&source_path, src_path, destination_path)?,
             source_path,
@@ -102,7 +102,7 @@ pub(super) fn prepare_single_file_registration(
         .repo
         .run_on_local_repo(&ctx.scope.repo_name, range::get_max_seq)?;
     let content = reconstructed_content(ctx, source_doc_id)?;
-    let patch = state::compute_diff("", &content);
+    let patch = state::compute_diff("", &content)?;
     ensure_preparation_head_unchanged(ctx, expected_ledger_head)?;
     Ok(CopyRegistrationPlan {
         expected_ledger_head,

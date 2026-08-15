@@ -27,6 +27,11 @@ pub(in crate::git_bridge) enum GitCommandError {
     Wait { args: String, message: String },
     #[error("git {args} returned non-UTF-8 field: {message}")]
     NonUtf8Field { args: String, message: String },
+    #[error("git {args} returned invalid {category}")]
+    InvalidOutput {
+        args: String,
+        category: &'static str,
+    },
     #[error("git {args} failed with status {status}")]
     Status { args: String, status: String },
     #[error("git {args} failed (status {status}): {detail}")]

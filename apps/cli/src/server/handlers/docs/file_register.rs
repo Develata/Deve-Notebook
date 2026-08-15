@@ -18,7 +18,7 @@ pub(super) fn create_file_from_content(
     content: &str,
     peer_label: &str,
 ) -> Result<(DocId, Vec<StructureOp>)> {
-    let patch = state::compute_diff("", content);
+    let patch = state::compute_diff("", content)?;
     create_file_from_patch(state, scope, rel_path, content, &patch, peer_label)
 }
 

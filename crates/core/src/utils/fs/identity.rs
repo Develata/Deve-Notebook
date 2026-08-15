@@ -112,7 +112,7 @@ impl HostPathIdentity {
     /// the captured parent/path lineage. This closes the A-to-B pathname swap
     /// that a plain "handle matches current path" check cannot detect.
     #[cfg_attr(target_arch = "wasm32", allow(dead_code))]
-    pub(crate) fn matches_open_file(&self, file: &File) -> std::io::Result<bool> {
+    pub fn matches_open_file(&self, file: &File) -> std::io::Result<bool> {
         Ok(identity_from_handle(file)? == self.object_identity
             && self.classify()? == HostPathState::Exact)
     }

@@ -165,14 +165,17 @@ fn project_one(
             seq_b: context.seq_b,
         });
     };
+    let Some(status) = detect_status(
+        old_path.as_deref(),
+        new_path.as_deref(),
+        &old_content,
+        &new_content,
+    ) else {
+        return Ok(None);
+    };
     Ok(Some(CommitFileDiff {
         doc_id: Some(doc_id),
-        status: detect_status(
-            old_path.as_deref(),
-            new_path.as_deref(),
-            &old_content,
-            &new_content,
-        ),
+        status,
         path,
         previous_path: (old_path != new_path).then_some(old_path).flatten(),
         old_content,
@@ -290,18 +293,14 @@ fn load_commit(
 ///
 /// 取该 doc_id 所有 seq <= max_seq 的 Op，按序重建
 fn reconstruct_at_seq(db: &Database, doc_id: DocId, max_seq: u64) -> CommitDiffResult<String> {
-    let all_ops = crate::ledger::ops::get_ops_from_db(db, doc_id).map_err(|err| {
+    let ops = crate::ledger::ops::get_ops_from_db_up_to(db, doc_id, max_seq).map_err(|err| {
         CommitDiffError::ContentLoad {
             doc_id,
             max_seq,
             message: err.to_string(),
         }
     })?;
-    let filtered: Vec<_> = all_ops
-        .into_iter()
-        .filter(|(seq, _)| *seq <= max_seq)
-        .map(|(_, entry)| entry)
-        .collect();
+    let filtered: Vec<_> = ops.into_iter().map(|(_, entry)| entry).collect();
     Ok(reconstruct_content(&filtered))
 }
 
@@ -311,16 +310,34 @@ fn detect_status(
     new_path: Option<&str>,
     old_content: &str,
     new_content: &str,
-) -> ChangeStatus {
+) -> Option<ChangeStatus> {
     if old_path.is_none() {
-        ChangeStatus::Added
+        Some(ChangeStatus::Added)
     } else if new_path.is_none() {
-        ChangeStatus::Deleted
+        Some(ChangeStatus::Deleted)
     } else if old_path != new_path {
-        ChangeStatus::Renamed
+        Some(ChangeStatus::Renamed)
     } else if old_content != new_content {
-        ChangeStatus::Modified
+        Some(ChangeStatus::Modified)
     } else {
-        ChangeStatus::Renamed
+        None
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::detect_status;
+    use crate::source_control::ChangeStatus;
+
+    #[test]
+    fn unchanged_commit_diff_status_is_absent_instead_of_renamed() {
+        assert_eq!(
+            detect_status(Some("a.md"), Some("a.md"), "same", "same"),
+            None
+        );
+        assert_eq!(
+            detect_status(Some("a.md"), Some("a.md"), "old", "new"),
+            Some(ChangeStatus::Modified)
+        );
     }
 }

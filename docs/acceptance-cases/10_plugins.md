@@ -96,6 +96,7 @@
     - server_receive: provider_tool_call_delta
     - run: scripts/check-ai-baseline.sh
     - run: cargo test -p deve_cli ai_chat -- --nocapture
+    - run: cargo test -p deve_core skill_manager -- --nocapture
     - run: cargo test -p deve_web message_dispatch_runtime -- --nocapture
   assertions:
     - server_assert: request_tools_rejected_before_provider_call true
@@ -103,6 +104,7 @@
     - ui_assert: partial_stream_error_code_copy_visible true
     - ui_assert: chat_streaming_stopped_after_plugin_error true
     - log_not_contains_any: ["mcp", "skill", "spawn subprocess", "shell"]
+    - server_assert: skill_lookup_rejects_path_traversal_and_symlink_escape true
 
 - case_id: AI-004
   goal: `/agents` 在原生 `PLAN ↔ BUILD` 间顺序切换。

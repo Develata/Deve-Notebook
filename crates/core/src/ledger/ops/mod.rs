@@ -16,11 +16,11 @@ mod validate;
 pub(crate) mod write_direct;
 mod write_generated;
 
-pub(crate) use query::get_ops_from_txn;
 pub use query::{
     count_ops_from_db, find_client_op_in_db, get_ops_from_db, get_ops_from_db_after,
     get_structure_ops_for_node_from_db, max_seq_from_db,
 };
+pub(crate) use query::{get_ops_from_db_up_to, get_ops_from_txn};
 pub use write_direct::append_op_to_db;
 pub(crate) use write_direct::append_op_to_txn;
 pub use write_generated::{append_generated_client_op, append_generated_op};

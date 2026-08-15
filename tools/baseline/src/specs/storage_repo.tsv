@@ -303,7 +303,8 @@ contains	apps/cli/src/watcher_runtime.rs	fn standalone_watch_partial_batch_start
 contains	apps/cli/src/watcher_runtime.rs	fn standalone_watch_shutdown_is_reverse_and_continues_after_failure()
 contains	apps/cli/src/commands/watch.rs	fn standalone_watch_terminal_failure_returns_nonzero()
 contains	apps/cli/src/server/start/tests.rs	fn server_shutdown_preserves_background_primary_and_watcher_failure()
-contains	apps/cli/src/server/start.rs	spawn_blocking(move || supervisor.shutdown())
+contains	apps/cli/src/server/start.rs	supervisor.shutdown_bounded(remaining_shutdown_budget(
+contains	apps/cli/src/server/start.rs	tokio::time::timeout_at(deadline, shutdown)
 absent_tree	crates/core/src	start_repo_watcher(
 absent_tree	crates/core/src	stop_repo_watcher(
 absent_optional	crates/core/src/sync/watcher/registry.rs	WatcherSlot
@@ -381,3 +382,22 @@ absent	docs/acceptance-cases/07_storage_repo.md	deve recover --from-ledger
 absent	docs/acceptance-cases/07_storage_repo.md	powershell -Command
 absent	docs/acceptance-cases/07_storage_repo.md	dir "${DEVE_DATA_DIR}"
 absent	docs/acceptance-cases/07_storage_repo.md	type ${DEVE_DATA_DIR}
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_cli --lib projection_push_source_rejects_single_and_total_payload_over_budget -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cargo test -p deve_cli --lib projection_push_source_rejects_same_inode_same_length_overwrite -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cli_assert: remote_projection_push_enforces_shared_capture_budgets_before_upload true
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-018	cli_assert: remote_projection_push_revalidates_open_handle_identity_and_content_before_upload true
+contains	apps/cli/src/remote_projection_transport/push_source.rs	fn projection_push_source_rejects_single_and_total_payload_over_budget
+contains	apps/cli/src/remote_projection_transport/push_source.rs	fn projection_push_source_rejects_file_growth_after_enumeration
+contains	apps/cli/src/remote_projection_transport/push_source.rs	fn projection_push_source_rejects_same_length_file_replacement
+contains	apps/cli/src/remote_projection_transport/push_source.rs	fn projection_push_source_rejects_same_inode_same_length_overwrite
+contains	crates/core/src/ledger/snapshot.rs	fn prune_snapshots_in_txn
+contains	crates/core/src/sync/drift_detect/explain.rs	pub struct ExplanationIndex
+cargo_test_lib	deve_cli	projection_push_source_rejects_single_and_total_payload_over_budget
+cargo_test_lib	deve_cli	projection_push_source_rejects_file_growth_after_enumeration
+cargo_test_lib	deve_cli	projection_push_source_rejects_same_length_file_replacement
+cargo_test_lib	deve_cli	projection_push_source_rejects_same_inode_same_length_overwrite
+cargo_test_integration	deve_core	store_acceptance_test	snapshot_respects_depth_limit
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	repo_watcher_bounded_shutdown_returns_without_drop_join
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-007	process_shutdown_deadline_consumes_watcher_handle_without_unbounded_drop_join true
+contains	crates/core/src/sync/watcher/handle.rs	pub fn shutdown_bounded
+cargo_test_lib	deve_core	repo_watcher_bounded_shutdown_returns_without_drop_join

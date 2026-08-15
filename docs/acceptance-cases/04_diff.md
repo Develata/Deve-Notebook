@@ -9,8 +9,10 @@
     - ui_place_cursor_after: "A😀"
     - ui_type: "X"
     - run: cargo test -p deve_core compute_diff_uses_utf16_positions -- --nocapture
+    - run: cargo test -p deve_core compute_diff_position_overflow_fails_closed -- --nocapture
   assertions:
     - api_assert: utf16_positions_match_editor_offsets true
+    - api_assert: utf16_diff_overflow_returns_typed_error true
 
 - case_id: DIFF-002
   goal: 3-Way Merge 使用可验证的 source checkpoint 基线，不使用 PeerId/VersionVector 交集猜测 LCA。
@@ -158,6 +160,13 @@
     - run: cargo test -p deve_core --lib git_bridge::import_plan::tests::plan_import_treats_git_copy_record_as_added -- --nocapture
     - run: cargo test -p deve_cli ngit_import_apply_rejects_broken_workspace_identity -- --nocapture
     - run: cargo test -p deve_core source_control_ngit_only -- --nocapture
+    - run: cargo test -p deve_core git_push_report_redacts_remote_credentials_and_command_detail -- --nocapture
+    - run: cargo test -p deve_core git_object_id_normalization_rejects_public_report_injection -- --nocapture
+    - run: cargo test -p deve_core git_push_report_rejects_corrupt_durable_object_id_without_projection -- --nocapture
+    - run: cargo test -p deve_core mark_committed_rejects_invalid_git_object_id_without_persisting_it -- --nocapture
+    - run: cargo test -p deve_cli ngit_push_public_error_does_not_expose_internal_detail -- --nocapture
+    - run: cargo test -p deve_core commit_diff_reconstructs_only_through_requested_waterline -- --nocapture
+    - run: cargo test -p deve_core commit_diff_structure_delete_uses_children_index -- --nocapture
     - run: cargo test -p deve_core run_pending_mirror_commits_terminal_projection_for_multiple_queued_records -- --nocapture
     - run: cargo test -p deve_core run_pending_mirror_rejects_terminal_projection_workspace_content_mismatch -- --nocapture
     - run: cargo test -p deve_core run_pending_mirror_creates_terminal_commit_instead_of_reusing_unmapped_head -- --nocapture

@@ -184,12 +184,24 @@ pub fn desktop_tauri_bootstrap_plugin<R: tauri::Runtime>(
         .js_init_script(script.source.clone())
         .on_webview_ready(move |webview| {
             if let Some(cookie) = native_session_cookie.as_ref() {
-                webview
-                    .set_cookie(tauri_cookie_from_native_session(cookie))
-                    .expect("desktop native session cookie install failed before bootstrap");
+                native_session_cookie_install_succeeded(
+                    webview.set_cookie(tauri_cookie_from_native_session(cookie)),
+                );
             }
         })
         .build()
+}
+
+pub(crate) fn native_session_cookie_install_succeeded<T, E>(result: Result<T, E>) -> bool {
+    match result {
+        Ok(_) => true,
+        Err(_) => {
+            eprintln!(
+                "desktop_native_session_cookie_install_failed: desktop native session cookie install failed before bootstrap"
+            );
+            false
+        }
+    }
 }
 
 pub fn desktop_tauri_local_service_bootstrap_from_env(

@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-26`
+- `Last Review`: `2026-08-14`
 - `Counterpart Feature`: `docs/features/08_ui_design_02_desktop.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`, `apps/desktop/`
@@ -98,6 +98,7 @@ Idle
 
 *   `EndpointHealthy` 只表示 loopback endpoint 可达且 `/api/node/role` 可读；它不代表 Web 已可写。
 *   `SessionHandoffReady` 必须在 `EndpointHealthy` 后发生，并且要求 session 已绑定；session handoff 失败是 fatal offline，不自动重试。
+*   WebView native session cookie 安装失败不得 panic，也不得继续投影可写成功。壳层只输出固定无 secret 诊断；随后 auth probe 必须 fail-closed 到 `SessionInvalid` / `Unauthorized`，writer-ready 永远不能仅依据 bootstrap 的 `session_bound` 获得。
 *   `BindFailed`、`HealthProbeFailed`、`ProcessExited` 可在 retry budget 内进入 `Restarting`；超过预算后进入 `Offline`。
 *   `SpawnFailed`、`ProcessContainmentFailed` 与 `SessionHandoffFailed` 默认不可重试，必须进入 `Offline`。
 *   `LocalBackend` 子进程必须绑定到 Desktop 父进程生命周期：正常退出、切换到 `RemoteBrowser`

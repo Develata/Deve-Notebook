@@ -56,16 +56,21 @@ pub(super) fn get_staged_for_unstage_target_in_txn(
     target: &ScPathTarget,
 ) -> Result<Option<(String, StagedEntry)>> {
     let table = write_txn.open_table(super::STAGED_TABLE)?;
-    let mut entries = Vec::new();
-    for item in table.iter()? {
-        let (path, value) = item?;
-        entries.push((
-            path.value().to_string(),
-            serde_json::from_slice::<StagedEntry>(value.value())?,
-        ));
-    }
     let path = to_forward_slash(&target.path);
     if let Some(doc_id) = target.doc_id {
+        let mut entries = Vec::new();
+        for indexed_path in super::index::paths_for_doc_in_txn(write_txn, doc_id)? {
+            let value = table.get(indexed_path.as_str())?.ok_or_else(|| {
+                anyhow!("Broken STAGED_DOC_INDEX: indexed staged path is missing")
+            })?;
+            let entry = serde_json::from_slice::<StagedEntry>(value.value())?;
+            if entry.doc_id != Some(doc_id) {
+                return Err(anyhow!(
+                    "Broken STAGED_DOC_INDEX: staged document identity mismatch"
+                ));
+            }
+            entries.push((indexed_path, entry));
+        }
         if let Some(exact) = entries
             .iter()
             .find(|(entry_path, entry)| entry_path == &path && entry.doc_id == Some(doc_id))
@@ -74,6 +79,14 @@ pub(super) fn get_staged_for_unstage_target_in_txn(
             return Ok(Some(exact));
         }
         return Ok(select_entry_for_doc(entries, &path, doc_id));
+    }
+    let mut entries = Vec::new();
+    for item in table.iter()? {
+        let (path, value) = item?;
+        entries.push((
+            path.value().to_string(),
+            serde_json::from_slice::<StagedEntry>(value.value())?,
+        ));
     }
     select_entry_without_doc(entries, &path)
 }

@@ -37,8 +37,9 @@ pub(crate) use store::removal::{
 use std::path::Path;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
 use tokio::sync::{Notify, mpsc, oneshot};
-use tokio::task::JoinHandle;
+use tokio::task::{AbortHandle, JoinHandle};
 use uuid::Uuid;
 
 const COMMAND_CAPACITY: usize = 32;
@@ -53,6 +54,7 @@ pub(crate) struct RepoLifecycleJobRuntime {
     shutdown_started: AtomicBool,
     commands: mpsc::Sender<worker::Command>,
     worker: Mutex<Option<JoinHandle<Result<(), RepoLifecycleJobError>>>>,
+    worker_abort: AbortHandle,
     shutdown_result: Mutex<Option<Result<(), String>>>,
     shutdown_notify: Notify,
 }
@@ -95,12 +97,14 @@ impl RepoLifecycleJobRuntime {
             skip_recovery_request_id,
             receiver,
         ));
+        let worker_abort = worker.abort_handle();
         Ok(Arc::new(Self {
             runtime_incarnation,
             accepting: AtomicBool::new(true),
             shutdown_started: AtomicBool::new(false),
             commands,
             worker: Mutex::new(Some(worker)),
+            worker_abort,
             shutdown_result: Mutex::new(None),
             shutdown_notify: Notify::new(),
         }))
@@ -253,6 +257,22 @@ impl RepoLifecycleJobRuntime {
     }
 
     pub(crate) async fn shutdown(self: &Arc<Self>) -> Result<(), RepoLifecycleJobError> {
+        self.begin_shutdown();
+        self.wait_for_shutdown().await
+    }
+
+    pub(crate) async fn shutdown_with_timeout(
+        self: &Arc<Self>,
+        timeout: Duration,
+    ) -> Result<(), RepoLifecycleJobError> {
+        self.begin_shutdown();
+        match tokio::time::timeout(timeout, self.wait_for_shutdown()).await {
+            Ok(result) => result,
+            Err(_) => self.abort_after_shutdown_deadline(),
+        }
+    }
+
+    fn begin_shutdown(self: &Arc<Self>) {
         self.accepting.store(false, Ordering::Release);
         if self
             .shutdown_started
@@ -262,6 +282,9 @@ impl RepoLifecycleJobRuntime {
             let runtime = self.clone();
             tokio::spawn(async move { runtime.drive_shutdown().await });
         }
+    }
+
+    async fn wait_for_shutdown(&self) -> Result<(), RepoLifecycleJobError> {
         loop {
             let notified = self.shutdown_notify.notified();
             if let Some(result) = self
@@ -276,14 +299,43 @@ impl RepoLifecycleJobRuntime {
         }
     }
 
+    fn abort_after_shutdown_deadline(&self) -> Result<(), RepoLifecycleJobError> {
+        self.worker_abort.abort();
+        let detail = "repo lifecycle shutdown deadline exceeded".to_string();
+        match self.shutdown_result.lock() {
+            Ok(mut slot) => {
+                if slot.is_none() {
+                    *slot = Some(Err(detail.clone()));
+                }
+            }
+            Err(poisoned) => {
+                let mut slot = poisoned.into_inner();
+                if slot.is_none() {
+                    *slot = Some(Err(detail.clone()));
+                }
+            }
+        }
+        self.shutdown_notify.notify_waiters();
+        Err(RepoLifecycleJobError::Shutdown(detail))
+    }
+
     async fn drive_shutdown(self: Arc<Self>) {
         let result = self
             .shutdown_worker()
             .await
             .map_err(|error| error.to_string());
         match self.shutdown_result.lock() {
-            Ok(mut slot) => *slot = Some(result),
-            Err(poisoned) => *poisoned.into_inner() = Some(Err("shutdown state poisoned".into())),
+            Ok(mut slot) => {
+                if slot.is_none() {
+                    *slot = Some(result);
+                }
+            }
+            Err(poisoned) => {
+                let mut slot = poisoned.into_inner();
+                if slot.is_none() {
+                    *slot = Some(Err("shutdown state poisoned".into()));
+                }
+            }
         }
         self.shutdown_notify.notify_waiters();
     }

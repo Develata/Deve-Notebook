@@ -4,6 +4,8 @@ use super::{
 };
 use crate::source_control::CommitInfo;
 
+const TEST_GIT_OBJECT_ID: &str = "0123456789abcdef0123456789abcdef01234567";
+
 fn commit(id: &str, ledger_seq: u64) -> CommitInfo {
     CommitInfo {
         id: id.to_string(),
@@ -40,7 +42,7 @@ fn mark_committed_and_out_of_sync_update_summary() {
     queue_deve_commit(&db, repo_id, &commit("c1", 1)).expect("queue c1");
     queue_deve_commit(&db, repo_id, &commit("c2", 2)).expect("queue c2");
 
-    mark_committed(&db, "c1", "abc123").expect("mark committed");
+    mark_committed(&db, "c1", TEST_GIT_OBJECT_ID).expect("mark committed");
     let failed = mark_out_of_sync(
         &db,
         "c2",
@@ -70,7 +72,7 @@ fn mark_committed_and_out_of_sync_update_summary() {
         get_record(&db, "c1")
             .expect("get")
             .and_then(|record| record.git_commit_id),
-        Some("abc123".to_string())
+        Some(TEST_GIT_OBJECT_ID.to_string())
     );
 }
 
@@ -86,6 +88,26 @@ fn missing_record_returns_typed_store_error() {
             deve_commit_id: "missing".to_string(),
         }
     );
+}
+
+#[test]
+fn mark_committed_rejects_invalid_git_object_id_without_persisting_it() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let db = redb::Database::create(dir.path().join("mirror.redb")).expect("db");
+    init_table(&db).expect("init");
+    let repo_id = uuid::Uuid::new_v4();
+    queue_deve_commit(&db, repo_id, &commit("c1", 1)).expect("queue c1");
+
+    assert_eq!(
+        mark_committed(&db, "c1", "secret\nnot-an-object-id")
+            .expect_err("invalid object id must fail closed"),
+        GitMirrorStoreError::InvalidGitCommitId {
+            deve_commit_id: "c1".to_string(),
+        }
+    );
+    let record = get_record(&db, "c1").expect("get").expect("record");
+    assert_eq!(record.state, GitMirrorCommitState::Queued);
+    assert_eq!(record.git_commit_id, None);
 }
 
 #[test]

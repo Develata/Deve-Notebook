@@ -5,7 +5,7 @@
 - `Layer`: `Application / Projection Transport`
 - `Status`: `Current MUST`
 - `Version`: `0.1.1`
-- `Last Review`: `2026-07-22`
+- `Last Review`: `2026-08-14`
 - `Counterpart Feature`: `docs/features/06_repository.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `crates/core/src/remote_projection/`, `crates/core/src/remote_import/`, `apps/cli/src/remote_projection_transport/`, `apps/cli/src/remote_import_runtime.rs`, `apps/cli/src/commands/projection_remote.rs`, `apps/cli/src/commands/remote_import/`, `apps/cli/src/server/handlers/remote_import/`
@@ -105,6 +105,7 @@ PushRequested
 ```
 
 Push 必须读取 `Healthy + Mounted` 的 current Projection Workspace，排除 internal/ignored path。partial remote upload 只形成 provider diagnostic/retry context，不触碰本地 Ledger 或 Source Control。
+Push 枚举与读取还必须执行 §4.2 的文件数、单文件、总 payload 与路径预算；metadata admission 后必须在实际读取结果上二次校验，以拒绝并发增长。任一超限都发生在对应 provider upload 之前并返回 typed transport failure。
 
 ## 4. Immutable Remote Import Session {#remote-import-session-contract}
 
@@ -192,6 +193,11 @@ receipt retention或Projection Fault authority。
 任何quarantine/membership cut之前；读取sidecar最多分配32 MiB + 1 byte，不得把64 MiB payload聚合
 进sidecar或内存，且需要negative fixture证明超限fail-closed。capture 必须逐文件 streaming，不得把
 完整64 MiB snapshot聚合进内存。remote 缺失文件不产生 Delete；首版无逐文件选择。
+
+Remote Projection push 的本机 source enumeration 与 upload visit 必须复用同一 no-follow
+ordinary-file identity seal：每个文件只允许有界读取，visit 前重验 identity、长度与 content digest；
+同长度 pathname replacement、symlink/reparse replacement 与并发增长都必须在 provider upload 前
+fail-closed。
 
 ## 5. Review and Apply Authority
 

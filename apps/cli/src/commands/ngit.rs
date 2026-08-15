@@ -109,6 +109,22 @@ pub fn push(
     branch: Option<&str>,
     snapshot_depth: usize,
 ) -> Result<()> {
+    public_push_result(push_inner(
+        ledger_dir,
+        target_repo,
+        remote,
+        branch,
+        snapshot_depth,
+    ))
+}
+
+fn push_inner(
+    ledger_dir: &Path,
+    target_repo: Option<&str>,
+    remote: Option<&str>,
+    branch: Option<&str>,
+    snapshot_depth: usize,
+) -> Result<()> {
     let repo = RepoManager::init(ledger_dir, snapshot_depth, None, None)?;
     let repo_names = resolve_local_repo_args(&repo, target_repo)?;
     for repo_name in repo_names {
@@ -127,6 +143,14 @@ pub fn push(
         print_push_report(&repo_name, &report);
     }
     Ok(())
+}
+
+fn public_push_result<T>(result: anyhow::Result<T>) -> anyhow::Result<T> {
+    result.map_err(|_| {
+        anyhow::anyhow!(
+            "Git push mirror failed before a safe report could be produced; category=git_push_internal"
+        )
+    })
 }
 
 fn run_executor(
@@ -185,4 +209,24 @@ fn run_export_for_repo(
             GitMirrorRunOptions { retry_out_of_sync },
         )?)
     })
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn ngit_push_public_error_does_not_expose_internal_detail() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let parent = dir.path().join("credential=secret-private-repository");
+        std::fs::write(&parent, b"not a directory").expect("write invalid ledger parent");
+        let ledger_dir = parent.join("ledger");
+        let error = super::push(&ledger_dir, None, None, None, 8)
+            .expect_err("public push must keep initialization failures private");
+        let public = error.to_string();
+        assert_eq!(
+            public,
+            "Git push mirror failed before a safe report could be produced; category=git_push_internal"
+        );
+        assert!(!public.contains("secret"));
+        assert!(!public.contains("private"));
+    }
 }

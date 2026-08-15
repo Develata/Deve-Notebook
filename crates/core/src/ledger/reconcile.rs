@@ -30,7 +30,7 @@ pub fn compute_reconcile_patch(
         return Ok(Vec::new());
     }
 
-    Ok(state::compute_diff(&ledger_norm, &target_norm))
+    Ok(state::compute_diff(&ledger_norm, &target_norm)?)
 }
 
 pub fn append_patch_in_local_repo(

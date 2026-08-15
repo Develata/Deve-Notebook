@@ -29,6 +29,28 @@ pub fn get_ops_from_db(db: &Database, doc_id: DocId) -> Result<Vec<(u64, LedgerE
     Ok(entries)
 }
 
+pub(crate) fn get_ops_from_db_up_to(
+    db: &Database,
+    doc_id: DocId,
+    max_seq: u64,
+) -> Result<Vec<(u64, LedgerEntry)>> {
+    let read_txn = db.begin_read()?;
+    let ops_table = read_txn.open_table(LEDGER_OPS)?;
+    let doc_ops_table = read_txn.open_multimap_table(DOC_OPS)?;
+    let mut entries = Vec::new();
+    for seq in doc_ops_table.get(doc_id.as_u128())? {
+        let seq = seq?.value();
+        if seq > max_seq {
+            break;
+        }
+        let Some(bytes) = ops_table.get(seq)? else {
+            return Err(broken_doc_ops_index(doc_id, seq));
+        };
+        entries.push((seq, deserialize_ledger_entry(bytes.value())?));
+    }
+    Ok(entries)
+}
+
 /// Read one document's facts from a caller-owned write transaction.
 ///
 /// Commit snapshot refresh uses this view so the ledger-head guard, fact read,
@@ -187,4 +209,57 @@ fn broken_node_ops_index(node_id: NodeId, seq: u64) -> anyhow::Error {
         node_id,
         seq
     )
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{get_ops_from_db, get_ops_from_db_up_to};
+    use crate::ledger::schema::LEDGER_OPS;
+    use crate::models::{DocId, FactActor, Op};
+
+    #[test]
+    fn commit_diff_reconstructs_only_through_requested_waterline() {
+        let dir = tempfile::tempdir().expect("tempdir");
+        let ledger = dir.path().join("ledger");
+        let projection = dir.path().join("projection");
+        let (repo, _) =
+            crate::test_support::init_cataloged_repo(&ledger, &projection).expect("cataloged repo");
+        let doc_id = DocId::new();
+        let writer = repo.local_fact_writer(FactActor::new("bounded-read").expect("actor"));
+        let (first, _) = writer
+            .append_content_in_local_repo(
+                repo.local_repo_name(),
+                doc_id,
+                Op::Insert {
+                    pos: 0,
+                    content: "a".into(),
+                },
+                1,
+            )
+            .expect("first");
+        let (future, _) = writer
+            .append_content_in_local_repo(
+                repo.local_repo_name(),
+                doc_id,
+                Op::Insert {
+                    pos: 1,
+                    content: "b".into(),
+                },
+                2,
+            )
+            .expect("future");
+        repo.run_on_local_repo(repo.local_repo_name(), |db| {
+            let txn = db.begin_write()?;
+            {
+                let mut ops = txn.open_table(LEDGER_OPS)?;
+                ops.remove(future)?;
+            }
+            txn.commit()?;
+            let bounded = get_ops_from_db_up_to(db, doc_id, first)?;
+            assert_eq!(bounded.len(), 1);
+            assert!(get_ops_from_db(db, doc_id).is_err());
+            Ok(())
+        })
+        .expect("bounded read");
+    }
 }

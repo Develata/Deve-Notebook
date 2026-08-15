@@ -18,6 +18,14 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
+mod shutdown_signal;
+mod transport_shutdown;
+
+use transport_shutdown::{
+    RuntimeShutdownDeadline, deadline_after, remaining_shutdown_budget,
+    serve_router_until_shutdown_with_deadline,
+};
+
 const SERVER_RUNTIME_SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Clone)]
@@ -172,21 +180,46 @@ impl EmbeddedServerRuntime {
         self.transport.clone()
     }
 
-    pub(crate) async fn shutdown(mut self, timeout: Duration) -> anyhow::Result<()> {
+    pub(crate) async fn shutdown(self, timeout: Duration) -> anyhow::Result<()> {
+        self.shutdown_until(deadline_after(timeout)).await
+    }
+
+    async fn shutdown_until(mut self, deadline: tokio::time::Instant) -> anyhow::Result<()> {
         let background_result = match self.background_tasks.take() {
-            Some(tasks) => tasks.shutdown(timeout).await,
+            Some(tasks) => {
+                tasks
+                    .shutdown(remaining_shutdown_budget(
+                        deadline,
+                        tokio::time::Instant::now(),
+                    ))
+                    .await
+            }
             None => Ok(()),
         };
         let lifecycle_result = match self.repo_lifecycle_jobs.take() {
-            Some(runtime) => runtime.shutdown().await.map_err(anyhow::Error::from),
+            Some(runtime) => runtime
+                .shutdown_with_timeout(remaining_shutdown_budget(
+                    deadline,
+                    tokio::time::Instant::now(),
+                ))
+                .await
+                .map_err(anyhow::Error::from),
             None => Ok(()),
         };
         let watcher_result = match self.watcher_supervisor.take() {
             Some(supervisor) => {
-                match tokio::task::spawn_blocking(move || supervisor.shutdown()).await {
-                    Ok(result) => result.map_err(anyhow::Error::from),
-                    Err(error) => Err(anyhow::anyhow!(
-                        "watcher shutdown coordination task failed: {error}"
+                let watcher_deadline = deadline;
+                let shutdown = tokio::task::spawn_blocking(move || {
+                    supervisor.shutdown_bounded(remaining_shutdown_budget(
+                        watcher_deadline,
+                        tokio::time::Instant::now(),
+                    ))
+                });
+                match tokio::time::timeout_at(deadline, shutdown).await {
+                    Ok(Ok(result)) => result.map_err(anyhow::Error::from),
+                    Ok(Err(_)) => Err(anyhow::anyhow!("watcher shutdown coordination task failed")),
+                    Err(_) => Err(anyhow::anyhow!(
+                        "watcher shutdown coordination deadline exceeded"
                     )),
                 }
             }
@@ -223,6 +256,25 @@ impl ServerTransportRuntime {
         listener: tokio::net::TcpListener,
         launch: ServerLaunchOptions,
         shutdown: F,
+    ) -> Result<(), ServerTransportServeError>
+    where
+        F: Future<Output = ()> + Send + 'static,
+    {
+        self.serve_with_shutdown_deadline(
+            listener,
+            launch,
+            shutdown,
+            RuntimeShutdownDeadline::default(),
+        )
+        .await
+    }
+
+    async fn serve_with_shutdown_deadline<F>(
+        &self,
+        listener: tokio::net::TcpListener,
+        launch: ServerLaunchOptions,
+        shutdown: F,
+        shutdown_deadline: RuntimeShutdownDeadline,
     ) -> Result<(), ServerTransportServeError>
     where
         F: Future<Output = ()> + Send + 'static,
@@ -276,14 +328,20 @@ impl ServerTransportRuntime {
         println!("Server running on {}", launch.ws_display_base());
         debug_assert_eq!(listener.local_addr().ok(), Some(addr));
         let shutdown_runtime = ws_transport_runtime.clone();
-        let serve_result = serve_router_until_shutdown(listener, app, async move {
+        let signal_deadline = shutdown_deadline.clone();
+        let serve_result = serve_router_until_shutdown_with_deadline(listener, app, async move {
             shutdown.await;
             shutdown_runtime.begin_shutdown();
+            signal_deadline.begin(SERVER_RUNTIME_SHUTDOWN_TIMEOUT)
         })
         .await;
         ws_transport_runtime.begin_shutdown();
+        let deadline = shutdown_deadline.begin(SERVER_RUNTIME_SHUTDOWN_TIMEOUT);
         let session_result = ws_transport_runtime
-            .wait_for_idle(SERVER_RUNTIME_SHUTDOWN_TIMEOUT)
+            .wait_for_idle(remaining_shutdown_budget(
+                deadline,
+                tokio::time::Instant::now(),
+            ))
             .await;
         match (serve_result, session_result) {
             (Ok(()), Ok(())) => Ok(()),
@@ -323,7 +381,7 @@ pub async fn start_server_with_bound_listener(
         sync_mode,
         p2p,
         listener,
-        std::future::pending(),
+        shutdown_signal::production_shutdown_signal(),
     )
     .await
 }
@@ -345,8 +403,13 @@ where
     let runtime =
         EmbeddedServerRuntime::initialize(repo, &launch, plugins, profile, sync_mode, p2p, true)?;
     let transport = runtime.transport();
-    let serve_result = transport.serve(listener, launch, shutdown).await;
-    let shutdown_result = runtime.shutdown(SERVER_RUNTIME_SHUTDOWN_TIMEOUT).await;
+    let shutdown_deadline = RuntimeShutdownDeadline::default();
+    let serve_result = transport
+        .serve_with_shutdown_deadline(listener, launch, shutdown, shutdown_deadline.clone())
+        .await;
+    let shutdown_result = runtime
+        .shutdown_until(shutdown_deadline.begin(SERVER_RUNTIME_SHUTDOWN_TIMEOUT))
+        .await;
     match (serve_result, shutdown_result) {
         (Ok(()), Ok(())) => Ok(()),
         (Err(error), Ok(())) => Err(error.into_anyhow()),
@@ -355,24 +418,6 @@ where
             "server runtime shutdown also failed: {shutdown_error}"
         ))),
     }
-}
-
-async fn serve_router_until_shutdown<F>(
-    listener: tokio::net::TcpListener,
-    app: axum::Router,
-    shutdown: F,
-) -> anyhow::Result<()>
-where
-    F: Future<Output = ()> + Send + 'static,
-{
-    let result = axum::serve(
-        listener,
-        app.into_make_service_with_connect_info::<std::net::SocketAddr>(),
-    )
-    .with_graceful_shutdown(shutdown)
-    .await;
-    result?;
-    Ok(())
 }
 
 pub(super) fn build_sync_engine(

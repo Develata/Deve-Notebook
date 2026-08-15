@@ -3,6 +3,7 @@
 
 use super::DriftKind;
 use crate::source_control::{ChangeStatus, pending_fs, staging};
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Copy)]
 pub struct DiffEvidence<'a> {
@@ -11,61 +12,81 @@ pub struct DiffEvidence<'a> {
     pub workspace_hash: Option<&'a str>,
 }
 
-pub fn is_explained(
-    diff: DiffEvidence,
-    pending: &[pending_fs::PendingFsEntry],
-    staged: &[(String, staging::StagedEntry)],
-) -> bool {
-    pending.iter().any(|entry| matches_pending(diff, entry))
-        || staged
-            .iter()
-            .any(|(path, entry)| matches_staged(diff, path, entry))
+#[derive(Default)]
+pub struct ExplanationIndex {
+    missing_paths: HashSet<String>,
+    inserted_hashes: HashMap<String, HashSet<String>>,
+    modified_hashes: HashMap<String, HashSet<String>>,
 }
 
-fn matches_pending(diff: DiffEvidence, entry: &pending_fs::PendingFsEntry) -> bool {
-    match diff.kind {
-        DriftKind::MissingOnDisk => match entry.change_type {
-            ChangeStatus::Deleted => entry.path == diff.path,
-            ChangeStatus::Renamed => entry.renamed_from.as_deref() == Some(diff.path),
-            _ => false,
-        },
-        DriftKind::UnexpectedOnDisk => {
-            matches_insert_like(diff, entry.change_type, &entry.path, &entry.content_hash)
+impl ExplanationIndex {
+    pub fn new(
+        pending: &[pending_fs::PendingFsEntry],
+        staged: &[(String, staging::StagedEntry)],
+    ) -> Self {
+        let mut index = Self::default();
+        for entry in pending {
+            index.observe(
+                entry.change_type,
+                &entry.path,
+                entry.renamed_from.as_deref(),
+                &entry.content_hash,
+            );
         }
-        DriftKind::ContentMismatch => {
-            matches_modify_like(diff, entry.change_type, &entry.path, &entry.content_hash)
+        for (path, entry) in staged {
+            index.observe(
+                entry.status,
+                path,
+                entry.renamed_from.as_deref(),
+                &entry.content_hash,
+            );
+        }
+        index
+    }
+
+    pub fn is_explained(&self, diff: DiffEvidence<'_>) -> bool {
+        match diff.kind {
+            DriftKind::MissingOnDisk => self.missing_paths.contains(diff.path),
+            DriftKind::UnexpectedOnDisk => diff.workspace_hash.is_some_and(|hash| {
+                self.inserted_hashes
+                    .get(diff.path)
+                    .is_some_and(|hashes| hashes.contains(hash))
+            }),
+            DriftKind::ContentMismatch => diff.workspace_hash.is_some_and(|hash| {
+                self.modified_hashes
+                    .get(diff.path)
+                    .is_some_and(|hashes| hashes.contains(hash))
+            }),
+        }
+    }
+
+    fn observe(
+        &mut self,
+        status: ChangeStatus,
+        path: &str,
+        renamed_from: Option<&str>,
+        hash: &str,
+    ) {
+        match status {
+            ChangeStatus::Deleted => {
+                self.missing_paths.insert(path.to_string());
+            }
+            ChangeStatus::Renamed => {
+                if let Some(previous) = renamed_from {
+                    self.missing_paths.insert(previous.to_string());
+                }
+                insert_hash(&mut self.inserted_hashes, path, hash);
+                insert_hash(&mut self.modified_hashes, path, hash);
+            }
+            ChangeStatus::Added => insert_hash(&mut self.inserted_hashes, path, hash),
+            ChangeStatus::Modified => insert_hash(&mut self.modified_hashes, path, hash),
         }
     }
 }
 
-fn matches_staged(diff: DiffEvidence, path: &str, entry: &staging::StagedEntry) -> bool {
-    match diff.kind {
-        DriftKind::MissingOnDisk => match entry.status {
-            ChangeStatus::Deleted => path == diff.path,
-            ChangeStatus::Renamed => entry.renamed_from.as_deref() == Some(diff.path),
-            _ => false,
-        },
-        DriftKind::UnexpectedOnDisk => {
-            matches_insert_like(diff, entry.status, path, &entry.content_hash)
-        }
-        DriftKind::ContentMismatch => {
-            matches_modify_like(diff, entry.status, path, &entry.content_hash)
-        }
-    }
-}
-
-fn matches_insert_like(diff: DiffEvidence, status: ChangeStatus, path: &str, hash: &str) -> bool {
-    matches!(status, ChangeStatus::Added | ChangeStatus::Renamed)
-        && path == diff.path
-        && diff
-            .workspace_hash
-            .is_some_and(|candidate| candidate == hash)
-}
-
-fn matches_modify_like(diff: DiffEvidence, status: ChangeStatus, path: &str, hash: &str) -> bool {
-    matches!(status, ChangeStatus::Modified | ChangeStatus::Renamed)
-        && path == diff.path
-        && diff
-            .workspace_hash
-            .is_some_and(|candidate| candidate == hash)
+fn insert_hash(index: &mut HashMap<String, HashSet<String>>, path: &str, hash: &str) {
+    index
+        .entry(path.to_string())
+        .or_default()
+        .insert(hash.to_string());
 }

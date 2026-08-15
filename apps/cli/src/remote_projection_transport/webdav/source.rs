@@ -7,6 +7,9 @@ use super::url::{relative_path_from_href, webdav_file_url, webdav_locator_to_htt
 use crate::remote_projection_transport::path_set::{
     DiscoveredRemotePaths, NormalizedDiscoveryPath, RemotePathBudget,
 };
+pub(super) use crate::remote_projection_transport::path_set::{
+    MAX_SOURCE_FILE_BYTES, MAX_SOURCE_TOTAL_BYTES,
+};
 use crate::remote_projection_transport::push_source::{
     is_markdown_path, is_reserved_projection_path,
 };
@@ -21,8 +24,6 @@ use quick_xml::events::Event;
 use reqwest::{StatusCode, Url};
 use std::collections::{BTreeSet, VecDeque};
 
-pub(super) const MAX_SOURCE_FILE_BYTES: usize = 4 * 1024 * 1024;
-pub(super) const MAX_SOURCE_TOTAL_BYTES: usize = 64 * 1024 * 1024;
 pub(super) const MAX_SOURCE_COLLECTIONS: usize = 2_048;
 const MAX_PROPFIND_BODY_BYTES: usize = 4 * 1024 * 1024;
 

@@ -19,6 +19,7 @@ use std::sync::atomic::AtomicBool;
 #[cfg(test)]
 use std::sync::atomic::Ordering;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 pub(crate) struct WatcherSupervisor {
     pub(super) slots: RuntimeSlots,
@@ -81,14 +82,29 @@ impl WatcherSupervisor {
 
     pub(crate) fn shutdown(&self) -> Result<(), WatcherSupervisorShutdownError> {
         let failures = self.shutdown_collect();
-        if failures.is_empty() {
-            Ok(())
-        } else {
-            Err(WatcherSupervisorShutdownError { failures })
-        }
+        shutdown_result(failures)
+    }
+
+    pub(crate) fn shutdown_bounded(
+        &self,
+        timeout: Duration,
+    ) -> Result<(), WatcherSupervisorShutdownError> {
+        let started = Instant::now();
+        let deadline = started.checked_add(timeout).unwrap_or(started);
+        let failures = self.shutdown_collect_with(|handle| {
+            handle.shutdown_bounded(deadline.saturating_duration_since(Instant::now()))
+        });
+        shutdown_result(failures)
     }
 
     pub(super) fn shutdown_collect(&self) -> Vec<WatcherFailure> {
+        self.shutdown_collect_with(RepoWatcherHandle::shutdown)
+    }
+
+    fn shutdown_collect_with(
+        &self,
+        mut shutdown_handle: impl FnMut(RepoWatcherHandle) -> Result<(), WatcherFailure>,
+    ) -> Vec<WatcherFailure> {
         let slots = match self.slots.lock() {
             Ok(slots) => slots.values().cloned().collect::<Vec<_>>(),
             Err(poisoned) => poisoned.into_inner().values().cloned().collect(),
@@ -119,13 +135,13 @@ impl WatcherSupervisor {
         let mut failures = Vec::new();
         while let Some(key) = start_order.pop() {
             if let Some(entry) = handles.remove(&key.repo_id)
-                && let Err(failure) = entry.handle.shutdown()
+                && let Err(failure) = shutdown_handle(entry.handle)
             {
                 failures.push(failure);
             }
         }
         for (_, entry) in handles {
-            if let Err(failure) = entry.handle.shutdown() {
+            if let Err(failure) = shutdown_handle(entry.handle) {
                 failures.push(failure);
             }
         }
@@ -142,6 +158,14 @@ impl WatcherSupervisor {
             slot.drop_deferred();
         }
         failures
+    }
+}
+
+fn shutdown_result(failures: Vec<WatcherFailure>) -> Result<(), WatcherSupervisorShutdownError> {
+    if failures.is_empty() {
+        Ok(())
+    } else {
+        Err(WatcherSupervisorShutdownError { failures })
     }
 }
 

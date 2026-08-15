@@ -8,7 +8,7 @@ mod walk;
 use crate::ledger::RepoManager;
 use crate::source_control::{pending_fs, staging};
 use anyhow::Result;
-use explain::{DiffEvidence, is_explained};
+use explain::{DiffEvidence, ExplanationIndex};
 use std::path::Path;
 
 #[derive(Debug, Default)]
@@ -69,6 +69,7 @@ fn detect_repo_drift_from_entries(
     staged: &[(String, staging::StagedEntry)],
 ) -> Result<DriftReport> {
     let mut report = DriftReport::default();
+    let evidence_index = ExplanationIndex::new(pending, staged);
 
     for (path, expected) in &projection {
         match workspace.get(path) {
@@ -79,8 +80,7 @@ fn detect_repo_drift_from_entries(
                         path,
                         DriftKind::ContentMismatch,
                         actual.content_hash.as_deref(),
-                        pending,
-                        staged,
+                        &evidence_index,
                     );
                 }
             }
@@ -89,8 +89,7 @@ fn detect_repo_drift_from_entries(
                 path,
                 DriftKind::MissingOnDisk,
                 None,
-                pending,
-                staged,
+                &evidence_index,
             ),
         }
     }
@@ -107,8 +106,7 @@ fn detect_repo_drift_from_entries(
             path,
             DriftKind::UnexpectedOnDisk,
             actual.content_hash.as_deref(),
-            pending,
-            staged,
+            &evidence_index,
         );
     }
 
@@ -120,15 +118,14 @@ fn record_diff(
     path: &str,
     kind: DriftKind,
     hash: Option<&str>,
-    pending: &[pending_fs::PendingFsEntry],
-    staged: &[(String, staging::StagedEntry)],
+    evidence_index: &ExplanationIndex,
 ) {
     let evidence = DiffEvidence {
         path,
         kind,
         workspace_hash: hash,
     };
-    if is_explained(evidence, pending, staged) {
+    if evidence_index.is_explained(evidence) {
         report.explained_count += 1;
     } else {
         report.unexplained.push(DriftEntry {

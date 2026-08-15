@@ -347,3 +347,6 @@ contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	resolve_trusted_git_e
 contains	apps/desktop/src/service_entrypoint/spawn_spec.rs	DEVE_GIT_EXECUTABLE_UNAVAILABLE_ENV
 contains	scripts/check-desktop-local-backend-lifecycle.ps1	ForceGitUnavailable
 absent	apps/desktop/src/service_entrypoint/spawn_spec.rs	std::env::var_os("PATH")
+contains	apps/desktop/src/tauri_bootstrap/mod.rs	native_session_cookie_install_succeeded
+contains	apps/desktop/src/tauri_bootstrap_test.rs	fn desktop_cookie_install_failure_returns_false_without_panic
+absent	apps/desktop/src/tauri_bootstrap/mod.rs	.expect("desktop native session cookie install failed before bootstrap")

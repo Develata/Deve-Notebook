@@ -7,6 +7,9 @@ use super::provider::S3ProjectionProvider;
 use super::signing::signed_get_request;
 use super::transport::S3Transport;
 use super::url::{S3CustomEndpointUrlBinding, s3_file_url_with_binding};
+pub(super) use crate::remote_projection_transport::path_set::{
+    MAX_SOURCE_FILE_BYTES, MAX_SOURCE_TOTAL_BYTES,
+};
 use crate::remote_projection_transport::{
     RemoteSourceAcquisition, RemoteSourceSink, SourceAcquisitionError, SourceAcquisitionOutcome,
     SourceAcquisitionRequest, TransportCapability,
@@ -14,9 +17,6 @@ use crate::remote_projection_transport::{
 use chrono::{DateTime, Utc};
 use deve_core::remote_projection::{RemoteProjectionProvider, RemoteProjectionProviderError};
 use reqwest::StatusCode;
-
-pub(super) const MAX_SOURCE_FILE_BYTES: usize = 4 * 1024 * 1024;
-pub(super) const MAX_SOURCE_TOTAL_BYTES: usize = 64 * 1024 * 1024;
 
 impl<T: S3Transport> RemoteSourceAcquisition for S3ProjectionProvider<T> {
     fn acquire<S: RemoteSourceSink>(

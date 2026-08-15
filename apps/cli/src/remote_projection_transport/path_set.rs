@@ -12,6 +12,8 @@ use unicode_normalization::UnicodeNormalization;
 pub(crate) const MAX_SOURCE_FILES: usize = 2_048;
 pub(crate) const MAX_SOURCE_PATH_BYTES: usize = 1_024;
 pub(crate) const MAX_SOURCE_TOTAL_PATH_BYTES: usize = 2 * 1024 * 1024;
+pub(crate) const MAX_SOURCE_FILE_BYTES: usize = 4 * 1024 * 1024;
+pub(crate) const MAX_SOURCE_TOTAL_BYTES: usize = 64 * 1024 * 1024;
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub(crate) struct NormalizedRemotePath(String);

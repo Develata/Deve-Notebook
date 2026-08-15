@@ -118,6 +118,7 @@
 - 当前阶段不通过显示层直接操控同步核心逻辑。
 - 当前阶段不要求 P2P 自动发现、NAT 穿透、自动 local merge 或移动端后台长时同步。
 - 当前阶段不提供压缩或分块 full snapshot；超过资源上限时明确失败。
+- 独立 `deve serve` 收到 Unix SIGTERM/SIGINT 或等价平台终止事件时，会先关闭 HTTP/WebSocket transport，再有界清理后台任务、repo lifecycle 与 watcher；Docker stop 不绕过正常 runtime cleanup。
 
 ## Chrome MCP 验收实例
 

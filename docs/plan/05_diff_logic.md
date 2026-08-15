@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-17`
+- `Last Review`: `2026-08-14`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -136,6 +136,8 @@ DeveStaged
 - Git push 只能发布已映射的 `.git` main mirror HEAD；它 **MUST** fail-closed 于 mirror 未 ready、
   Source Control 不干净、Git worktree 不干净、存在 queued/out-of-sync record、`.notegit`
   tracked 泄漏或 Git HEAD 未映射到最新 NoteGit/ngit commit。
+- Git push 的公开 report、CLI 输出与 blocker 只能包含 allowlisted remote/branch/head/category。公开或持久化的 Git object id 必须先规范化为精确的 40/64 位十六进制值；异常 Git stdout 或损坏的 durable object id 必须以固定 category fail-closed，不得进入 report。`remote get-url` 的 userinfo、query、fragment，以及 Git stderr/stdout、credential helper detail、host path 或 provider response body不得进入这些 surface；包括 status/store 在内的顶层命令失败必须投影为固定 repair category，原始 detail 只允许进入受控内部诊断。
+- commit diff 重建文档内容时必须只读取 `global_seq <= commit waterline` 的有序 content ops；不得先加载该文档全部未来历史再在内存中过滤。结构历史删除必须维护派生 children index，以与 subtree size 线性地退休后代；该 index 不是 authority。
 - repair action schema 只能用于诊断、人工修复指引和显式 retry；**MUST NOT** 被 Web、后台任务或 Command Palette 解释为自动 Git 写入授权。
 - 自动后台执行、可点击 repair UI 与 Web 后端直接执行 Git 写入 **MUST** 作为独立设计批次处理，不能从只读 status/review surface 隐式升级。
 - Proxy / plugin-host node role 摘要不得展示 legacy bridge mode；如果需要描述 Source Control，
@@ -154,6 +156,7 @@ remote provider -> ordered source acquisition -> project-owned bounded sink
 - source acquisition 只负责 locator/profile admission、确定性列举与逐文件 streaming；它不拥有 Remote Import session、Ledger、Projection Workspace、External Changes 或 apply 决策。
 - push 与 source acquisition 可以复用 provider、credential/profile、HTTP/signing 基础设施，但必须使用语义分离的 typed interface。locator/profile 必须继续满足 ADR 0008 的 exact host-local binding，禁止 ambient credential fallback 到任意 custom host。
 - Web surface 只发送 typed intent；provider I/O、路径归一化、预算 admission 与失败分类全部属于 backend/host infra。
+- push source 与 source acquisition 使用相同的 `2048 files / 4 MiB per file / 64 MiB total / bounded path` admission。push 必须通过 no-follow ordinary-file handle 读取，打开后校验 identity/reparse 属性，并且最多读取 admission 上限或已封存长度再加一个探测字节；不得先按 pathname 检查、再重新打开并无界 `read`。枚举与上传之间必须重验同一 file identity、长度与 content digest；并发替换、增长、算术溢出或累计预算变化都必须 fail-closed，不能把 provider 作为本机无界读取 sink。
 
 #### Push-only Implementation Anchor {#remote-projection-transport}
 

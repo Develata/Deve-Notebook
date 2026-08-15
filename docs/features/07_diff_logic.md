@@ -107,6 +107,7 @@ Web 只提供 `ngit:import`、`ngit:push` 与 `ngit:repair`
 - Git main mirror 只要求 Markdown Projection Workspace 的终态与 NoteGit/ngit 终态一致，不要求历史轨迹逐条一致。
 - ngit status/import/mirror/export/push 在执行 import apply、mirror/export 或 push 前必须复用本地 Projection Workspace identity gate；
   `.notegit` identity marker 或 Projection Locator 破损时不得写 pending/import、`.git` mirror 或发布 mirror HEAD。
+- ngit push 的可见 report 只显示脱敏 remote、branch、经 40/64 位十六进制校验的 head 与固定 blocker category；嵌入 URL 的 userinfo/query/fragment、异常 object id、host path 和 Git stderr/stdout 不得出现在 CLI、日志或可复制 blocker 中。status/store 等无法生成安全 report 的顶层失败同样只返回固定 category。
 - Web Command Palette 与 Source Control UI 不展示 legacy bridge mode；Source Control header 应写成 NoteGit/ngit authority-first 文案，避免把 Git main mirror 误读成 Git authority 切换。
 - Source Control header 的 section visibility menu 只用于切换 view-local section 显示；trigger 应暴露
   menu 展开状态，菜单项应暴露 checked 状态，并在选择后自动关闭。
@@ -134,6 +135,7 @@ Web 只提供 `ngit:import`、`ngit:push` 与 `ngit:repair`
   失败显示“Ledger 已提交、Projection degraded”，崩溃/重试幂等恢复，不得回滚 Ledger 或诱导重复 Apply。
 - Web 只发送 typed intent；provider/profile admission、stream capture、预算、candidate/diff/blocker、
   sealed writer 与 cleanup 全属于 backend/core infra。
+- Remote Projection push 与 import capture 使用同一资源预算：最多 2048 个文件、单文件 4 MiB、总 payload 64 MiB；超限在 provider upload 前明确失败。
 - backend/Web 已删除 `webdav:pull` / `s3:pull`、workspace overwrite、rollback continuation 与
   External Changes scan bridge。Push 使用独立 typed intent；Remote Import review 由 backend 聚合 blocker，
   完整独立 view 由 B5 继续交付。

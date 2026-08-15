@@ -155,3 +155,6 @@ absent	apps/desktop/src/service_entrypoint/spawn_spec.rs	"PATHEXT".to_string()
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	desktop_sidecar_receives_only_canonical_git_executable_not_host_path true
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	desktop_git_unavailable_does_not_block_local_backend true
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	check-desktop-local-backend-lifecycle.ps1 -ForceGitUnavailable
+contains	apps/desktop/src/tauri_bootstrap/mod.rs	native_session_cookie_install_succeeded
+contains	apps/desktop/src/tauri_bootstrap_test.rs	fn desktop_cookie_install_failure_returns_false_without_panic
+absent	apps/desktop/src/tauri_bootstrap/mod.rs	.expect("desktop native session cookie install failed before bootstrap")

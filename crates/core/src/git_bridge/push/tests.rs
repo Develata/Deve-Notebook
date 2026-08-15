@@ -1,7 +1,10 @@
-use super::{GitMirrorPushOptions, push_mirror, resolved_push_target, validate_push_name};
+use super::{
+    GitMirrorPushOptions, GitMirrorPushReport, collect_mapping_blockers, push_mirror,
+    resolve_push_target, resolved_push_target, sanitize_remote_url, validate_push_name,
+};
 use crate::git_bridge::{
-    GIT_MIRROR_COMMITS_TABLE, GitMirrorCommitState, GitMirrorPushError, GitMirrorRunOptions,
-    get_record, run_pending_mirror,
+    GIT_MIRROR_COMMITS_TABLE, GitMirrorCommitState, GitMirrorPushError, GitMirrorRecord,
+    GitMirrorRunOptions, get_record, run_pending_mirror,
 };
 use crate::ledger::RepoManager;
 use crate::source_control::pending_fs::{self, PendingFsEntry};
@@ -123,6 +126,12 @@ fn push_name_validation_rejects_option_like_or_whitespace_values() {
         ("--mirror", "remote"),
         ("origin --upload-pack=sh", "remote"),
         ("feature branch", "branch"),
+        (":refs/heads/main", "branch"),
+        ("HEAD:refs/heads/other", "branch"),
+        ("feature..other", "branch"),
+        ("topic.lock", "branch"),
+        ("https://user:secret@example.invalid/repo.git", "remote"),
+        ("../private/repo.git", "remote"),
         ("", "branch"),
     ] {
         let err = validate_push_name(value, label)
@@ -166,6 +175,112 @@ fn unresolved_push_target_becomes_blocker_instead_of_panic() {
         Some(("origin".into(), "main".into()))
     );
     assert!(ready.blockers.is_empty());
+}
+
+#[test]
+fn git_push_report_redacts_remote_credentials_and_command_detail() {
+    assert_eq!(
+        sanitize_remote_url("https://user:secret@example.invalid/repo.git?token=hidden#frag"),
+        Some("https://example.invalid/repo.git".into())
+    );
+    assert_eq!(
+        sanitize_remote_url("ssh://git@example.invalid/repo.git"),
+        Some("ssh://example.invalid/repo.git".into())
+    );
+    assert_eq!(
+        sanitize_remote_url("git@example.invalid:repo.git"),
+        Some("example.invalid:repo.git".into())
+    );
+    assert_eq!(
+        sanitize_remote_url("user:secret@example.invalid:repo.git"),
+        Some("example.invalid:repo.git".into())
+    );
+    assert_eq!(
+        sanitize_remote_url("https://example.invalid:443/repo.git"),
+        Some("https://example.invalid:443/repo.git".into())
+    );
+    assert_eq!(
+        sanitize_remote_url("ssh://git@[::1]:22/repo.git"),
+        Some("ssh://[::1]:22/repo.git".into())
+    );
+    for unsafe_remote in [
+        "/home/private/repo.git",
+        r"C:\Users\private\repo.git",
+        "file:///home/private/repo.git",
+        "relative/repo.git",
+        "https://user:secret/repo.git",
+        "https://example.invalid:token/repo.git",
+        "https://[not-ipv6]:22/repo.git",
+        "https://example.invalid/repo.git\nsecret",
+    ] {
+        assert_eq!(
+            sanitize_remote_url(unsafe_remote),
+            None,
+            "{unsafe_remote:?}"
+        );
+    }
+
+    let source = include_str!("../push.rs");
+    assert!(!source.contains("blocker(\"git_command\", reason)"));
+    assert!(source.contains("Git push command failed; inspect credential, network"));
+
+    let dir = tempfile::tempdir().expect("tempdir");
+    init_git_repo(dir.path());
+    let mut report = super::GitMirrorPushReport::default();
+    resolve_push_target(
+        dir.path(),
+        &GitMirrorPushOptions {
+            remote: Some("https://user:secret@example.invalid/repo.git".into()),
+            branch: Some("main".into()),
+        },
+        &mut report,
+    );
+    assert_eq!(report.remote, None);
+    assert_eq!(report.remote_url, None);
+    assert!(
+        !serde_json::to_string(&report)
+            .expect("report")
+            .contains("secret")
+    );
+}
+
+#[test]
+fn git_push_report_rejects_corrupt_durable_object_id_without_projection() {
+    let secret = "secret\nC:\\private\\repository";
+    let records = vec![GitMirrorRecord {
+        deve_commit_id: "deve-commit".into(),
+        repo_id: uuid::Uuid::new_v4(),
+        ledger_seq: 1,
+        state: GitMirrorCommitState::Committed,
+        git_commit_id: Some(secret.into()),
+        last_error: None,
+        failure_stage: None,
+        failure_subject: None,
+        failure_command: None,
+        failure_exit_status: None,
+        queued_at_ms: 1,
+        updated_at_ms: 1,
+        attempts: 1,
+    }];
+    let mut report = GitMirrorPushReport {
+        head: Some("0123456789abcdef0123456789abcdef01234567".into()),
+        ..Default::default()
+    };
+
+    collect_mapping_blockers(&records, &mut report);
+
+    assert_eq!(report.blockers.len(), 1, "{report:?}");
+    assert_eq!(report.blockers[0].location, "git_history_mapping");
+    assert!(
+        report.blockers[0]
+            .reason
+            .contains("invalid durable Git object identity")
+    );
+    assert!(
+        !serde_json::to_string(&report)
+            .expect("report")
+            .contains(secret)
+    );
 }
 
 #[test]
