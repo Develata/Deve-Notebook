@@ -23,7 +23,10 @@
   }
   if (installed) return;
 
-  root.queueMicrotask(() => Promise.resolve()
+  // A newly created Android WebView can execute document-start scripts before
+  // Tauri has finished registering that WebView on the native side. Yield one
+  // browser task so the first IPC request cannot race that registration.
+  root.setTimeout(() => Promise.resolve()
     .then(() => root.__TAURI_INTERNALS__.invoke(
       "plugin:deve-native-backend-commands|native_backend_prepare_webview_session",
     ))
@@ -34,5 +37,5 @@
       }
       root.location.reload();
     })
-    .catch(fail));
+    .catch(fail), 0);
 })

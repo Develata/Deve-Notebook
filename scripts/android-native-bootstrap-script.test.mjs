@@ -129,7 +129,7 @@ test("replacement storage failure projects session invalid", () => {
 });
 
 function prepareRoot(storage) {
-  const queued = [];
+  const scheduled = [];
   const events = [];
   let invokes = 0;
   let reloads = 0;
@@ -141,10 +141,13 @@ function prepareRoot(storage) {
       __TAURI_INTERNALS__: { invoke: async () => { invokes += 1; } },
       Event,
       dispatchEvent: (event) => events.push(event.type),
-      queueMicrotask: (callback) => queued.push(callback),
+      queueMicrotask: () => {
+        throw new Error("native handoff must not run in the document-start microtask checkpoint");
+      },
+      setTimeout: (callback, delay) => scheduled.push({ callback, delay }),
       location: { reload: () => { reloads += 1; } },
     },
-    queued,
+    scheduled,
     observation: () => ({ invokes, reloads, events }),
   };
 }
@@ -183,11 +186,16 @@ test("confirmed marker skips native handoff and reload", () => {
   assert.deepEqual(harness.observation(), { invokes: 0, reloads: 0, events: [] });
 });
 
-test("successful handoff confirms the marker before one reload", async () => {
+test("first-document handoff yields one browser task before invoking Tauri", async () => {
   const harness = prepareRoot(storageWith());
+  const invoke = harness.root.__TAURI_INTERNALS__.invoke;
+  delete harness.root.__TAURI_INTERNALS__;
   prepare(harness.root, installId);
-  assert.equal(harness.queued.length, 1);
-  await harness.queued[0]();
+  assert.deepEqual(harness.scheduled.map(({ delay }) => delay), [0]);
+  assert.deepEqual(harness.observation(), { invokes: 0, reloads: 0, events: [] });
+
+  harness.root.__TAURI_INTERNALS__ = { invoke };
+  await harness.scheduled[0].callback();
   assert.deepEqual(harness.observation(), { invokes: 1, reloads: 1, events: [] });
 });
 
@@ -199,7 +207,7 @@ test("rejected native handoff does not reload", async () => {
     throw new Error("native handoff rejected");
   };
   prepare(harness.root, installId);
-  await harness.queued[0]();
+  await harness.scheduled[0].callback();
   assert.equal(rejectedInvokes, 1);
   assert.equal(harness.observation().reloads, 0);
   assert.deepEqual(harness.observation().events, ["deve-native-service-error"]);
@@ -208,7 +216,7 @@ test("rejected native handoff does not reload", async () => {
 test("marker storage failure after handoff does not reload", async () => {
   const harness = prepareRoot(storageWith(undefined, { setThrows: true }));
   prepare(harness.root, installId);
-  await harness.queued[0]();
+  await harness.scheduled[0].callback();
   assert.deepEqual(harness.observation(), {
     invokes: 1,
     reloads: 0,
