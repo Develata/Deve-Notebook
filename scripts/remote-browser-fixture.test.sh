@@ -132,6 +132,8 @@ grep -Fq -- 'remote_fixture_run_bounded "password hasher"' "$ROOT_DIR/scripts/re
   || fail "password hasher must use bounded process infra"
 grep -Fq -- 'remote_fixture_run_bounded "exact-HEAD backend init"' "$ROOT_DIR/scripts/remote-browser-fixture.sh" \
   || fail "backend init must use bounded process infra"
+grep -Fq -- 'tunnel --no-autoupdate --protocol http2' "$ROOT_DIR/scripts/remote-browser-fixture.sh" \
+  || fail "quick tunnel must use deterministic HTTP/2 transport"
 grep -Fq -- '--max-time "$DEVE_REMOTE_FIXTURE_CLOUDFLARED_DOWNLOAD_TIMEOUT_SECONDS"' \
   "$ROOT_DIR/scripts/lib/remote-browser-fixture.sh" \
   || fail "cloudflared download must have a bounded timeout"

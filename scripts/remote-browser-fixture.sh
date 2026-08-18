@@ -311,7 +311,8 @@ NODE
 
     local cloudflared
     cloudflared="$(remote_fixture_install_cloudflared "$state_dir" "$cloudflared_executable")"
-    "$cloudflared" tunnel --no-autoupdate --url "http://127.0.0.1:$port" \
+    "$cloudflared" tunnel --no-autoupdate --protocol http2 \
+      --url "http://127.0.0.1:$port" \
       >"$state_dir/cloudflared.stdout.log" 2>"$state_dir/cloudflared.stderr.log" &
     tunnel_pid="$!"
     tunnel_token="$(remote_fixture_process_token "$tunnel_pid")"
