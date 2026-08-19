@@ -5,10 +5,12 @@ import {
   consumeExactCreateDocumentClickObservationByPath,
   finalizeExactCreateDocumentClickObservation,
   readExactCreateDocumentClickObservation,
+  readExactCreateDocumentLateClick,
 } from "./android-document-create-observation.mjs";
 
 const CREATE_CLICK_SETTLEMENT_MS = 2000;
 const CREATE_TOUCH_TRANSPORT_LEASE_MS = 5000;
+const CREATE_LATE_CLICK_DIAGNOSTIC_MS = 8000;
 
 export {
   armExactCreateDocumentClickObservation,
@@ -16,6 +18,7 @@ export {
   consumeExactCreateDocumentClickObservationByPath,
   finalizeExactCreateDocumentClickObservation,
   readExactCreateDocumentClickObservation,
+  readExactCreateDocumentLateClick,
 } from "./android-document-create-observation.mjs";
 
 export async function readExactCreateDocumentPointer(expectedPath) {
@@ -87,11 +90,30 @@ async function waitForExactCreateDocumentClickSettlement(page, token, timeoutMs)
   return observation;
 }
 
+async function waitForLateCreateDocumentClick(page, timeoutMs) {
+  const intervalMs = 100;
+  const attempts = Math.ceil(timeoutMs / intervalMs) + 1;
+  let evidence = null;
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    try {
+      evidence = await page.call(readExactCreateDocumentLateClick);
+    } catch {
+      break;
+    }
+    if (evidence?.lateClick) return evidence;
+    if (attempt + 1 < attempts) {
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    }
+  }
+  return evidence;
+}
+
 export async function clickExactCreateDocument(
   page,
   path,
   expectedWriterScope,
   tap = tapWebViewPoint,
+  lateClickDiagnosticMs = CREATE_LATE_CLICK_DIAGNOSTIC_MS,
 ) {
   const attemptNonce = `${Date.now()}-${clickExactCreateDocument.nextAttemptId}`;
   clickExactCreateDocument.nextAttemptId += 1;
@@ -173,6 +195,15 @@ export async function clickExactCreateDocument(
   } catch (error) {
     settlementError = error;
   }
+  let lateClickEvidence = null;
+  if (!settlementError
+    && !pointerError
+    && settlement?.kind === "observed"
+    && settlement.clicked !== true
+    && settlement.blocked !== true
+    && lateClickDiagnosticMs > 0) {
+    lateClickEvidence = await waitForLateCreateDocumentClick(page, lateClickDiagnosticMs);
+  }
   let observation;
   try {
     observation = await page.call(finalizeExactCreateDocumentClickObservation, armed.token);
@@ -197,7 +228,8 @@ export async function clickExactCreateDocument(
       : "did not produce a DOM click";
     throw new Error(
       `exact Create pointer ${category}: ${JSON.stringify(settlement)}; `
-        + `observation_cleanup=${JSON.stringify(observation)}`,
+        + `observation_cleanup=${JSON.stringify(observation)}; `
+        + `late_click=${JSON.stringify(lateClickEvidence)}`,
     );
   }
   return observation;

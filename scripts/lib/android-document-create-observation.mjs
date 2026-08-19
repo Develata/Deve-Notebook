@@ -39,6 +39,7 @@ export function armExactCreateDocumentClickObservation(
     nextToken: 1,
     sealed: false,
     sealListener: null,
+    lateClick: null,
   };
   if (lane.documentRoot !== document) return { kind: "document-mismatch" };
   if (lane.sealed) return { kind: "sealed" };
@@ -51,6 +52,11 @@ export function armExactCreateDocumentClickObservation(
     element.getAttribute("data-deve-search-result-create-target") === expectedPath);
   if (exactTargets.length !== 1 || exactTargets[0] !== target) {
     return { kind: "changed" };
+  }
+  const scrolling = document.scrollingElement ?? null;
+  let targetScroller = target.parentElement ?? null;
+  while (targetScroller && !(targetScroller.scrollHeight > targetScroller.clientHeight)) {
+    targetScroller = targetScroller.parentElement ?? null;
   }
   const token = lane.nextToken;
   lane.nextToken += 1;
@@ -67,6 +73,17 @@ export function armExactCreateDocumentClickObservation(
       pointerdown: false,
       pointerup: false,
       click: false,
+    },
+    touchStartTimeStamp: null,
+    touchEndTimeStamp: null,
+    scrollEvidence: {
+      scrollEvents: 0,
+      documentScrollTopAtArm: typeof scrolling?.scrollTop === "number"
+        ? scrolling.scrollTop
+        : null,
+      targetScrollerTopAtArm: typeof targetScroller?.scrollTop === "number"
+        ? targetScroller.scrollTop
+        : null,
     },
     documentRoot: document,
     listener: null,
@@ -92,6 +109,12 @@ export function armExactCreateDocumentClickObservation(
         const target = event.target
           ?.closest?.('[data-deve-search-result-action="create-doc"]') ?? null;
         if (!target) return;
+        if (!lane.lateClick) {
+          lane.lateClick = {
+            at: Date.now(),
+            timeStamp: typeof event.timeStamp === "number" ? event.timeStamp : null,
+          };
+        }
         event.preventDefault();
         event.stopImmediatePropagation();
       };
@@ -112,11 +135,29 @@ export function armExactCreateDocumentClickObservation(
   for (const phase of ["touchstart", "touchend", "pointerdown", "pointerup"]) {
     const phaseListener = (event) => {
       if (globalThis.__deveAndroidCreatePointerObservation !== observation) return;
-      if (matchesCurrentTargetAndScope(event)) observation.inputPhases[phase] = true;
+      if (matchesCurrentTargetAndScope(event)) {
+        observation.inputPhases[phase] = true;
+        if (phase === "touchstart") {
+          observation.touchStartTimeStamp = typeof event.timeStamp === "number"
+            ? event.timeStamp
+            : null;
+        }
+        if (phase === "touchend") {
+          observation.touchEndTimeStamp = typeof event.timeStamp === "number"
+            ? event.timeStamp
+            : null;
+        }
+      }
     };
     observation.phaseListeners.push({ phase, listener: phaseListener });
     observation.documentRoot.addEventListener(phase, phaseListener, { capture: true });
   }
+  const scrollListener = () => {
+    if (globalThis.__deveAndroidCreatePointerObservation !== observation) return;
+    observation.scrollEvidence.scrollEvents += 1;
+  };
+  observation.phaseListeners.push({ phase: "scroll", listener: scrollListener });
+  observation.documentRoot.addEventListener("scroll", scrollListener, { capture: true });
   observation.cleanup = () => {
     observation.documentRoot.removeEventListener("click", observation.listener, { capture: true });
     for (const phaseListener of observation.phaseListeners) {
@@ -174,6 +215,9 @@ export function armExactCreateDocumentClickObservation(
       blocked: observation.blocked,
       clickState: observation.clickState,
       inputPhases: { ...observation.inputPhases },
+      touchStartTimeStamp: observation.touchStartTimeStamp,
+      touchEndTimeStamp: observation.touchEndTimeStamp,
+      scrollEvidence: { ...observation.scrollEvidence },
     };
     delete globalThis.__deveAndroidCreatePointerObservation;
   }, settlementTimeoutMs);
@@ -194,6 +238,9 @@ export function readExactCreateDocumentClickObservation(token) {
     blocked: observation.blocked,
     clickState: observation.clickState,
     inputPhases: { ...observation.inputPhases },
+    touchStartTimeStamp: observation.touchStartTimeStamp,
+    touchEndTimeStamp: observation.touchEndTimeStamp,
+    scrollEvidence: { ...observation.scrollEvidence },
   };
 }
 
@@ -214,6 +261,12 @@ export function beginExactCreateDocumentClickSettlement(token, settlementTimeout
         const target = event.target
           ?.closest?.('[data-deve-search-result-action="create-doc"]') ?? null;
         if (!target) return;
+        if (!lane.lateClick) {
+          lane.lateClick = {
+            at: Date.now(),
+            timeStamp: typeof event.timeStamp === "number" ? event.timeStamp : null,
+          };
+        }
         event.preventDefault();
         event.stopImmediatePropagation();
       };
@@ -227,6 +280,9 @@ export function beginExactCreateDocumentClickSettlement(token, settlementTimeout
       blocked: observation.blocked,
       clickState: observation.clickState,
       inputPhases: { ...observation.inputPhases },
+      touchStartTimeStamp: observation.touchStartTimeStamp,
+      touchEndTimeStamp: observation.touchEndTimeStamp,
+      scrollEvidence: { ...observation.scrollEvidence },
     };
     delete globalThis.__deveAndroidCreatePointerObservation;
   };
@@ -245,6 +301,12 @@ export function finalizeExactCreateDocumentClickObservation(token) {
         const target = event.target
           ?.closest?.('[data-deve-search-result-action="create-doc"]') ?? null;
         if (!target) return;
+        if (!lane.lateClick) {
+          lane.lateClick = {
+            at: Date.now(),
+            timeStamp: typeof event.timeStamp === "number" ? event.timeStamp : null,
+          };
+        }
         event.preventDefault();
         event.stopImmediatePropagation();
       };
@@ -267,7 +329,27 @@ export function finalizeExactCreateDocumentClickObservation(token) {
     blocked: observation.blocked,
     clickState: observation.clickState,
     inputPhases: { ...observation.inputPhases },
+    touchStartTimeStamp: observation.touchStartTimeStamp,
+    touchEndTimeStamp: observation.touchEndTimeStamp,
+    scrollEvidence: { ...observation.scrollEvidence },
     laneSealed: lane?.sealed === true,
+  };
+}
+
+export function readExactCreateDocumentLateClick() {
+  const lane = globalThis.__deveAndroidCreatePointerLane;
+  if (!lane || lane.documentRoot !== document) return { kind: "missing", lateClick: null };
+  const finalObservation = lane.finalObservation ?? null;
+  const lateClick = lane.lateClick ?? null;
+  return {
+    kind: "observed",
+    laneSealed: lane.sealed === true,
+    lateClick,
+    lateClickDelayMs: lateClick
+      && typeof lateClick.timeStamp === "number"
+      && typeof finalObservation?.touchEndTimeStamp === "number"
+      ? lateClick.timeStamp - finalObservation.touchEndTimeStamp
+      : null,
   };
 }
 

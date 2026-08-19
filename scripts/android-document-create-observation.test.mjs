@@ -9,6 +9,7 @@ import {
   consumeExactCreateDocumentClickObservationByPath,
   finalizeExactCreateDocumentClickObservation,
   readExactCreateDocumentClickObservation,
+  readExactCreateDocumentLateClick,
   readExactCreateDocumentPointer,
 } from "./lib/android-document-create-touch.mjs";
 import { tapWebViewPoint } from "./lib/android-webview-pointer.mjs";
@@ -60,6 +61,9 @@ test("observation functions execute in an isolated CDP serialization realm", asy
     const finalized = callSerialized(finalizeExactCreateDocumentClickObservation, armed.token);
     assert.equal(finalized.kind, "observed");
     assert.equal(finalized.laneSealed, true);
+    const lateClick = callSerialized(readExactCreateDocumentLateClick);
+    assert.equal(lateClick.kind, "observed");
+    assert.equal(lateClick.lateClick, null);
 
     const cleanupContext = vm.createContext({
       document: globalThis.document,
@@ -183,6 +187,40 @@ test("exact Create synchronously seals after a blocked click", async () => {
       /did not produce a DOM click.*"blocked":true/,
     );
     assert.equal(commits, 0);
+  });
+});
+
+test("Create observation records scroll evidence and gesture timestamps", async () => {
+  let commits = 0;
+  const exact = createResult(exactPath, { onCommit: () => { commits += 1; } });
+  await withCreateDom([exact], exact, async () => {
+    globalThis.document.scrollingElement = { scrollTop: 12 };
+    const armed = armExactCreateDocumentClickObservation(
+      exactPath,
+      { x: 34, y: 42 },
+      "scroll-evidence",
+      100,
+      admittedWriterScope,
+    );
+    assert.equal(armed.kind, "armed");
+    exact.emitEvent("touchstart");
+    globalThis.document.emitEvent("scroll", exact);
+    exact.emitEvent("touchend");
+    assert.equal(
+      beginExactCreateDocumentClickSettlement(armed.token, 100).kind,
+      "settling",
+    );
+    exact.emitClick();
+
+    const finalized = finalizeExactCreateDocumentClickObservation(armed.token);
+
+    assert.equal(finalized.clicked, true);
+    assert.equal(commits, 1);
+    assert.equal(finalized.scrollEvidence.scrollEvents, 1);
+    assert.equal(finalized.scrollEvidence.documentScrollTopAtArm, 12);
+    assert.equal(typeof finalized.touchStartTimeStamp, "number");
+    assert.equal(typeof finalized.touchEndTimeStamp, "number");
+    assert.equal(globalThis.document.listenerCount("scroll"), 0);
   });
 });
 

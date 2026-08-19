@@ -8,6 +8,7 @@ import {
   consumeExactCreateDocumentClickObservationByPath,
   finalizeExactCreateDocumentClickObservation,
   readExactCreateDocumentClickObservation,
+  readExactCreateDocumentLateClick,
   readExactCreateDocumentPointer,
 } from "./lib/android-document-create-touch.mjs";
 import { tapWebViewPoint } from "./lib/android-webview-pointer.mjs";
@@ -171,7 +172,7 @@ test("exact Create click settlement timeout never retransmits the committed touc
     };
 
     await assert.rejects(
-      clickExactCreateDocument(page, exactPath, admittedWriterScope),
+      clickExactCreateDocument(page, exactPath, admittedWriterScope, undefined, 25),
       /click settlement timed out/,
     );
 
@@ -181,6 +182,7 @@ test("exact Create click settlement timeout never retransmits the committed touc
     for (const phase of ["touchstart", "touchend", "pointerdown", "pointerup"]) {
       assert.equal(globalThis.document.listenerCount(phase), 0);
     }
+    assert.equal(globalThis.document.listenerCount("scroll"), 0);
   });
 });
 
@@ -195,7 +197,7 @@ test("committed-unknown Create seals the document lane against a late click and 
     };
 
     await assert.rejects(
-      clickExactCreateDocument(page, exactPath, admittedWriterScope),
+      clickExactCreateDocument(page, exactPath, admittedWriterScope, undefined, 25),
       /settlement timed out/,
     );
     await assert.rejects(
@@ -206,6 +208,41 @@ test("committed-unknown Create seals the document lane against a late click and 
 
     assert.deepEqual(sent, ["touchStart", "touchEnd"]);
     assert.equal(late.immediatePropagationStopped, true);
+    assert.equal(commits, 0);
+    assert.equal(globalThis.document.clickListenerCount(), 1);
+    const lateEvidence = readExactCreateDocumentLateClick();
+    assert.equal(lateEvidence.kind, "observed");
+    assert.equal(lateEvidence.laneSealed, true);
+    assert.ok(lateEvidence.lateClick);
+    assert.equal(lateEvidence.lateClickDelayMs, null);
+  });
+});
+
+test("exact Create settlement timeout captures sealed late-click delay evidence", async () => {
+  let commits = 0;
+  const exact = createResult(exactPath, { onCommit: () => { commits += 1; } });
+  await withCreateDom([exact], exact, async () => {
+    const page = {
+      async call(fn, ...args) { return fn(...args); },
+      async send(_method, params) {
+        if (params.type === "touchStart") {
+          exact.emitEvent("pointerdown");
+          exact.emitEvent("touchstart");
+        }
+        if (params.type === "touchEnd") {
+          exact.emitEvent("pointerup");
+          exact.emitEvent("touchend");
+          setTimeout(() => exact.emitClick(), 2300);
+        }
+      },
+    };
+
+    const failure = await clickExactCreateDocument(page, exactPath, admittedWriterScope)
+      .then(() => null, (error) => error);
+
+    assert.match(failure.message, /click settlement timed out/);
+    assert.match(failure.message, /"lateClick":\{"at":\d+,"timeStamp":\d+\}/);
+    assert.match(failure.message, /"lateClickDelayMs":\d+/);
     assert.equal(commits, 0);
     assert.equal(globalThis.document.clickListenerCount(), 1);
   });

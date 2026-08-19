@@ -33,6 +33,7 @@ export function withCreateDom(elements, hit, run) {
       const event = {
         type,
         target,
+        timeStamp: Date.now(),
         defaultPrevented: false,
         immediatePropagationStopped: false,
         preventDefault() { this.defaultPrevented = true; },
