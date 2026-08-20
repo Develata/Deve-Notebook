@@ -38,6 +38,9 @@ test("Android RemoteBrowser smoke proves business flow, zero IPC, and native loc
   assert.match(businessFlowSource, /waitForCurrentStableAndroidRepoScope\(page, waitUntil\)/);
   assert.match(browserSource, /commitAndroidChange/);
   assert.match(browserSource, /exerciseAndroidLastRepoRemoval/);
+  assert.match(browserSource, /createFirstAndroidRepoFromBootstrapUnbound/);
+  assert.match(browserSource, /defaultRepoAbsent/);
+  assert.match(browserSource, /bootstrapUnbound/);
   assert.match(browserSource, /repoRemovalNoScope/);
   assert.match(browserSource, /ipc\.localhost/);
   assert.match(browserSource, /__DEVE_NATIVE_BACKEND_CONFIG__/);

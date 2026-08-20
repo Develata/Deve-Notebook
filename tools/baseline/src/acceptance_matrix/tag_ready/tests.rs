@@ -224,6 +224,7 @@ fn android_remote_fixture(
         "zeroNativeIpc": true,
         "nativeLocalRecovery": true,
         "remoteSurfaceDestroyedBeforeLocalIpc": true,
+        "freshLocalBootstrapUnboundBeforeFirstCreate": true,
         "freshLocalEndpointSessionScope": true,
         "remoteAuthorityNotReused": true,
         "noOrphanEmbeddedRuntime": true,
@@ -252,6 +253,13 @@ fn android_remote_fixture(
         "local": {
             "origin": "http://tauri.localhost",
             "endpoint": "http://127.0.0.1:39123",
+            "bootstrapUnbound": {
+                "status": "handshaking-repo",
+                "repoIdEmpty": true,
+                "scopeNonce": 0,
+                "defaultRepoAbsent": true
+            },
+            "status": "ready",
             "repoId": "repo-local",
             "scopeNonce": 9,
             "sessionGeneration": 1
@@ -371,6 +379,49 @@ fn android_remote_receipt_requires_observed_retirement_and_bundled_local_target(
     let (_, _, mut record) = android_remote_fixture(now);
     record.receipt.claims.as_mut().expect("claims")["recovery"]["local"]["origin"] =
         json!("https://stale-remote.example.test");
+    assert!(validate_fixture(&record, &row, &binding).is_err());
+}
+
+#[test]
+fn android_remote_receipt_requires_bootstrap_unbound_then_ready_first_create() {
+    let now = Utc::now();
+    let (row, binding, record) = android_remote_fixture(now);
+    assert!(validate_fixture(&record, &row, &binding).is_ok());
+
+    let (_, _, mut record) = android_remote_fixture(now);
+    record.receipt.claims.as_mut().expect("claims")["journey"]
+        .as_object_mut()
+        .expect("journey")
+        .remove("freshLocalBootstrapUnboundBeforeFirstCreate");
+    assert!(validate_fixture(&record, &row, &binding).is_err());
+
+    let (_, _, mut record) = android_remote_fixture(now);
+    record.receipt.claims.as_mut().expect("claims")["journey"]["freshLocalBootstrapUnboundBeforeFirstCreate"] =
+        json!(false);
+    assert!(validate_fixture(&record, &row, &binding).is_err());
+
+    let (_, _, mut record) = android_remote_fixture(now);
+    record.receipt.claims.as_mut().expect("claims")["recovery"]["local"]
+        .as_object_mut()
+        .expect("local recovery")
+        .remove("bootstrapUnbound");
+    assert!(validate_fixture(&record, &row, &binding).is_err());
+
+    for (field, invalid) in [
+        ("status", json!("ready")),
+        ("repoIdEmpty", json!(false)),
+        ("scopeNonce", json!(1)),
+        ("defaultRepoAbsent", json!(false)),
+    ] {
+        let (_, _, mut record) = android_remote_fixture(now);
+        record.receipt.claims.as_mut().expect("claims")["recovery"]["local"]["bootstrapUnbound"]
+            [field] = invalid;
+        assert!(validate_fixture(&record, &row, &binding).is_err());
+    }
+
+    let (_, _, mut record) = android_remote_fixture(now);
+    record.receipt.claims.as_mut().expect("claims")["recovery"]["local"]["status"] =
+        json!("handshaking-repo");
     assert!(validate_fixture(&record, &row, &binding).is_err());
 }
 

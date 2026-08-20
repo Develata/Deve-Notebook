@@ -795,6 +795,7 @@
         "scripts/lib/android-business-flow-removal-fixture.mjs",
         "scripts/android-document-create-flow.test.mjs",
         "scripts/android-document-create-pointer.test.mjs",
+        "scripts/android-document-create-settlement.test.mjs",
         "scripts/android-document-create-observation.test.mjs",
         "scripts/lib/android-identity-capability.mjs",
         "scripts/lib/android-writable-evidence.mjs",
@@ -939,6 +940,7 @@
         "scripts/lib/android-business-flow-removal-fixture.mjs",
         "scripts/android-document-create-flow.test.mjs",
         "scripts/android-document-create-pointer.test.mjs",
+        "scripts/android-document-create-settlement.test.mjs",
         "scripts/android-document-create-observation.test.mjs",
         "scripts/lib/android-writable-evidence.mjs",
         "scripts/mobile-android-emulator-journey.test.mjs",
@@ -973,7 +975,7 @@
           ]
         }
       ],
-      "note": "Build and run Android RemoteBrowser HTTPS login, edit, commit, resume, native local recovery, and zero-IPC proof on a self-owned emulator"
+      "note": "Build and run Android RemoteBrowser HTTPS login, edit, commit, resume, native local recovery into fresh zero-repo BootstrapUnbound, ordinary UI first-repo Create into a non-zero LocalBackend scope, and zero-IPC proof on a self-owned emulator"
     },
     {
       "producer_id": "desktop.local-backend",

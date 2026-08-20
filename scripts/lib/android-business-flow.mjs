@@ -261,14 +261,25 @@ export async function createFirstAndroidRepoFromBootstrapUnbound(
   name,
   { waitUntil, stableQuietMs = 1000, stableNow = () => globalThis.performance.now() },
 ) {
+  let lastInitial = null;
   const initial = await waitUntil("initial zero-repo BootstrapUnbound", async () => {
-    const current = await readRepoScope(page);
-    return current.status === "handshaking-repo"
-      && current.repoIdRaw === ""
-      && current.scopeNonceRaw === "0"
-      && current.scopeNonce === 0
-      ? current
+    lastInitial = await readRepoScope(page);
+    return lastInitial.status === "handshaking-repo"
+      && lastInitial.repoIdRaw === ""
+      && lastInitial.scopeNonceRaw === "0"
+      && lastInitial.scopeNonce === 0
+      ? lastInitial
       : null;
+  }).catch((error) => {
+    const diagnostic = {
+      status: lastInitial?.status === "ready" || lastInitial?.status === "handshaking-repo"
+        ? lastInitial.status
+        : "other",
+      repoIdPresent: typeof lastInitial?.repoIdRaw === "string"
+        && lastInitial.repoIdRaw.length > 0,
+      scopeNonce: Number.isSafeInteger(lastInitial?.scopeNonce) ? lastInitial.scopeNonce : null,
+    };
+    throw new Error(`${error.message}; last_scope=${JSON.stringify(diagnostic)}`);
   });
   assert.notEqual(
     initial.status,

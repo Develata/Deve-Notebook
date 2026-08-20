@@ -68,7 +68,7 @@
 - Remote Backend 必须先校验远端 HTTPS origin 的 `<origin>/api/node/role`，校验成功后才能保存；失败时 Settings 显示结构化失败反馈。
 - RemoteBrowser 失联时 UI 沿用浏览器锁屏/只读语义；远端页面不注册 backend facade，也不能调用 native IPC。
 - preference-driven RemoteBrowser 必须显示 Android/iOS 平台原生 “Use Local Backend” 控件；Android 在后台重进、Activity/WebView 重建或重新挂载后仍必须恢复该原生入口并保持在 WebView 之上，直到 native coordinator 明确退休它。显式 CLI/env override 必须隐藏。控件只调用 native coordinator，不进入远端 DOM，也不注册 RemoteBrowser IPC。
-- 切回 local 时必须销毁远端 WebView，启动新的 embedded supervisor，并以新的随机 endpoint、native session、repo handshake 与 scope 创建 bundled-local WebView；远端 cookie/session/authority 不得复用。
+- 切回 local 时必须销毁远端 WebView并启动新的 embedded supervisor；bundled-local WebView 使用新的随机 endpoint/native session，远端 cookie、session、repo 与 authority 均不得复用。fresh app-private data 没有本地 repo 时，界面先显示合法的 zero-repo BootstrapUnbound，再由用户可见的普通 Create 流程建立首个本地 repo；只有此后才能宣称 non-zero ready scope，不能由壳层暗建默认 repo。
 - `RemoteBrowser` 不启动 embedded service，不注入本地 endpoint/session bootstrap，不注册 Tauri commands，也不把远端 URL 保存为本地 writer authority。
 - `RemoteBrowser` 主 WebView 由 native 以已校验 HTTPS `WindowConfig` 直接创建，不通过 bundled 页面或远端页面的 init-script redirect 过渡。
 - `RemoteBrowser` 只接受 HTTPS origin；包含 userinfo、query、fragment 或业务子路径的 URL 必须被拒绝。
@@ -225,7 +225,7 @@
 4. 在后台期间终止当前 transport generation，再恢复前台并确认唯一 authority runtime 未重建、新 endpoint/session generation 被安装、旧 scope 写入被拒绝且非零 pending 未丢失。
 5. 在 Settings 中切换到 RemoteBrowser HTTPS origin，检查壳层只加载远端 origin且旧 embedded service 已有界退出。
 6. 模拟 RemoteBrowser 失联，确认远端页面没有 backend facade/native IPC；通过平台原生 “Use Local Backend” 控件切换。
-7. 确认远端 WebView 被销毁，bundled-local WebView 使用新的 loopback endpoint/session/scope，且切换前后没有孤儿 embedded runtime。
+7. 确认远端 WebView 被销毁，bundled-local WebView 使用新的 loopback endpoint/session；fresh app-private data 先进入 zero-repo BootstrapUnbound，再经普通 UI Create 建立首个本地 repo 与 non-zero ready scope，且切换前后没有孤儿 embedded runtime。
 
 期望结果：
 

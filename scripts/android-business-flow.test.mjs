@@ -204,6 +204,21 @@ test("first Android repo transitions from explicit BootstrapUnbound(0) to writer
   });
 });
 
+test("BootstrapUnbound timeout reports only a fixed last-scope summary", async () => {
+  await withFakeDom({ initialRepoIdRaw: "private-repo-id" }, async () => {
+    const failure = await createFirstAndroidRepoFromBootstrapUnbound(
+      page,
+      "first-repo",
+      repoCreateOptions,
+    ).then(() => null, (error) => error);
+    assert.match(
+      failure.message,
+      /last_scope=\{"status":"handshaking-repo","repoIdPresent":true,"scopeNonce":0\}/,
+    );
+    assert.doesNotMatch(failure.message, /private-repo-id/);
+  });
+});
+
 for (const [label, options] of [
   ["missing repo id", { initialRepoIdRaw: null }],
   ["missing nonce", { initialScopeNonceRaw: null }],

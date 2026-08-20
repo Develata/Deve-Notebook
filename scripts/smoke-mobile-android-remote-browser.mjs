@@ -12,6 +12,7 @@ import {
 } from "./lib/android-webview-cdp.mjs";
 import {
   commitAndroidChange,
+  createFirstAndroidRepoFromBootstrapUnbound,
   createAndroidDocument,
   dispatchWebViewText,
   exerciseAndroidLastRepoRemoval,
@@ -342,15 +343,17 @@ async function main() {
       ? state
       : null;
   }, 30000);
-  const localScope = await waitUntil("fresh LocalBackend repo scope", async () => {
-    const scope = await readScope(page);
-    return scope.status === "ready"
-      && scope.repoId
-      && Number.isInteger(scope.scopeNonce)
-      && scope.scopeNonce > 0
-      ? scope
-      : null;
-  }, 60000);
+  const localRepoLifecycle = await createFirstAndroidRepoFromBootstrapUnbound(
+    page,
+    `android-local-recovery-${stamp}`,
+    { waitUntil },
+  );
+  assert.equal(localRepoLifecycle.defaultRepoAbsent, true);
+  assert.equal(localRepoLifecycle.aliasCount, 1);
+  const localScope = localRepoLifecycle.created;
+  assert.equal(localScope.status, "ready");
+  assert.ok(localScope.repoId, "LocalBackend first Create must establish a repo scope");
+  assert.ok(Number.isSafeInteger(localScope.scopeNonce) && localScope.scopeNonce > 0);
   const transition = await nativeInvoke(page, "native_backend_get_recovery_state");
   assert.ok(
     Number.isSafeInteger(transition.recoveryId) && transition.recoveryId > 0,
@@ -403,6 +406,13 @@ async function main() {
       origin: localRuntime.origin,
       endpoint: service.endpoint,
       sessionGeneration: service.session_generation,
+      bootstrapUnbound: {
+        status: localRepoLifecycle.initial.status,
+        repoIdEmpty: localRepoLifecycle.initial.repoIdRaw === "",
+        scopeNonce: localRepoLifecycle.initial.scopeNonce,
+        defaultRepoAbsent: localRepoLifecycle.defaultRepoAbsent,
+      },
+      status: localScope.status,
       repoId: localScope.repoId,
       scopeNonce: localScope.scopeNonce,
     },
@@ -421,6 +431,11 @@ async function main() {
     nativeLocalRecovery: transition.phase === "local_window_created",
     remoteSurfaceDestroyedBeforeLocalIpc: transition.remoteSurfaceRetired
       && transition.localPluginsRegisteredAfterRemoteRetirement,
+    freshLocalBootstrapUnboundBeforeFirstCreate: localRepoLifecycle.initial.status
+      === "handshaking-repo"
+      && localRepoLifecycle.initial.repoIdRaw === ""
+      && localRepoLifecycle.initial.scopeNonce === 0
+      && localRepoLifecycle.defaultRepoAbsent,
     freshLocalEndpointSessionScope: Boolean(localScope.repoId)
       && localScope.scopeNonce > 0
       && service.session_generation === 1,

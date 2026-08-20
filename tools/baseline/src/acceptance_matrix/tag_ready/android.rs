@@ -155,6 +155,7 @@ fn validate_remote_journey(journey: &Value) -> Result<()> {
         "zeroNativeIpc",
         "nativeLocalRecovery",
         "remoteSurfaceDestroyedBeforeLocalIpc",
+        "freshLocalBootstrapUnboundBeforeFirstCreate",
         "freshLocalEndpointSessionScope",
         "remoteAuthorityNotReused",
         "noOrphanEmbeddedRuntime",
@@ -222,6 +223,17 @@ fn validate_authority_observations(recovery: &Value) -> Result<()> {
     let local = recovery
         .get("local")
         .context("Android RemoteBrowser local authority observation is missing")?;
+    let bootstrap = local
+        .get("bootstrapUnbound")
+        .context("Android RemoteBrowser local BootstrapUnbound observation is missing")?;
+    if bootstrap.get("status").and_then(Value::as_str) != Some("handshaking-repo")
+        || bootstrap.get("repoIdEmpty").and_then(Value::as_bool) != Some(true)
+        || bootstrap.get("scopeNonce").and_then(Value::as_u64) != Some(0)
+        || bootstrap.get("defaultRepoAbsent").and_then(Value::as_bool) != Some(true)
+        || local.get("status").and_then(Value::as_str) != Some("ready")
+    {
+        bail!("Android RemoteBrowser local BootstrapUnbound/Create observations are invalid");
+    }
     let remote_origin = remote.get("origin").and_then(Value::as_str).unwrap_or("");
     let local_origin = local.get("origin").and_then(Value::as_str).unwrap_or("");
     let remote_repo = remote.get("repoId").and_then(Value::as_str).unwrap_or("");

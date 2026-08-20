@@ -77,9 +77,17 @@ android_startup_diag_adb() {
           printf 'deve_mobile initial native session handoff failed closed: android_native_cookie_callback_timeout\n'
           printf 'deve_mobile initial native session handoff failed closed: android_initial_webview_admission_timeout\n'
           printf 'deve_mobile native session cookie handoff failed closed: android_native_cookie_not_retained\n'
+          printf 'DeveMobile: deve_mobile presentation checkpoint: android_system_gesture_insets_unavailable\n'
+          printf 'DeveMobile: deve_mobile ui back checkpoint: android_ui_back_root_backgrounded\n'
+          printf 'RustStdoutStderr: deve_mobile RemoteBrowser recovered to fresh LocalBackend runtime recovery_id=7\n'
+          printf '%s DeveMobile: deve_mobile presentation checkpoint: android_system_gesture_insets_unavailable\n' "$SECRET_SENTINEL"
+          printf '%s RustStdoutStderr: deve_mobile RemoteBrowser recovered to fresh LocalBackend runtime recovery_id=7\n' "$SECRET_SENTINEL"
+          printf '%s DeveMobile: deve_mobile initial native session handoff failed closed: android_native_cookie_callback_timeout\n' "$SECRET_SENTINEL"
           printf 'deve_mobile initial native session handoff failed closed: %s\n' "$SECRET_SENTINEL"
           printf 'deve_mobile native session cookie handoff failed closed: %s\n' "$SECRET_SENTINEL"
           printf 'dev.deve.notebook.mobile deve_mobile native session cookie handoff failed closed: %s\n' "$SECRET_SENTINEL"
+          printf 'dev.deve.notebook.mobile deve_mobile presentation checkpoint: %s\n' "$SECRET_SENTINEL"
+          printf 'dev.deve.notebook.mobile deve_mobile RemoteBrowser recovered to fresh LocalBackend runtime recovery_id=7 %s\n' "$SECRET_SENTINEL"
           ;;
       esac
       return 0
@@ -147,6 +155,12 @@ grep -Fq "deve_mobile initial native session handoff failed closed: android_init
   || test_fail "fixed WebView admission category missing from bounded diagnostics"
 grep -Fq "deve_mobile native session cookie handoff failed closed: android_native_cookie_not_retained" "$stderr_file" \
   || test_fail "fixed platform cookie category missing from bounded diagnostics"
+grep -Fq "deve_mobile presentation checkpoint: android_system_gesture_insets_unavailable" "$stderr_file" \
+  || test_fail "fixed Android presentation category missing from bounded diagnostics"
+grep -Fq "deve_mobile ui back checkpoint: android_ui_back_root_backgrounded" "$stderr_file" \
+  || test_fail "fixed Android UI Back category missing from bounded diagnostics"
+grep -Fq "deve_mobile RemoteBrowser recovered to fresh LocalBackend runtime recovery_id=7" "$stderr_file" \
+  || test_fail "fixed Android native recovery completion missing from bounded diagnostics"
 if grep -Fq "$SECRET_SENTINEL" "$stderr_file"; then
   test_fail "unknown native session handoff suffix leaked through bounded diagnostics"
 fi

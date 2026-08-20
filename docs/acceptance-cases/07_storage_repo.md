@@ -295,7 +295,7 @@
     - run: cargo test -p deve_cli repo_lifecycle_remove_e2_failure_restarts_old_watcher -- --nocapture
     - run: cargo test -p deve_core --lib authority_storage_runtime::local_authority::tests:: -- --nocapture
     - run: cargo test -p deve_core --test local_repo_routing_test -- --nocapture
-    - run: node --test scripts/android-document-create-pointer.test.mjs
+    - run: node --test scripts/android-document-create-pointer.test.mjs scripts/android-document-create-settlement.test.mjs
     - receipt: `repo-lifecycle.process-linux` 在 Linux exact HEAD 原子执行 removal runtime、真实 `deve` preview/apply/repair 子进程、20/21/22 映射、lost-response replay、secondary preservation 与 last-repo NoScope
     - receipt: `repo-lifecycle.process-windows` 在 Windows exact HEAD 执行同一命令组并产生独立 evidence ID，不与 Linux receipt 形成双重身份
     - receipt: `docker.multiclient-product` 通过真实 candidate image 浏览器 journey 证明 backend preview、initiator/observer finalization、last-repo NoScope、restart 后 first-create 与 workspace/Git preservation
