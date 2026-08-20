@@ -285,6 +285,21 @@ fn android_backend_recovery_uses_capability_free_activity_anchor_in_contract_ord
 }
 
 #[test]
+fn android_backend_recovery_initial_session_uses_invoking_current_webview() {
+    let commands = include_str!("native_backend_commands.rs");
+    let prepare = &commands[commands
+        .find("async fn native_backend_prepare_webview_session")
+        .expect("initial session command")..];
+    let prepare = &prepare[..prepare
+        .find("async fn native_backend_debug_stop_transport")
+        .expect("next native command")];
+
+    assert!(prepare.contains("state.prepare_initial_webview_session(&window).await"));
+    assert!(!prepare.contains("get_webview_window"));
+    assert!(!prepare.contains("MOBILE_MAIN_WINDOW_LABEL"));
+}
+
+#[test]
 fn android_back_dispatch_prioritizes_ime_and_backgrounds_only_after_matching_unhandled_ack() {
     let activity = include_str!(
         "../../gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt"

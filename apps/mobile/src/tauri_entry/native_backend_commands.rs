@@ -13,7 +13,6 @@ use tauri::{AppHandle, Manager, State, WebviewWindow, Wry};
 
 use super::backend_recovery::{PlatformColdRestartSource, request_platform_cold_restart};
 
-const MOBILE_MAIN_WINDOW_LABEL: &str = "main";
 const UNTRUSTED_ORIGIN: &str = "native backend command requires bundled LocalBackend origin";
 #[cfg(any(mobile, test))]
 const INITIAL_NATIVE_SESSION_HANDOFF_FAILURE_CATEGORIES: &[&str] = &[
@@ -108,18 +107,12 @@ async fn native_backend_get_recovery_state(
 #[tauri::command]
 async fn native_backend_prepare_webview_session(
     window: WebviewWindow<Wry>,
-    app: AppHandle<Wry>,
+    state: State<'_, std::sync::Arc<MobileEmbeddedBackendSupervisor>>,
 ) -> Result<(), String> {
     ensure_bundled_local_origin(&window)?;
-    let state = app
-        .try_state::<std::sync::Arc<MobileEmbeddedBackendSupervisor>>()
-        .ok_or_else(|| "mobile embedded runtime unavailable".to_string())?;
-    let webview = app
-        .get_webview_window(MOBILE_MAIN_WINDOW_LABEL)
-        .ok_or_else(|| "mobile main WebView unavailable".to_string())?;
     #[cfg(mobile)]
     {
-        let result = state.prepare_initial_webview_session(&webview).await;
+        let result = state.prepare_initial_webview_session(&window).await;
         if let Err(error) = &result {
             let category = initial_native_session_handoff_failure_category(error);
             eprintln!("deve_mobile initial native session handoff failed closed: {category}");
@@ -128,7 +121,7 @@ async fn native_backend_prepare_webview_session(
     }
     #[cfg(not(mobile))]
     {
-        let _ = (state, webview);
+        let _ = state;
         Err("mobile WebView session preparation is unavailable on this target".to_string())
     }
 }

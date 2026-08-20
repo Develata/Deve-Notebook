@@ -186,7 +186,7 @@ test("confirmed marker skips native handoff and reload", () => {
   assert.deepEqual(harness.observation(), { invokes: 0, reloads: 0, events: [] });
 });
 
-test("first-document handoff yields one browser task before invoking Tauri", async () => {
+test("delayed Tauri invoke bridge becomes ready within the bounded admission window", async () => {
   const harness = prepareRoot(storageWith());
   const invoke = harness.root.__TAURI_INTERNALS__.invoke;
   delete harness.root.__TAURI_INTERNALS__;
@@ -194,9 +194,39 @@ test("first-document handoff yields one browser task before invoking Tauri", asy
   assert.deepEqual(harness.scheduled.map(({ delay }) => delay), [0]);
   assert.deepEqual(harness.observation(), { invokes: 0, reloads: 0, events: [] });
 
+  await harness.scheduled.shift().callback();
+  assert.deepEqual(harness.scheduled.map(({ delay }) => delay), [25]);
+  assert.deepEqual(harness.observation(), { invokes: 0, reloads: 0, events: [] });
+
   harness.root.__TAURI_INTERNALS__ = { invoke };
-  await harness.scheduled[0].callback();
+  await harness.scheduled.shift().callback();
   assert.deepEqual(harness.observation(), { invokes: 1, reloads: 1, events: [] });
+});
+
+test("Tauri invoke bridge admission exhaustion fails closed without a late invoke", async () => {
+  const harness = prepareRoot(storageWith());
+  const invoke = harness.root.__TAURI_INTERNALS__.invoke;
+  delete harness.root.__TAURI_INTERNALS__;
+  prepare(harness.root, installId);
+  const scheduledDelays = [];
+  while (harness.scheduled.length > 0) {
+    assert.ok(scheduledDelays.length < 200, "bridge readiness admission must stay bounded");
+    const task = harness.scheduled.shift();
+    scheduledDelays.push(task.delay);
+    await task.callback();
+  }
+  assert.equal(scheduledDelays.length, 200);
+  assert.equal(scheduledDelays[0], 0);
+  assert.ok(scheduledDelays.slice(1).every((delay) => delay === 25));
+  assert.deepEqual(harness.observation(), {
+    invokes: 0,
+    reloads: 0,
+    events: ["deve-native-service-error"],
+  });
+
+  harness.root.__TAURI_INTERNALS__ = { invoke };
+  assert.deepEqual(harness.scheduled, []);
+  assert.equal(harness.observation().invokes, 0);
 });
 
 test("rejected native handoff does not reload", async () => {

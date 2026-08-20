@@ -797,6 +797,11 @@ contains	apps/mobile/src/embedded_backend/cookie.rs	fn mobile_embedded_backend_a
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_native_session_cookie_callback_failure_timeout_and_late_completion_fail_closed true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_initial_and_resume_webview_session_handoffs_share_process_single_flight_gate true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_recovery_webview_handoff_waits_for_native_surface_admission true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_recovery_initial_session_uses_invoking_current_webview true
+contains	apps/mobile/src/tauri_entry/tests.rs	fn android_backend_recovery_initial_session_uses_invoking_current_webview()
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_initial_session_waits_for_bounded_invoke_bridge_readiness true
+contains	scripts/android-native-bootstrap-script.test.mjs	delayed Tauri invoke bridge becomes ready within the bounded admission window
+contains	scripts/android-native-bootstrap-script.test.mjs	Tauri invoke bridge admission exhaustion fails closed without a late invoke
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	observe: admission timeout and supervisor shutdown cancel all waiters and reject a late recovery grant
 contains	apps/mobile/src/embedded_backend/webview_admission.rs	fn android_recovery_webview_handoff_waits_for_native_surface_admission()
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_initial_session_install_marker_rejects_stale_process_bootstrap_on_reused_endpoint true

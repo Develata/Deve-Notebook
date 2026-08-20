@@ -23,19 +23,42 @@
   }
   if (installed) return;
 
-  // A newly created Android WebView can execute document-start scripts before
-  // Tauri has finished registering that WebView on the native side. Yield one
-  // browser task so the first IPC request cannot race that registration.
-  root.setTimeout(() => Promise.resolve()
-    .then(() => root.__TAURI_INTERNALS__.invoke(
-      "plugin:deve-native-backend-commands|native_backend_prepare_webview_session",
-    ))
-    .then(() => {
-      root.sessionStorage.setItem(key, installId);
-      if (root.sessionStorage.getItem(key) !== installId) {
-        throw new Error("native session install marker unavailable");
+  const bridgeRetryDelayMs = 25;
+  const bridgeMaxAttempts = 200;
+  let bridgeAttempts = 0;
+  let terminal = false;
+  let inFlight = false;
+  const failOnce = () => {
+    if (terminal) return;
+    terminal = true;
+    fail();
+  };
+  const attempt = () => {
+    if (terminal || inFlight) return undefined;
+    const invoke = root.__TAURI_INTERNALS__?.invoke;
+    if (typeof invoke !== "function") {
+      bridgeAttempts += 1;
+      if (bridgeAttempts >= bridgeMaxAttempts) {
+        failOnce();
+        return undefined;
       }
-      root.location.reload();
-    })
-    .catch(fail), 0);
+      root.setTimeout(attempt, bridgeRetryDelayMs);
+      return undefined;
+    }
+    inFlight = true;
+    return Promise.resolve()
+      .then(() => invoke(
+        "plugin:deve-native-backend-commands|native_backend_prepare_webview_session",
+      ))
+      .then(() => {
+        root.sessionStorage.setItem(key, installId);
+        if (root.sessionStorage.getItem(key) !== installId) {
+          throw new Error("native session install marker unavailable");
+        }
+        terminal = true;
+        root.location.reload();
+      })
+      .catch(failOnce);
+  };
+  root.setTimeout(attempt, 0);
 })
