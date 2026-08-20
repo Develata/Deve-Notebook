@@ -122,6 +122,7 @@ fn record(now: chrono::DateTime<Utc>) -> ReceiptRecord {
                     "staleScopeRejected": true,
                     "pendingPreserved": true,
                     "repoRemovalNoScope": true,
+                    "rootBackBackgroundsTaskWithStablePid": true,
                     "writableLifecycleComplete": true
                 }
             })),
@@ -322,6 +323,30 @@ fn android_receipt_requires_repo_removal_no_scope_claim() {
         .and_then(|journey| journey.as_object_mut())
         .expect("journey claims")
         .remove("repoRemovalNoScope");
+    assert!(validate_fixture(&record, &row, &binding).is_err());
+}
+
+#[test]
+fn android_receipt_requires_root_back_same_pid_claim() {
+    let now = Utc::now();
+    let row = row();
+    let binding = binding();
+    let mut record = record(now);
+    assert!(validate_fixture(&record, &row, &binding).is_ok());
+    record
+        .receipt
+        .claims
+        .as_mut()
+        .and_then(|claims| claims.get_mut("journey"))
+        .and_then(|journey| journey.as_object_mut())
+        .expect("journey claims")
+        .remove("rootBackBackgroundsTaskWithStablePid");
+    assert!(validate_fixture(&record, &row, &binding).is_err());
+    record.receipt.claims.as_mut().expect("claims")["journey"]["rootBackBackgroundsTaskWithStablePid"] =
+        json!(true);
+    assert!(validate_fixture(&record, &row, &binding).is_ok());
+    record.receipt.claims.as_mut().expect("claims")["journey"]["rootBackBackgroundsTaskWithStablePid"] =
+        json!(false);
     assert!(validate_fixture(&record, &row, &binding).is_err());
 }
 

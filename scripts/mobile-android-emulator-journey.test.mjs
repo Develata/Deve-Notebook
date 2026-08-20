@@ -293,10 +293,21 @@ test("local lifecycle proves root Back backgrounds and rebinds the same app proc
   assert.match(localJourney, /data-deve-native-presentation/);
   assert.match(localJourney, /waitForAndroidRootReentry/);
   assert.match(lifecycleHarness, /root Back lifecycle rebind/);
-  assert.match(lifecycleHarness, /state\.service_state === "endpoint_session_ready"/);
-  assert.match(lifecycleHarness, /projection\.bootstrapSessionBound/);
-  assert.match(lifecycleHarness, /projection\.nativeSessionInstalled/);
-  assert.match(lifecycleHarness, /presentation\.epoch > presentationBeforeRootBack\.epoch/);
+  assert.match(
+    lifecycleHarness,
+    /endpointSessionReady: state\?\.service_state === "endpoint_session_ready"/,
+  );
+  assert.match(lifecycleHarness, /bootstrapSessionBound: projection\?\.bootstrapSessionBound/);
+  assert.match(lifecycleHarness, /nativeSessionInstalled: projection\?\.nativeSessionInstalled/);
+  assert.match(
+    lifecycleHarness,
+    /freshPresentationEpoch: epoch !== null && epoch > presentationBeforeRootBack\.epoch/,
+  );
+  assert.match(lifecycleHarness, /rootReentryObservationIsReady\(lastObservation\)/);
+  assert.match(
+    lifecycleHarness,
+    /requireAndroidRootBackStablePid\(pidBefore, readPid\(\)\)/,
+  );
   assert.equal(
     (businessFlow.match(/await closeMobileSidebar\(page, \{ click: clickVisible, waitUntil \}\);/gu)
       ?? []).length,

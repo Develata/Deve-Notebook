@@ -83,6 +83,7 @@ fn validate_local_journey(journey: &Value) -> Result<()> {
         "staleScopeRejected",
         "pendingPreserved",
         "repoRemovalNoScope",
+        "rootBackBackgroundsTaskWithStablePid",
     ] {
         if journey.get(claim).and_then(Value::as_bool) != Some(true) {
             bail!("Android LocalBackend journey is missing required claim {claim}");

@@ -1,5 +1,50 @@
 import { execFileSync } from "node:child_process";
 
+const ROOT_REENTRY_SAMPLE_TIMEOUT_MS = 5_000;
+
+function rootReentryObservation(raw, presentationBeforeRootBack) {
+  const state = raw?.state;
+  const projection = raw?.projection;
+  const presentation = raw?.presentation;
+  const generation = Number.isSafeInteger(presentation?.generation)
+    ? presentation.generation
+    : null;
+  const epoch = Number.isSafeInteger(presentation?.epoch) ? presentation.epoch : null;
+  return {
+    backendRunning: state?.backend_running === true,
+    endpointSessionReady: state?.service_state === "endpoint_session_ready",
+    bootstrapUnbound: projection?.syncStatus === "handshaking-repo"
+      && projection.repoIdRaw === "",
+    loginHidden: projection?.loginVisible === false,
+    bootstrapSessionBound: projection?.bootstrapSessionBound === true,
+    nativeSessionInstalled: projection?.nativeSessionInstalled === true,
+    samePresentationGeneration: generation === presentationBeforeRootBack.generation,
+    freshPresentationEpoch: epoch !== null && epoch > presentationBeforeRootBack.epoch,
+    presentationGeneration: generation,
+    presentationEpoch: epoch,
+  };
+}
+
+function rootReentryObservationIsReady(observation) {
+  return observation.backendRunning
+    && observation.endpointSessionReady
+    && observation.bootstrapUnbound
+    && observation.loginHidden
+    && observation.bootstrapSessionBound
+    && observation.nativeSessionInstalled
+    && observation.samePresentationGeneration
+    && observation.freshPresentationEpoch;
+}
+
+export function requireAndroidRootBackStablePid(pidBefore, pidAfter) {
+  if (!/^[1-9][0-9]*$/.test(pidBefore)
+    || !/^[1-9][0-9]*$/.test(pidAfter)
+    || pidAfter !== pidBefore) {
+    throw new Error("android_root_back_pid_unstable");
+  }
+  return true;
+}
+
 export function classifyAndroidActivityResumed(output, appId) {
   if (typeof output !== "string"
     || typeof appId !== "string"
@@ -32,7 +77,12 @@ export function classifyAndroidActivityResumed(output, appId) {
   return "not-resumed";
 }
 
-export function createAndroidLifecycleHarness({ timeoutMs, adb, serial }) {
+export function createAndroidLifecycleHarness({
+  timeoutMs,
+  adb,
+  serial,
+  rootReentrySampleTimeoutMs = ROOT_REENTRY_SAMPLE_TIMEOUT_MS,
+}) {
   const harnessDeadline = Date.now() + timeoutMs;
 
   function remainingMs() {
@@ -111,83 +161,115 @@ export function createAndroidLifecycleHarness({ timeoutMs, adb, serial }) {
   }
 
   async function proveAndroidRootBackBackground(appId, reentryReady) {
-    const readPid = () => adbOutput("shell", "pidof", appId).trim();
-    const resumedState = () => classifyAndroidActivityResumed(
-      adbOutput("shell", "dumpsys", "activity", "activities"),
-      appId,
-    );
-    const rootBackLogCount = () => adbOutput(
-      "shell", "logcat", "-d", "-s", "DeveMobile:I", "*:S",
-    ).split("\n").filter((line) => line.includes("android_ui_back_root_backgrounded")).length;
+    try {
+      const readPid = () => adbOutput("shell", "pidof", appId).trim();
+      const resumedState = () => classifyAndroidActivityResumed(
+        adbOutput("shell", "dumpsys", "activity", "activities"),
+        appId,
+      );
+      const rootBackLogCount = () => adbOutput(
+        "shell", "logcat", "-d", "-s", "DeveMobile:I", "*:S",
+      ).split("\n").filter((line) => line.includes("android_ui_back_root_backgrounded")).length;
 
-    const pidBefore = readPid();
-    if (!pidBefore) throw new Error("Android root Back proof requires a live app PID");
-    const logsBefore = rootBackLogCount();
-    adbCommand("shell", "input", "keyevent", "4");
-    await waitUntil("root Back backgrounds task", () => (
-      resumedState() === "not-resumed"
-        && readPid() === pidBefore
-        && rootBackLogCount() > logsBefore
-    ), 30000);
-    adbCommand("shell", "monkey", "-p", appId, "-c", "android.intent.category.LAUNCHER", "1");
-    await waitUntil("root Back task reentry", () => (
-      resumedState() === "resumed" && readPid() === pidBefore
-    ), 30000);
-    await reentryReady();
-    return { pidStable: readPid() === pidBefore, rootBackBackgrounded: true, reentryReady: true };
+      const pidBefore = readPid();
+      requireAndroidRootBackStablePid(pidBefore, pidBefore);
+      const logsBefore = rootBackLogCount();
+      adbCommand("shell", "input", "keyevent", "4");
+      await waitUntil("root Back backgrounds task", () => (
+        resumedState() === "not-resumed"
+          && readPid() === pidBefore
+          && rootBackLogCount() > logsBefore
+      ), 30000);
+      adbCommand(
+        "shell", "monkey", "-p", appId, "-c", "android.intent.category.LAUNCHER", "1",
+      );
+      await waitUntil("root Back task reentry", () => (
+        resumedState() === "resumed" && readPid() === pidBefore
+      ), 30000);
+      await reentryReady();
+      requireAndroidRootBackStablePid(pidBefore, readPid());
+      return { pidStable: true, rootBackBackgrounded: true, reentryReady: true };
+    } catch {
+      throw new Error("android_root_back_proof_failed");
+    }
   }
 
   async function waitForAndroidRootReentry(readState, presentationBeforeRootBack) {
-    return waitUntil("root Back lifecycle rebind", async () => {
-      const { state, projection, presentation } = await readState();
-      return state?.backend_running === true
-        && state.service_state === "endpoint_session_ready"
-        && projection.syncStatus === "handshaking-repo"
-        && projection.repoIdRaw === ""
-        && projection.loginVisible === false
-        && projection.bootstrapSessionBound
-        && projection.nativeSessionInstalled
-        && presentation?.generation === presentationBeforeRootBack.generation
-        && Number.isSafeInteger(presentation?.epoch)
-        && presentation.epoch > presentationBeforeRootBack.epoch;
-    }, 120000);
+    const sampleBudget = Number.isSafeInteger(rootReentrySampleTimeoutMs)
+      && rootReentrySampleTimeoutMs > 0
+      ? rootReentrySampleTimeoutMs
+      : ROOT_REENTRY_SAMPLE_TIMEOUT_MS;
+    let lastObservation = null;
+    let sampleFailures = 0;
+    try {
+      return await waitUntil("root Back lifecycle rebind", async () => {
+        let raw;
+        try {
+          raw = await withDeadline(
+            "Android root Back reentry readonly sample",
+            Promise.resolve().then(readState),
+            Math.min(sampleBudget, remainingMs()),
+          );
+        } catch {
+          sampleFailures += 1;
+          return false;
+        }
+        lastObservation = rootReentryObservation(raw, presentationBeforeRootBack);
+        return rootReentryObservationIsReady(lastObservation);
+      }, 120000);
+    } catch {
+      const category = sampleFailures > 0
+        ? "android_root_reentry_sample_failed"
+        : "android_root_reentry_incomplete";
+      throw new Error(
+        `root Back lifecycle rebind failed; category=${category}; `
+          + `sampleFailures=${sampleFailures}; last=${JSON.stringify(lastObservation)}`,
+      );
+    }
   }
 
   async function readAndroidUiBackSurfaceObservation(page) {
-    return page.call(() => {
-      const visible = (selector) => [...document.querySelectorAll(selector)].some((element) => {
-        const style = getComputedStyle(element);
-        const rect = element.getBoundingClientRect();
-        return style.display !== "none"
-          && style.visibility !== "hidden"
-          && rect.width > 0
-          && rect.height > 0;
+    try {
+      return await page.call(() => {
+        const visible = (selector) => [...document.querySelectorAll(selector)].some((element) => {
+          const style = getComputedStyle(element);
+          const rect = element.getBoundingClientRect();
+          return style.display !== "none"
+            && style.visibility !== "hidden"
+            && rect.width > 0
+            && rect.height > 0;
+        });
+        return {
+          editorVisible: visible("[data-deve-editor-host=true]"),
+          repoSwitcherVisible: visible("[data-deve-repo-switcher-menu]"),
+          repoRemovalDialogVisible: visible('[data-deve-repo-removal-dialog="visible"]'),
+          settingsVisible: visible('[data-deve-settings-surface="modal"]'),
+          searchVisible: visible("[data-deve-search-sheet-position]"),
+          mobileMoreMenuVisible: visible("[data-deve-mobile-more-menu]"),
+          sourceControlMenuVisible: visible('[data-deve-sc-section-menu="true"]'),
+          surfaceSwitcherVisible: visible('[data-deve-mobile-surface-sheet="open"]'),
+          chatExpanded: visible('[data-deve-mobile-chat="expanded"]'),
+          leftDrawerOpen: document.querySelector('[data-deve-mobile-drawer="left"]')
+            ?.getAttribute("data-deve-mobile-drawer-open") === "true",
+          rightDrawerOpen: document.querySelector('[data-deve-mobile-drawer="right"]')
+            ?.getAttribute("data-deve-mobile-drawer-open") === "true",
+          visibleDialogCount: [...document.querySelectorAll('[role="dialog"]')]
+            .filter((element) => {
+              const style = getComputedStyle(element);
+              const rect = element.getBoundingClientRect();
+              return style.display !== "none"
+                && style.visibility !== "hidden"
+                && rect.width > 0
+                && rect.height > 0;
+            }).length,
+        };
       });
+    } catch {
       return {
-        editorVisible: visible("[data-deve-editor-host=true]"),
-        repoSwitcherVisible: visible("[data-deve-repo-switcher-menu]"),
-        repoRemovalDialogVisible: visible('[data-deve-repo-removal-dialog="visible"]'),
-        settingsVisible: visible('[data-deve-settings-surface="modal"]'),
-        searchVisible: visible("[data-deve-search-sheet-position]"),
-        mobileMoreMenuVisible: visible("[data-deve-mobile-more-menu]"),
-        sourceControlMenuVisible: visible('[data-deve-sc-section-menu="true"]'),
-        surfaceSwitcherVisible: visible('[data-deve-mobile-surface-sheet="open"]'),
-        chatExpanded: visible('[data-deve-mobile-chat="expanded"]'),
-        leftDrawerOpen: document.querySelector('[data-deve-mobile-drawer="left"]')
-          ?.getAttribute("data-deve-mobile-drawer-open") === "true",
-        rightDrawerOpen: document.querySelector('[data-deve-mobile-drawer="right"]')
-          ?.getAttribute("data-deve-mobile-drawer-open") === "true",
-        visibleDialogCount: [...document.querySelectorAll('[role="dialog"]')]
-          .filter((element) => {
-            const style = getComputedStyle(element);
-            const rect = element.getBoundingClientRect();
-            return style.display !== "none"
-              && style.visibility !== "hidden"
-              && rect.width > 0
-              && rect.height > 0;
-          }).length,
+        observationAvailable: false,
+        category: "android_ui_back_surface_observation_failed",
       };
-    });
+    }
   }
 
   return {

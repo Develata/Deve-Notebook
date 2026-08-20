@@ -55,7 +55,7 @@
 - 打开与关闭 sheet 时，不应和滚动、drawer、outline 产生语义冲突。
 - Sheet 打开时不得自动聚焦输入框或弹出软键盘；初始焦点进入面板或 44×44 的 `×` 关闭按钮。
 - 用户可通过 `×`、外部点击、上滑或系统返回关闭最上层 surface。
-- Android 返回键先关闭可见键盘，再关闭 overlay、drawer、outline 或受保护文档 surface；根界面返回只把任务退到后台，不结束 Activity，重新进入后恢复当前 runtime。target-host 在证明根返回前会显式收敛本场景打开的 repo switcher、菜单、dialog 与 Drawer，并拒绝用连续 Back 掩盖残留 surface。
+- Android 返回键先关闭可见键盘，再关闭 overlay、drawer、outline 或受保护文档 surface；根界面返回只把任务退到后台，不结束 Activity，重新进入后恢复当前 runtime。target-host 在证明根返回前会显式收敛本场景打开的 repo switcher、菜单、dialog 与 Drawer，并拒绝用连续 Back 掩盖残留 surface；重进后的只读状态轮询会给每次采样单独设置短预算，单次无响应不会吞掉整个 rebind 窗口，但总 deadline 耗尽或无法取得 fresh native session / presentation 证据时仍然失败。
 - Android target-host 兼容 AOSP 与 Android 15/OEM 的 resumed-Activity 规范字段，并按精确包组件判定前后台；未知字段、不可解析/互相冲突的规范字段或包名前缀碰撞会阻断证据，不会被当作已经后台化。
 
 ### 5. Native 双模式

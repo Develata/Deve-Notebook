@@ -1267,6 +1267,8 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: ime_visib
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: activity_backgrounds_only_after_matching_unhandled_ack true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: stale_ack_and_timeout_do_not_background_or_exit_activity true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: root_back_keeps_pid_and_reentry_completes_lifecycle_rebind true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: root_back_reentry_retries_bounded_stalled_readonly_sample_without_extending_total_deadline true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: root_back_failure_diagnostics_are_fixed_and_pid_replacement_cannot_produce_a_valid_receipt true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: target_host_root_back_does_not_repeat_back_to_hide_surface_leaks true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	run: node --test scripts/android-lifecycle-harness.test.mjs
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-026	native_assert: unknown_resumed_activity_projection_fails_closed true
@@ -1278,8 +1280,16 @@ contains	scripts/lib/android-business-flow-removal-fixture.mjs	drawerCloseCount
 contains	docs/registry/acceptance-producers.json	scripts/lib/android-business-flow-removal-fixture.mjs
 contains	scripts/mobile-android-emulator-host.test.mjs	scripts/lib/android-business-flow-removal-fixture.mjs
 contains	scripts/lib/android-lifecycle-harness.mjs	classifyAndroidActivityResumed
+contains	scripts/lib/android-lifecycle-harness.mjs	Android root Back reentry readonly sample
+contains	scripts/lib/android-lifecycle-harness.mjs	android_root_reentry_sample_failed
 contains	scripts/android-lifecycle-harness.test.mjs	HyperOS topResumedActivity
 contains	scripts/android-lifecycle-harness.test.mjs	fails closed when admitted keys conflict
+contains	scripts/android-lifecycle-harness.test.mjs	root Back reentry retries one bounded stalled readonly sample
+contains	scripts/android-lifecycle-harness.test.mjs	root Back reentry sampling failure exposes only fixed bounded diagnostics
+contains	scripts/android-lifecycle-harness.test.mjs	root Back surface observation failure exposes only a fixed category
+contains	scripts/android-lifecycle-harness.test.mjs	root Back PID replacement fails with a fixed category
+contains	scripts/android-lifecycle-harness.test.mjs	root Back proof hides raw ADB failures behind a fixed category
+contains	tools/baseline/src/acceptance_matrix/tag_ready/tests.rs	android_receipt_requires_root_back_same_pid_claim
 contains	scripts/android-lifecycle-harness.test.mjs	fails closed on package prefix collisions
 contains	scripts/android-lifecycle-harness.test.mjs	ResumedActivity: null
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-lifecycle-harness.test.mjs

@@ -464,9 +464,7 @@ async function main() {
       ]);
       return { state, projection, presentation };
     }, presentationBeforeRootBack)).catch(async (error) => {
-    const rootSurfaceAfter = await readAndroidUiBackSurfaceObservation(page).catch(
-      (observationError) => ({ observationError: observationError.message }),
-    );
+    const rootSurfaceAfter = await readAndroidUiBackSurfaceObservation(page);
     throw new Error(
       `${error.message}; rootBack=${JSON.stringify({
         before: rootSurfaceBefore,

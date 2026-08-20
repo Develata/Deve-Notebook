@@ -541,6 +541,12 @@ view-local lifecycle，但不得直接复制桌面横向 tabstrip。
 *   Android target-host 的 root Back 证据必须先显式关闭并等待本场景打开的 repo switcher、菜单、dialog 与左右
     Drawer 全部收敛，再发送唯一一次用于证明 `Unhandled -> background` 的 Back；不得用连续 Back 掩盖测试编排
     泄漏的 presentation surface，也不得把“关闭 Drawer”的 handled transition 冒充 root background。
+*   root Back 重新进入后的 target-host 只读状态采样必须为单次 `service / bootstrap / presentation` 读取设置短预算，
+    且该预算不得扩张总 rebind deadline。单次采样 timeout、renderer execution interruption 或无响应可以丢弃后重新
+    采样，不能让一个 unresolved read 独占整个轮询窗口；成功仍必须同时证明同 PID、current native session、
+    BootstrapUnbound 与同 generation 的更高 presentation epoch。连续采样失败或总 deadline 耗尽时必须 fail-closed；
+    失败诊断只允许固定类别、布尔准入结果、安全整数 generation/epoch 与采样计数，不得输出 endpoint、session、
+    cookie、repo identity、页面内容或底层异常 detail。
 *   target-host 对 Activity 前后台的读取必须识别 AOSP `mResumedActivity` 以及 Android 15/OEM 可能投影的
     `topResumedActivity` / `ResumedActivity` 规范记录，并按精确 package component 分类；不存在任何已批准 key、
     已批准 key 无法解析唯一规范 component、多个 key 的 component 冲突、package 前缀碰撞或输出异常时必须返回

@@ -76,6 +76,9 @@ jobs:
           cargo run --quiet -p deve_baseline -- acceptance-run --tier ci --plan
           cargo run --quiet -p deve_baseline -- acceptance-run --tier tag-ready --plan
 
+      - name: Check Android lifecycle harness contracts
+        run: node --test scripts/android-lifecycle-harness.test.mjs scripts/mobile-android-emulator-journey.test.mjs
+
       - name: Execute required CI acceptance evidence
         run: cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci
 
