@@ -2,13 +2,6 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import test from "node:test";
 import {
-  beginTouchDeliveryProbe,
-  classifyAndroidDrawerGestureDelivery,
-  selectNonInteractiveSwipePoints,
-  shouldRetryAndroidDrawerGestureDelivery,
-  takeTouchDeliveryProbe,
-} from "./lib/android-drawer-touch-proof.mjs";
-import {
   androidSafeAreaStateMatches,
   drawerVisualStateMatches,
   openDrawerWithObservedNativeSwipe,
@@ -38,23 +31,36 @@ const completeLeftDelivery = (identifier = 7) => [
   { type: "touchend", identifier, x: 120, y: 100, touchCount: 0 },
 ];
 
-function createSwipeHarness({ deliveries = [], openFailures = [], adbFailure = false } = {}) {
-  const calls = { adb: 0, begin: 0, take: 0, select: 0, visual: [] };
+function createSwipeHarness({
+  deliveries = [], openFailures = [], adbFailure = false, focusFailure = false,
+} = {}) {
+  const calls = {
+    adb: 0, begin: 0, focus: 0, take: 0, select: 0, visual: [], order: [],
+  };
   return {
     calls,
     adbCommand() {
+      calls.order.push("adb");
       calls.adb += 1;
       if (adbFailure) throw new Error("synthetic adb failure");
     },
     testing: {
+      async waitForCurrentWebViewInputFocus() {
+        calls.order.push("focus");
+        calls.focus += 1;
+        if (focusFailure) throw new Error("synthetic focus timeout");
+      },
       async selectNonInteractiveSwipePoints() {
+        calls.order.push("select");
         calls.select += 1;
         return [{ yCss: 100, targetTag: "main" }];
       },
       async beginTouchDeliveryProbe() {
+        calls.order.push("begin");
         calls.begin += 1;
       },
       async takeTouchDeliveryProbe() {
+        calls.order.push("take");
         const delivery = deliveries[calls.take] ?? [];
         calls.take += 1;
         return delivery;
@@ -171,82 +177,6 @@ test("Work Edit selection proof rejects null, malformed, and invalid identities"
   }
 });
 
-test("drawer delivery classifier binds identifier, coordinates, direction, and retry categories", () => {
-  assert.equal(classifyAndroidDrawerGestureDelivery([], expectedLeftDelivery), "missing");
-  assert.equal(classifyAndroidDrawerGestureDelivery([
-    { type: "touchstart", identifier: 7, x: 40, y: 100, touchCount: 1 },
-    { type: "touchcancel", identifier: 7, x: 40, y: 100, touchCount: 0 },
-  ], expectedLeftDelivery), "cancelled");
-  assert.equal(classifyAndroidDrawerGestureDelivery(completeLeftDelivery(), expectedLeftDelivery), "complete");
-  assert.equal(classifyAndroidDrawerGestureDelivery([
-    completeLeftDelivery()[0],
-    { ...completeLeftDelivery()[1], identifier: 8 },
-  ], expectedLeftDelivery), "invalid");
-  assert.equal(classifyAndroidDrawerGestureDelivery([
-    { ...completeLeftDelivery()[0], x: 300 },
-    completeLeftDelivery()[1],
-  ], expectedLeftDelivery), "invalid");
-  assert.equal(classifyAndroidDrawerGestureDelivery([
-    completeLeftDelivery()[0],
-    { ...completeLeftDelivery()[1], x: 10 },
-  ], expectedLeftDelivery), "invalid");
-  assert.equal(shouldRetryAndroidDrawerGestureDelivery("missing", 1), true);
-  assert.equal(shouldRetryAndroidDrawerGestureDelivery("cancelled", 1), true);
-  assert.equal(shouldRetryAndroidDrawerGestureDelivery("complete", 1), false);
-  assert.equal(shouldRetryAndroidDrawerGestureDelivery("invalid", 1), false);
-  assert.equal(shouldRetryAndroidDrawerGestureDelivery("missing", 2), false);
-});
-
-test("drawer hit testing rejects action controls and requires the marked Work Edit surface", async () => {
-  const mobileRoot = {};
-  const workEditRoot = {};
-  const makePage = (blocked, workEdit = true, editorContent = workEdit) => ({
-    async call(callback, ...args) {
-      const previousWindow = globalThis.window;
-      const previousDocument = globalThis.document;
-      globalThis.window = { innerHeight: 1000 };
-      globalThis.document = {
-        elementFromPoint() {
-          return {
-            tagName: "DIV",
-            closest(selector) {
-              if (selector === '[data-deve-layout-mode="mobile"]') return mobileRoot;
-              if (selector.includes("data-deve-mobile-work-edit-swipe-surface")) {
-                if (selector.includes(".cm-content")) return editorContent ? workEditRoot : null;
-                return workEdit ? workEditRoot : null;
-              }
-              return blocked && selector.includes("button") ? this : null;
-            },
-          };
-        },
-      };
-      try {
-        return callback(...args);
-      } finally {
-        globalThis.window = previousWindow;
-        globalThis.document = previousDocument;
-      }
-    },
-  });
-  assert.deepEqual(await selectNonInteractiveSwipePoints(makePage(true), 40, [0.5]), []);
-  assert.deepEqual(await selectNonInteractiveSwipePoints(makePage(false), 40, [0.5]), [
-    { yCss: 500, targetTag: "div" },
-  ]);
-  const required = '[data-deve-mobile-work-edit-swipe-surface="true"] .cm-content';
-  assert.deepEqual(
-    await selectNonInteractiveSwipePoints(makePage(false, false), 200, [0.5], required),
-    [],
-  );
-  assert.deepEqual(
-    await selectNonInteractiveSwipePoints(makePage(false, true, false), 200, [0.5], required),
-    [],
-  );
-  assert.deepEqual(
-    await selectNonInteractiveSwipePoints(makePage(false, true, true), 200, [0.5], required),
-    [{ yCss: 500, targetTag: "div" }],
-  );
-});
-
 test("drawer visual settlement requires marker, accessibility, hit testing, and geometry", () => {
   const leftOpen = { open: "true", ariaHidden: "false", pointerEvents: "auto", left: 0, right: 320, width: 320, viewportWidth: 400, safeTopCss: 35, closeControlTop: 39 };
   const leftClosed = { open: "false", ariaHidden: "true", pointerEvents: "none", left: -320, right: 0, width: 320, viewportWidth: 400 };
@@ -355,50 +285,6 @@ test("drawer visual settlement rejects a transient open state", async () => {
   }
 });
 
-test("touch delivery probe aborts listeners and deletes state on success or read failure", async () => {
-  const listeners = [];
-  const previousWindow = globalThis.window;
-  globalThis.window = {
-    addEventListener(type, callback, options) {
-      listeners.push({ type, callback, signal: options.signal });
-    },
-  };
-  const page = { call: async (callback, ...args) => callback(...args) };
-  try {
-    await beginTouchDeliveryProbe(page);
-    const probeKey = Object.getOwnPropertyNames(globalThis)
-      .find((key) => key.includes("DEVE_ANDROID_DRAWER_GESTURE_PROBE"));
-    assert.ok(probeKey);
-    listeners.find(({ type }) => type === "touchstart").callback({
-      changedTouches: [{ identifier: 4, clientX: 40, clientY: 100 }],
-      touches: [{}],
-    });
-    listeners.find(({ type }) => type === "touchend").callback({
-      changedTouches: [{ identifier: 4, clientX: 120, clientY: 100 }],
-      touches: [],
-    });
-    const signal = listeners[0].signal;
-    assert.deepEqual(await takeTouchDeliveryProbe(page), completeLeftDelivery(4));
-    assert.equal(signal.aborted, true);
-    assert.equal(Object.hasOwn(globalThis, probeKey), false);
-
-    await beginTouchDeliveryProbe(page);
-    const failingProbe = globalThis[probeKey];
-    const failingSignal = failingProbe.controller.signal;
-    failingProbe.events = new Proxy([], {
-      get(target, property, receiver) {
-        if (property === Symbol.iterator) throw new Error("synthetic read failure");
-        return Reflect.get(target, property, receiver);
-      },
-    });
-    await assert.rejects(takeTouchDeliveryProbe(page), /synthetic read failure/);
-    assert.equal(failingSignal.aborted, true);
-    assert.equal(Object.hasOwn(globalThis, probeKey), false);
-  } finally {
-    globalThis.window = previousWindow;
-  }
-});
-
 test("drawer proof requires an initially closed drawer and a complete observed transition", async () => {
   const initialOpen = createSwipeHarness();
   initialOpen.testing.waitForDrawerVisualState = async (_page, _side, open) => {
@@ -410,6 +296,10 @@ test("drawer proof requires an initially closed drawer and a complete observed t
     { adb: 0, begin: 0, take: 0 },
   );
 
+  const unfocused = createSwipeHarness({ focusFailure: true });
+  await assert.rejects(runLeftSwipe(unfocused), /synthetic focus timeout/);
+  assert.deepEqual(unfocused.calls.order, ["focus"]);
+
   const success = createSwipeHarness({ deliveries: [completeLeftDelivery()] });
   assert.deepEqual(await runLeftSwipe(success), { attempts: 1, targetTag: "main" });
   assert.deepEqual(success.calls.visual, [
@@ -417,23 +307,28 @@ test("drawer proof requires an initially closed drawer and a complete observed t
     { side: "left", open: true },
   ]);
   assert.deepEqual(
-    { adb: success.calls.adb, begin: success.calls.begin, take: success.calls.take },
-    { adb: 1, begin: 1, take: 1 },
+    { adb: success.calls.adb, begin: success.calls.begin, focus: success.calls.focus, take: success.calls.take },
+    { adb: 1, begin: 1, focus: 1, take: 1 },
   );
+  assert.deepEqual(success.calls.order, ["focus", "select", "begin", "adb", "take"]);
 });
 
 test("drawer proof retries one missing delivery but not complete or invalid delivery", async () => {
   const retry = createSwipeHarness({ deliveries: [[], completeLeftDelivery()], openFailures: [1] });
   assert.deepEqual(await runLeftSwipe(retry), { attempts: 2, targetTag: "main" });
   assert.deepEqual(
-    { adb: retry.calls.adb, begin: retry.calls.begin, take: retry.calls.take, select: retry.calls.select },
-    { adb: 2, begin: 2, take: 2, select: 2 },
+    { adb: retry.calls.adb, begin: retry.calls.begin, focus: retry.calls.focus, take: retry.calls.take, select: retry.calls.select },
+    { adb: 2, begin: 2, focus: 2, take: 2, select: 2 },
   );
   assert.deepEqual(retry.calls.visual, [
     { side: "left", open: false },
     { side: "left", open: true },
     { side: "left", open: false },
     { side: "left", open: true },
+  ]);
+  assert.deepEqual(retry.calls.order, [
+    "focus", "select", "begin", "adb", "take",
+    "focus", "select", "begin", "adb", "take",
   ]);
 
   const completeClosed = createSwipeHarness({ deliveries: [completeLeftDelivery()], openFailures: [1] });

@@ -17,6 +17,7 @@
 - 左/右 drawer 应可打开、关闭、切换，并且与主内容区配合清晰。
 - 左右 Drawer 的标题栏总高必须在 48px 内容区之外再包含顶部安全区，44px 关闭按钮不得因 border-box padding 被挤回状态栏；Settings 底部 Sheet 与 Command Palette 也必须同时避开 canonical top/bottom safe area。
 - 从左侧系统返回手势区的内侧向右滑应打开文件树；从右侧系统返回手势区的内侧向左滑应打开当前 Markdown 的逐级标题大纲。当前处于 Work Edit 时，用户也可在编辑内容区中部横滑：左向右打开 Work Tree，右向左打开 Outline；该中部准入不能覆盖系统保留区、改写左右安全边带的单向语义，或扩张到 Dashboard、Diff、AI、工具栏或浮层。普通移动 Web 的边缘入口仍从屏幕边缘起算；若 OEM 把标准系统手势 Insets 错报为零，Android native 使用 24 CSS px 的跨密度保守安全下限。每次页面重载或远程导航都必须重新取得当代 Android presentation hint 后才开放边缘激活带与 Work Edit 中部准入；hint 缺失时必须一并 fail-closed。绝对系统边缘继续归 Android Back，短拖动、纵向滚动、多指操作、链接、checkbox 与按钮点击不能误开 drawer，Markdown 内容、selection 与 pending 必须保持不变。
+- Android target-host 在注入每次真实 Drawer swipe 前还必须等待当代 WebView 文档可见且持续取得输入焦点；CDP 可连接或 presentation ready 不能替代该输入准入。页面 reload 或采样中断后必须从新文档重新累计稳定窗口；一次 missing/cancelled retry 也必须重新准入，且没有完整 WebView 触摸事件时仍然失败。
 
 ### 2. 移动端核心面板
 

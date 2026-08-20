@@ -5,6 +5,7 @@ import {
   selectNonInteractiveSwipePoints,
   shouldRetryAndroidDrawerGestureDelivery,
   takeTouchDeliveryProbe,
+  waitForCurrentWebViewInputFocus,
 } from "./android-drawer-touch-proof.mjs";
 
 const SAFE_FLOOR_CSS = 24;
@@ -182,6 +183,8 @@ export async function openDrawerWithObservedNativeSwipe(page, {
   const selectPoints = testing.selectNonInteractiveSwipePoints ?? selectNonInteractiveSwipePoints;
   const beginProbe = testing.beginTouchDeliveryProbe ?? beginTouchDeliveryProbe;
   const takeProbe = testing.takeTouchDeliveryProbe ?? takeTouchDeliveryProbe;
+  const waitForInputFocus = testing.waitForCurrentWebViewInputFocus
+    ?? waitForCurrentWebViewInputFocus;
   const waitForVisualState = testing.waitForDrawerVisualState ?? waitForDrawerVisualState;
   const direction = side === "left" ? 1 : -1;
   await waitForVisualState(page, side, false, waitUntil);
@@ -189,6 +192,7 @@ export async function openDrawerWithObservedNativeSwipe(page, {
   let lastEvents = [];
 
   for (let attempt = 0; attempt < MAX_SWIPE_DELIVERY_ATTEMPTS; attempt += 1) {
+    await waitForInputFocus(page, waitUntil);
     const points = await selectPoints(
       page, startPx / density, SWIPE_Y_FRACTIONS, requiredClosestSelector,
     );

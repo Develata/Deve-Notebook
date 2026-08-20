@@ -52,6 +52,8 @@ contains	apps/web/src/components/mobile_layout/native_presentation.rs	data-deve-
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: zero_reported_insets_use_24css_safe_floor true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: app_activation_bands_begin_inside_system_gesture_insets true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_swipe_point_is_hit_tested_outside_action_controls true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_adb_swipe_waits_for_stable_current_webview_input_focus true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_input_focus_settlement_restarts_after_document_replacement true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: missing_or_cancelled_adb_touch_allows_at_most_one_bounded_retry true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: complete_webview_touch_without_drawer_open_fails_immediately true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: opposite_swipe_waits_for_closed_drawer_transition_settlement true
@@ -106,6 +108,7 @@ contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/WebV
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	system-gesture-insets-pending
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/NativePresentationDispatcher.kt	ViewCompat.setOnApplyWindowInsetsListener(observer)
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	mobile-android-presentation.test.mjs
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android-drawer-touch-proof.test.mjs
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	mobile-android-emulator-host.test.mjs
 contains	scripts/lib/android-writable-evidence.mjs	rootBackBackgroundsTaskWithStablePid
 contains	apps/mobile/gen/android/app/src/main/java/dev/deve/notebook/mobile/WebViewInputCoordinator.kt	document.elementFromPoint($xCss, $yCss)
@@ -214,9 +217,14 @@ contains	scripts/lib/android-lifecycle-harness.mjs	"shell", "input", "tap",
 contains	scripts/lib/android-writable-evidence.mjs	imeBackPreservedEditorSession: true
 contains	scripts/lib/android-drawer-touch-proof.mjs	export function classifyAndroidDrawerGestureDelivery(
 contains	scripts/lib/android-drawer-touch-proof.mjs	document.elementFromPoint(x, y)
+contains	scripts/lib/android-drawer-touch-proof.mjs	export async function waitForCurrentWebViewInputFocus(
+contains	scripts/lib/android-drawer-touch-proof.mjs	document.hasFocus()
 contains	scripts/lib/android-presentation-proof.mjs	export async function proveAndroidDrawerGesturesAfterReload(
 contains	scripts/lib/android-presentation-proof.mjs	data-deve-native-presentation
 contains	scripts/mobile-android-presentation.test.mjs	native presentation is re-admitted after same-WebView reload before drawer gestures
+contains	scripts/android-drawer-touch-proof.test.mjs	ADB drawer input waits for a continuously visible and focused current WebView
+contains	scripts/android-drawer-touch-proof.test.mjs	ADB drawer input focus settlement restarts after document replacement
+contains	scripts/android-drawer-touch-proof.test.mjs	ADB drawer input focus settlement restarts after a redacted sampling failure
 contains	scripts/mobile-android-presentation.test.mjs	native presentation requires a settled system-bar safe area around mobile chrome
 contains	scripts/lib/android-presentation-proof.mjs	androidSafeAreaStateMatches
 contains	scripts/lib/android-presentation-proof.mjs	data-deve-native-safe-area
@@ -1005,6 +1013,7 @@ contains	scripts/sign-mobile-android-target-host-release-apk.sh	signer=ephemeral
 contains	docs/registry/acceptance-producers.json	scripts/sign-mobile-android-target-host-release-apk.sh
 contains	docs/registry/acceptance-producers.json	scripts/mobile-android-emulator-host.test.mjs
 contains	docs/registry/acceptance-producers.json	scripts/mobile-android-presentation.test.mjs
+contains	docs/registry/acceptance-producers.json	scripts/android-drawer-touch-proof.test.mjs
 contains	docs/registry/acceptance-producers.json	scripts/lib/android-lifecycle-harness.mjs
 contains	docs/registry/acceptance-producers.json	scripts/lib/android-drawer-touch-proof.mjs
 contains	docs/registry/acceptance-producers.json	scripts/lib/android-presentation-proof.mjs
@@ -1026,7 +1035,7 @@ contains	scripts/lib/android-logcat-observation.mjs	Android logcat observation e
 contains	scripts/android-logcat-observation.test.mjs	Android logcat observation streams past the execFileSync default buffer
 contains	scripts/lib/android-app-process-observation.mjs	android_app_process_probe_failed
 contains	scripts/android-app-process-observation.test.mjs	Android graceful exit rejects a sample that returns after its deadline
-contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/mobile-webview-interaction.test.mjs" "$ROOT_DIR/scripts/mobile-editor-session-observation.test.mjs" "$ROOT_DIR/scripts/mobile-keyboard-presentation.test.mjs" "$ROOT_DIR/scripts/android-webview-pointer.test.mjs" "$ROOT_DIR/scripts/mobile-android-presentation.test.mjs"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/mobile-webview-interaction.test.mjs" "$ROOT_DIR/scripts/mobile-editor-session-observation.test.mjs" "$ROOT_DIR/scripts/mobile-keyboard-presentation.test.mjs" "$ROOT_DIR/scripts/android-webview-pointer.test.mjs" "$ROOT_DIR/scripts/android-drawer-touch-proof.test.mjs" "$ROOT_DIR/scripts/mobile-android-presentation.test.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --test "$ROOT_DIR/scripts/websocket-delivery-gate.test.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --check "$ROOT_DIR/scripts/lib/android-webview-cdp.mjs"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	node --check "$ROOT_DIR/scripts/lib/android-webview-cdp-client.mjs"

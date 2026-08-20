@@ -429,6 +429,14 @@ Task 按钮必须发送 `10_rendering.md` 定义的 `InsertTaskItem` 语义 inte
     系统 Insets 变化的独立 lifecycle trigger 必须由 adapter 自有、零尺寸且不接收触摸的 sibling observer 承载；
     该 observer 与前述 adapter 独占的 WebView IME passthrough listener 是两个不同职责，不得覆盖或替代 source slot，
     也不得用永久轮询代替 document 生命周期。
+*   **Target-host Input Admission**: Android target-host 通过 ADB 注入 Drawer 手势前，必须等待当代主文档
+    同时满足 `visibilityState = visible` 与 `document.hasFocus() = true`，并连续稳定至少 `250ms`；CDP 已连接、
+    presentation hint 已 ready 或 Activity 进程仍存活都不能单独证明 WebView 已获得系统输入焦点。稳定窗口
+    必须绑定当代 Document 身份（target-host 使用有限的 `performance.timeOrigin`）；Document 替换、身份异常或
+    采样 execution-context 失败都必须清空候选并从零重新累计。每次真实 swipe（包括一次允许的
+    missing/cancelled retry）都必须重新通过该准入，再安装页面触摸探针并注入输入。准入超时必须
+    fail-closed；不得增加随机重试、通过重新创建业务 surface 掩盖焦点缺失，或把没有完整
+    `touchstart + touchend` 的 ADB 命令计为 Drawer 成功。
 
 ## 4. Visual Adaptations
 
