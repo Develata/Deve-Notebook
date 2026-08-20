@@ -52,9 +52,11 @@ mod tests {
             .expect_err("unreadable skill file must fail closed");
 
         std::fs::set_permissions(&bad, original).expect("restore perms");
-        assert!(
-            err.to_string().contains("Failed to load skill from")
-                || err.to_string().contains("Permission denied")
-        );
+        assert_eq!(err.to_string(), "Failed to open direct regular skill file");
+        let io_error = err
+            .root_cause()
+            .downcast_ref::<std::io::Error>()
+            .expect("skill failure keeps typed I/O source");
+        assert_eq!(io_error.kind(), std::io::ErrorKind::PermissionDenied);
     }
 }

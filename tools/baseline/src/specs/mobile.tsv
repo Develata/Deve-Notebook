@@ -814,6 +814,8 @@ contains	scripts/android-native-bootstrap-script.test.mjs	registered invoke retr
 contains	scripts/android-native-bootstrap-script.test.mjs	Tauri invoke bridge admission exhaustion fails closed without a late invoke
 contains	scripts/android-native-bootstrap-script.test.mjs	late command-route readiness after admission timeout cannot submit prepare
 contains	apps/mobile/src/tauri_entry/native_backend_commands.rs	fn native_backend_webview_session_bridge_ready(
+contains	apps/mobile/src/tauri_entry/tests.rs	fn mobile_native_backend_build_allowlist_includes_readiness_route()
+contains	apps/mobile/build.rs	"native_backend_webview_session_bridge_ready",
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	observe: admission timeout and supervisor shutdown cancel all waiters and reject a late recovery grant
 contains	apps/mobile/src/embedded_backend/webview_admission.rs	fn android_recovery_webview_handoff_waits_for_native_surface_admission()
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	native_assert: android_initial_session_install_marker_rejects_stale_process_bootstrap_on_reused_endpoint true

@@ -310,6 +310,13 @@ fn android_backend_recovery_initial_session_uses_invoking_current_webview() {
 }
 
 #[test]
+fn mobile_native_backend_build_allowlist_includes_readiness_route() {
+    let build = include_str!("../../build.rs");
+
+    assert!(build.contains("\"native_backend_webview_session_bridge_ready\","));
+}
+
+#[test]
 fn android_back_dispatch_prioritizes_ime_and_backgrounds_only_after_matching_unhandled_ack() {
     let activity = include_str!(
         "../../gen/android/app/src/main/java/dev/deve/notebook/mobile/MainActivity.kt"
