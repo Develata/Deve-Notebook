@@ -128,7 +128,7 @@ impl AppState {
             .entry(key)
             .or_insert_with(|| {
                 Arc::new(
-                    super::ai_chat::settings::NativeAiProviderSettingsRuntime::from_data_root(
+                    super::ai_chat::settings::NativeAiProviderSettingsRuntime::from_test_data_root(
                         self.repo
                             .ledger_dir()
                             .parent()
@@ -454,6 +454,11 @@ impl Drop for AppState {
             && let Ok(mut grants) = grants.lock()
         {
             grants.remove(&key);
+        }
+        if let Some(runtimes) = TEST_AI_PROVIDER_SETTINGS.get()
+            && let Ok(mut runtimes) = runtimes.lock()
+        {
+            runtimes.remove(&key);
         }
     }
 }

@@ -105,6 +105,12 @@ async fn native_backend_get_recovery_state(
 }
 
 #[tauri::command]
+fn native_backend_webview_session_bridge_ready(window: WebviewWindow<Wry>) -> Result<bool, String> {
+    ensure_bundled_local_origin(&window)?;
+    Ok(true)
+}
+
+#[tauri::command]
 async fn native_backend_prepare_webview_session(
     window: WebviewWindow<Wry>,
     state: State<'_, std::sync::Arc<MobileEmbeddedBackendSupervisor>>,
@@ -208,6 +214,7 @@ pub(super) fn mobile_local_backend_command_plugin() -> tauri::plugin::TauriPlugi
             native_backend_get_config,
             native_backend_get_service_state,
             native_backend_get_recovery_state,
+            native_backend_webview_session_bridge_ready,
             native_backend_prepare_webview_session,
             native_backend_debug_stop_transport,
             native_backend_debug_request_exit,

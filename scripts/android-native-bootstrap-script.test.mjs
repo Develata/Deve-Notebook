@@ -9,6 +9,8 @@ const initialize = (0, eval)(initializeSource);
 const prepare = (0, eval)(prepareSource);
 const installId = "0123456789abcdef0123456789abcdef";
 const otherInstallId = "fedcba9876543210fedcba9876543210";
+const bridgeReadyCommand = "plugin:deve-native-backend-commands|native_backend_webview_session_bridge_ready";
+const prepareCommand = "plugin:deve-native-backend-commands|native_backend_prepare_webview_session";
 const fallback = {
   http_base: "http://127.0.0.1:40123",
   ws_base: "ws://127.0.0.1:40123",
@@ -133,23 +135,46 @@ function prepareRoot(storage) {
   const events = [];
   let invokes = 0;
   let reloads = 0;
+  let nextTimerId = 1;
   return {
     root: {
       sessionStorage: storage,
       __DEVE_NATIVE_BOOTSTRAP: fallback,
       __DEVE_NATIVE_SESSION_STORAGE_READY: true,
-      __TAURI_INTERNALS__: { invoke: async () => { invokes += 1; } },
+      __TAURI_INTERNALS__: {
+        invoke: async (command) => {
+          invokes += 1;
+          if (command === bridgeReadyCommand) return true;
+          if (command === prepareCommand) return undefined;
+          throw new Error("unexpected native command");
+        },
+      },
       Event,
       dispatchEvent: (event) => events.push(event.type),
       queueMicrotask: () => {
         throw new Error("native handoff must not run in the document-start microtask checkpoint");
       },
-      setTimeout: (callback, delay) => scheduled.push({ callback, delay }),
+      setTimeout: (callback, delay) => {
+        const id = nextTimerId;
+        nextTimerId += 1;
+        scheduled.push({ callback, delay, id });
+        return id;
+      },
+      clearTimeout: (id) => {
+        const index = scheduled.findIndex((task) => task.id === id);
+        if (index >= 0) scheduled.splice(index, 1);
+      },
       location: { reload: () => { reloads += 1; } },
     },
     scheduled,
     observation: () => ({ invokes, reloads, events }),
   };
+}
+
+function takeScheduled(harness, delay) {
+  const index = harness.scheduled.findIndex((task) => task.delay === delay);
+  assert.notEqual(index, -1, `expected scheduled task with delay ${delay}`);
+  return harness.scheduled.splice(index, 1)[0];
 }
 
 test("storage admission failure does not invoke or reload", () => {
@@ -191,16 +216,44 @@ test("delayed Tauri invoke bridge becomes ready within the bounded admission win
   const invoke = harness.root.__TAURI_INTERNALS__.invoke;
   delete harness.root.__TAURI_INTERNALS__;
   prepare(harness.root, installId);
-  assert.deepEqual(harness.scheduled.map(({ delay }) => delay), [0]);
+  assert.deepEqual(harness.scheduled.map(({ delay }) => delay), [0, 5000]);
   assert.deepEqual(harness.observation(), { invokes: 0, reloads: 0, events: [] });
 
-  await harness.scheduled.shift().callback();
-  assert.deepEqual(harness.scheduled.map(({ delay }) => delay), [25]);
+  await takeScheduled(harness, 0).callback();
+  assert.deepEqual(harness.scheduled.map(({ delay }) => delay), [5000, 25]);
   assert.deepEqual(harness.observation(), { invokes: 0, reloads: 0, events: [] });
 
   harness.root.__TAURI_INTERNALS__ = { invoke };
-  await harness.scheduled.shift().callback();
-  assert.deepEqual(harness.observation(), { invokes: 1, reloads: 1, events: [] });
+  await takeScheduled(harness, 25).callback();
+  assert.deepEqual(harness.observation(), { invokes: 2, reloads: 1, events: [] });
+  assert.deepEqual(harness.scheduled, []);
+});
+
+test("registered invoke retries typed command-route readiness before one prepare", async () => {
+  const harness = prepareRoot(storageWith());
+  let readinessAttempts = 0;
+  let prepareAttempts = 0;
+  harness.root.__TAURI_INTERNALS__.invoke = async (command) => {
+    if (command === bridgeReadyCommand) {
+      readinessAttempts += 1;
+      if (readinessAttempts < 3) throw new Error("route not registered yet");
+      return true;
+    }
+    assert.equal(command, prepareCommand);
+    prepareAttempts += 1;
+    return undefined;
+  };
+
+  prepare(harness.root, installId);
+  await takeScheduled(harness, 0).callback();
+  await takeScheduled(harness, 25).callback();
+  await takeScheduled(harness, 25).callback();
+
+  assert.equal(readinessAttempts, 3);
+  assert.equal(prepareAttempts, 1);
+  assert.equal(harness.observation().reloads, 1);
+  assert.deepEqual(harness.observation().events, []);
+  assert.deepEqual(harness.scheduled, []);
 });
 
 test("Tauri invoke bridge admission exhaustion fails closed without a late invoke", async () => {
@@ -209,9 +262,9 @@ test("Tauri invoke bridge admission exhaustion fails closed without a late invok
   delete harness.root.__TAURI_INTERNALS__;
   prepare(harness.root, installId);
   const scheduledDelays = [];
-  while (harness.scheduled.length > 0) {
+  while (harness.scheduled.some(({ delay }) => delay !== 5000)) {
     assert.ok(scheduledDelays.length < 200, "bridge readiness admission must stay bounded");
-    const task = harness.scheduled.shift();
+    const task = takeScheduled(harness, scheduledDelays.length === 0 ? 0 : 25);
     scheduledDelays.push(task.delay);
     await task.callback();
   }
@@ -231,24 +284,59 @@ test("Tauri invoke bridge admission exhaustion fails closed without a late invok
 
 test("rejected native handoff does not reload", async () => {
   const harness = prepareRoot(storageWith());
-  let rejectedInvokes = 0;
-  harness.root.__TAURI_INTERNALS__.invoke = async () => {
-    rejectedInvokes += 1;
+  let readinessInvokes = 0;
+  let rejectedPrepares = 0;
+  harness.root.__TAURI_INTERNALS__.invoke = async (command) => {
+    if (command === bridgeReadyCommand) {
+      readinessInvokes += 1;
+      return true;
+    }
+    assert.equal(command, prepareCommand);
+    rejectedPrepares += 1;
     throw new Error("native handoff rejected");
   };
   prepare(harness.root, installId);
-  await harness.scheduled[0].callback();
-  assert.equal(rejectedInvokes, 1);
+  await takeScheduled(harness, 0).callback();
+  assert.equal(readinessInvokes, 1);
+  assert.equal(rejectedPrepares, 1);
+  assert.deepEqual(harness.scheduled, []);
   assert.equal(harness.observation().reloads, 0);
   assert.deepEqual(harness.observation().events, ["deve-native-service-error"]);
+});
+
+test("late command-route readiness after admission timeout cannot submit prepare", async () => {
+  const harness = prepareRoot(storageWith());
+  let settleReadiness;
+  let prepareAttempts = 0;
+  harness.root.__TAURI_INTERNALS__.invoke = (command) => {
+    if (command === bridgeReadyCommand) {
+      return new Promise((resolve) => { settleReadiness = resolve; });
+    }
+    assert.equal(command, prepareCommand);
+    prepareAttempts += 1;
+    return Promise.resolve();
+  };
+
+  prepare(harness.root, installId);
+  const pendingProbe = takeScheduled(harness, 0).callback();
+  await Promise.resolve();
+  assert.equal(typeof settleReadiness, "function");
+  takeScheduled(harness, 5000).callback();
+  settleReadiness(true);
+  await pendingProbe;
+
+  assert.equal(prepareAttempts, 0);
+  assert.equal(harness.observation().reloads, 0);
+  assert.deepEqual(harness.observation().events, ["deve-native-service-error"]);
+  assert.deepEqual(harness.scheduled, []);
 });
 
 test("marker storage failure after handoff does not reload", async () => {
   const harness = prepareRoot(storageWith(undefined, { setThrows: true }));
   prepare(harness.root, installId);
-  await harness.scheduled[0].callback();
+  await takeScheduled(harness, 0).callback();
   assert.deepEqual(harness.observation(), {
-    invokes: 1,
+    invokes: 2,
     reloads: 0,
     events: ["deve-native-service-error"],
   });

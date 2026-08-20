@@ -26,7 +26,7 @@
 - UI 只在配置已启用且运行时确实注册 Native AI 后显示其为可用；注册失败必须明确降级，不能在发送后才报“插件不存在”。
 - Native AI Provider 可选择 OpenAI Chat Completions、OpenAI Responses 或 Anthropic Messages；切换协议
   不改变 Native/Trusted CLI 后端语义，也不扩大 Markdown 上下文或工具权限。
-- 兼容 Rhai 插件的 skill lookup 只接受简单 ASCII identifier 并只读取 skills 根目录的直接 regular Markdown；插件即使声明 skill capability，也不能通过 `..`、分隔符、绝对路径或 symlink 读取目录外文件。
+- 兼容 Rhai 插件的 skill lookup 只接受简单 ASCII identifier 并只读取 skills 根目录的直接 regular Markdown；插件即使声明 skill capability，也不能通过 `..`、分隔符、绝对路径或 symlink 读取目录外文件。文件不可读或不是 regular file 时，用户只看到稳定的失败分类，不会看到主机路径或系统错误细节。
 - provider key 永不回显；未配置、被清除或 provider stream 返回工具/拒绝/error 时，Chat 必须结束
   loading 并显示明确错误。
 

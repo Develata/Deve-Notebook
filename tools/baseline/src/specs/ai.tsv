@@ -176,7 +176,11 @@ case_contains	docs/acceptance-cases/10_plugins.md	AI-011	server_assert: truncate
 case_contains	docs/acceptance-cases/10_plugins.md	AI-011	server_assert: done_without_protocol_terminal_fails_closed true
 contains	apps/cli/src/server/agent_bridge/policy.rs	is_native_ai_provider_ready()
 case_contains	docs/acceptance-cases/10_plugins.md	AI-008	cargo test -p deve_core skill_manager -- --nocapture
+case_contains	docs/acceptance-cases/10_plugins.md	AI-008	cargo test -p deve_core --lib skill_host_file_error -- --nocapture
 case_contains	docs/acceptance-cases/10_plugins.md	AI-008	server_assert: skill_lookup_rejects_path_traversal_and_symlink_escape true
+case_contains	docs/acceptance-cases/10_plugins.md	AI-008	server_assert: skill_file_failures_keep_fixed_public_category_and_typed_io_source true
 contains	crates/core/src/skill/mod.rs	fn skill_manager_rejects_path_traversal_and_symlink_escape
 contains	crates/core/src/skill/mod.rs	open_regular_file_read(path, "skill file")
+contains	crates/core/src/plugin/runtime/host/skill/tests.rs	fn skill_host_file_errors_keep_fixed_public_category()
 cargo_test_lib	deve_core	skill_manager
+cargo_test_lib	deve_core	skill_host_file_error

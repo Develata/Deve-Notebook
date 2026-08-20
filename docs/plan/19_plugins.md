@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Deferred`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-08-14`
+- `Last Review`: `2026-08-20`
 - `Counterpart Feature`: `docs/features/17_plugins.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
 - `Primary Code Areas`: `crates/core/src/plugin/`, `docs/plan/plugins/`
@@ -49,7 +49,7 @@ MCP 相关文字只作为历史决策保留。扩展路线是 Skills 调用受�
     `ManagedSourceControlMutationHost` 注入 server adapter，并进入同一个 repo mutation/publication gate；
     不得复用 HTTP facade 绕过 gate。Core plugin runtime 不得反向依赖 CLI。
 *   **Source-Control Writer Gate**：plugin-host 暴露 source-control writer host functions 时，必须显式接入当前 repo/sync writer gate 与 NoteGit/ngit authority；不得接收 mirror/off 之类的 legacy bridge policy。缺少本地 managed host 时必须 fail-closed，除非调用目标是明确的 remote proxy delegated API。delegated API 必须以显式 authority（例如 `DelegatedRemoteProxy`）进入，不得把 `REMOTE_PROXY_SCOPE_NONCE = 1` 解释为普通 browser HTTP mutation grant。
-*   **Skill Path Boundary**：Rhai `skill::get(name)` 只接受非空、受限长度的 ASCII `[A-Za-z0-9_-]` identifier，并只读取 skills root 的直接 regular `.md` child。路径分隔符、`.` / `..`、绝对路径、控制字符、Unicode 混淆名与 symlink/reparse target 必须在文件读取前 fail-closed；capability admission 不授予任意文件读取能力。
+*   **Skill Path Boundary**：Rhai `skill::get(name)` 只接受非空、受限长度的 ASCII `[A-Za-z0-9_-]` identifier，并只读取 skills root 的直接 regular `.md` child。路径分隔符、`.` / `..`、绝对路径、控制字符、Unicode 混淆名与 symlink/reparse target 必须在文件读取前 fail-closed；capability admission 不授予任意文件读取能力。文件打开或验证失败的公开外层错误必须收敛为固定分类，不得携带 host path、OS detail 或文件内容；内部错误链必须保留 typed I/O source，供受控诊断与跨平台测试分类。
 *   未引入认证层的 plugin-host satellite 必须绑定 loopback，不得默认监听 `0.0.0.0`。
 *   `agent-bridge` 的拦截属于 `16_ai_agent` 的 Trusted External Agent Bridge，不得被重新包装成通用插件平台能力。
 

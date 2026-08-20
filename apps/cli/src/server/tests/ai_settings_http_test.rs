@@ -37,6 +37,16 @@ fn auth_config() -> Arc<deve_core::security::AuthConfig> {
     )
 }
 
+#[test]
+fn ai_settings_test_runtime_retires_with_app_state() {
+    let (_dir, state, _) = super::sync_hello_test_support::build_state().expect("state");
+    let runtime = state.ai_provider_settings();
+    let weak_runtime = Arc::downgrade(&runtime);
+    drop(runtime);
+    drop(state);
+    assert!(weak_runtime.upgrade().is_none());
+}
+
 #[tokio::test]
 async fn ai_settings_route_requires_auth_and_never_returns_raw_key() {
     let (_dir, state, _) = super::sync_hello_test_support::build_state().expect("state");

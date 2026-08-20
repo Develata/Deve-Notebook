@@ -122,6 +122,11 @@ impl NativeAiProviderSettingsRuntime {
         Self::from_sources(data_root, std::env::vars().collect())
     }
 
+    #[cfg(test)]
+    pub(crate) fn from_test_data_root(data_root: &Path) -> Result<Self> {
+        Self::from_sources(data_root, BTreeMap::new())
+    }
+
     pub(crate) fn environment_only() -> Result<Self> {
         let values = std::env::vars().collect::<BTreeMap<_, _>>();
         let (snapshot, source) = snapshot_from_environment(&values)?

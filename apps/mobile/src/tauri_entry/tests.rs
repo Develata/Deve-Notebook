@@ -287,6 +287,12 @@ fn android_backend_recovery_uses_capability_free_activity_anchor_in_contract_ord
 #[test]
 fn android_backend_recovery_initial_session_uses_invoking_current_webview() {
     let commands = include_str!("native_backend_commands.rs");
+    let readiness = &commands[commands
+        .find("fn native_backend_webview_session_bridge_ready")
+        .expect("bridge readiness command")..];
+    let readiness = &readiness[..readiness
+        .find("async fn native_backend_prepare_webview_session")
+        .expect("initial session command")];
     let prepare = &commands[commands
         .find("async fn native_backend_prepare_webview_session")
         .expect("initial session command")..];
@@ -294,6 +300,10 @@ fn android_backend_recovery_initial_session_uses_invoking_current_webview() {
         .find("async fn native_backend_debug_stop_transport")
         .expect("next native command")];
 
+    assert!(readiness.contains("ensure_bundled_local_origin(&window)?"));
+    assert!(readiness.contains("Ok(true)"));
+    assert!(!readiness.contains("prepare_initial_webview_session"));
+    assert!(commands.contains("native_backend_webview_session_bridge_ready,"));
     assert!(prepare.contains("state.prepare_initial_webview_session(&window).await"));
     assert!(!prepare.contains("get_webview_window"));
     assert!(!prepare.contains("MOBILE_MAIN_WINDOW_LABEL"));
