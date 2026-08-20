@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-08-13`
+- `Last Review`: `2026-08-20`
 - `Counterpart Feature`: `docs/features/13_settings.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `crates/core/src/config.rs`, `apps/cli/src/commands/config.rs`, `apps/web/src/components/settings.rs`, `apps/web/src/hooks/use_layout.rs`
@@ -205,6 +205,12 @@ header、环境值或 host path。PUT body 固定包含 `expected_revision`、�
 `api_key` 与显式 `clear_api_key`；空 key 表示保留当前 key，不等价于清除。environment managed 状态、
 revision 冲突、非法 provider/URL/model/token 上限、同时 replace+clear key、持久化失败都必须 fail-closed，
 且不得更改 runtime snapshot。
+
+该专用 HTTP API 的业务失败 code 与 exact HTTP status 配对唯一归
+[`13_i18n#error-code-catalog`](./13_i18n.md#i18n-error-code-catalog)。body 固定为仅含 `code` 的 closed
+typed shape；server 与 Web 必须分别以 closed enum 序列化/反序列化，并由 Web 同时校验 status/code。
+未知 code、额外字段、无法解码或 status/code 不匹配一律投影为 unavailable。响应不得携带自由文本
+`error/message/detail`、raw runtime error、secret、环境值或 host path。
 
 Settings 的 key 清除控制必须明确表示“保存时清除”，在 PUT 成功前只属于可撤销的 pending UI intent；
 关闭 Settings 不得把 pending intent 伪装为已删除。PUT DTO 的未知字段必须拒绝，不能静默接受客户端漂移。

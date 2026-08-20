@@ -140,6 +140,15 @@ contains	apps/cli/src/native_runtime/tests.rs	native_ai_settings_root_is_platfor
 contains	apps/cli/src/server/ai_chat/settings/tests.rs	ai_env_store_rejects_app_data_parent_replacement
 contains	docs/acceptance-cases/11_commands_settings.md	cargo test -p deve_web ai_settings -- --nocapture
 contains	docs/plan/15_settings.md	{#native-ai-provider-settings}
+case_contains	docs/acceptance-cases/11_commands_settings.md	SET-009	http_assert: ai_settings_error_body_is_closed_typed_code true
+case_contains	docs/acceptance-cases/11_commands_settings.md	SET-009	http_assert: ai_settings_error_body_has_no_free_text_detail true
+case_contains	docs/acceptance-cases/11_commands_settings.md	SET-009	http_assert: ai_settings_status_code_matrix_exact true
+case_contains	docs/acceptance-cases/11_commands_settings.md	SET-009	api_assert: ai_settings_status_code_mismatch_is_unavailable true
+contains	docs/plan/13_i18n.md	AI_SETTINGS_ENVIRONMENT_MANAGED
+contains	apps/cli/src/server/ai_chat/settings/http.rs	ai_settings_error_status_code_matrix_is_closed
+contains	apps/cli/src/server/tests/ai_settings_http_test.rs	ai_settings_http_error_body_is_closed_typed_code
+contains	apps/web/src/api/ai_settings.rs	ai_settings_error_body_accepts_only_closed_typed_code
+contains	apps/web/src/api/ai_settings.rs	ai_settings_status_code_matrix_and_mismatch_are_fail_closed
 contains	apps/cli/src/server/router.rs	/api/ai/settings
 contains	apps/cli/src/server/ai_chat/settings/file.rs	create_atomic_replace_temp
 contains	apps/cli/src/server/ai_chat/settings/file.rs	replace_file_atomically

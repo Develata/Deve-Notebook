@@ -70,6 +70,17 @@ pub(super) struct SwipeSession {
     editor_selection_token: Option<u64>,
 }
 
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(super) struct SwipeStartContext {
+    pub(super) width: i32,
+    pub(super) show_sidebar: bool,
+    pub(super) show_outline: bool,
+    pub(super) interactive_target: bool,
+    pub(super) work_edit_surface: bool,
+    pub(super) touch_count: u32,
+    pub(super) system_gesture_insets: Option<SystemGestureInsets>,
+}
+
 impl SwipeSession {
     pub(super) fn new(target: SwipeTarget, start: TouchPoint) -> Self {
         Self {
@@ -113,13 +124,15 @@ pub fn build_touch_start(
         let work_edit_target = is_work_edit_target(&ev);
         let session = resolve_swipe_start_for_surface(
             start,
-            width,
-            show_sidebar.get_untracked(),
-            show_outline.get_untracked(),
-            is_interactive_target(&ev),
-            work_edit_target,
-            ev.touches().length(),
-            system_gesture_insets.get_untracked(),
+            SwipeStartContext {
+                width,
+                show_sidebar: show_sidebar.get_untracked(),
+                show_outline: show_outline.get_untracked(),
+                interactive_target: is_interactive_target(&ev),
+                work_edit_surface: work_edit_target,
+                touch_count: ev.touches().length(),
+                system_gesture_insets: system_gesture_insets.get_untracked(),
+            },
         )
         .and_then(|session| {
             if !work_edit_target {
@@ -193,26 +206,31 @@ pub(super) fn resolve_swipe_start(
 ) -> Option<SwipeSession> {
     resolve_swipe_start_for_surface(
         start,
-        width,
-        show_sidebar,
-        show_outline,
-        interactive_target,
-        false,
-        touch_count,
-        system_gesture_insets,
+        SwipeStartContext {
+            width,
+            show_sidebar,
+            show_outline,
+            interactive_target,
+            work_edit_surface: false,
+            touch_count,
+            system_gesture_insets,
+        },
     )
 }
 
 pub(super) fn resolve_swipe_start_for_surface(
     start: TouchPoint,
-    width: i32,
-    show_sidebar: bool,
-    show_outline: bool,
-    interactive_target: bool,
-    work_edit_surface: bool,
-    touch_count: u32,
-    system_gesture_insets: Option<SystemGestureInsets>,
+    context: SwipeStartContext,
 ) -> Option<SwipeSession> {
+    let SwipeStartContext {
+        width,
+        show_sidebar,
+        show_outline,
+        interactive_target,
+        work_edit_surface,
+        touch_count,
+        system_gesture_insets,
+    } = context;
     if interactive_target || touch_count != 1 {
         return None;
     }
@@ -377,9 +395,7 @@ fn is_work_edit_target(ev: &TouchEvent) -> bool {
 }
 
 fn event_target_element(ev: &TouchEvent) -> Option<web_sys::Element> {
-    let Some(target) = ev.target() else {
-        return None;
-    };
+    let target = ev.target()?;
     target.dyn_ref::<web_sys::Element>().cloned().or_else(|| {
         target
             .dyn_ref::<web_sys::Node>()

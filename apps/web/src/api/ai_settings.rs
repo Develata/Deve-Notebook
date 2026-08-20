@@ -1,4 +1,5 @@
 //! plan_ref:
+//!   - 13_i18n#i18n-error-code-catalog
 //!   - 15_settings#native-ai-provider-settings
 //!
 //! Redacted Native AI provider settings HTTP intents.
@@ -66,9 +67,22 @@ pub enum AiSettingsApiError {
     Unavailable,
 }
 
+#[derive(Clone, Copy, Debug, Deserialize, Eq, PartialEq)]
+enum AiSettingsErrorCode {
+    #[serde(rename = "AI_SETTINGS_ENVIRONMENT_MANAGED")]
+    EnvironmentManaged,
+    #[serde(rename = "AI_SETTINGS_REVISION_CONFLICT")]
+    RevisionConflict,
+    #[serde(rename = "AI_SETTINGS_INVALID")]
+    Invalid,
+    #[serde(rename = "AI_SETTINGS_UNAVAILABLE")]
+    Unavailable,
+}
+
 #[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
 struct ErrorBody {
-    error: String,
+    code: AiSettingsErrorCode,
 }
 
 pub async fn fetch_ai_provider_settings() -> Result<AiProviderSettings, AiSettingsApiError> {
@@ -115,15 +129,22 @@ pub async fn replace_ai_provider_settings(
 }
 
 async fn decode_error(response: gloo_net::http::Response) -> AiSettingsApiError {
-    match response
+    let status = response.status();
+    let code = response
         .json::<ErrorBody>()
         .await
         .ok()
-        .map(|body| body.error)
-    {
-        Some(code) if code == "environment_managed" => AiSettingsApiError::EnvironmentManaged,
-        Some(code) if code == "revision_conflict" => AiSettingsApiError::RevisionConflict,
-        Some(code) if code == "invalid_settings" => AiSettingsApiError::Invalid,
+        .map(|body| body.code);
+    map_error_response(status, code)
+}
+
+fn map_error_response(status: u16, code: Option<AiSettingsErrorCode>) -> AiSettingsApiError {
+    match (status, code) {
+        (409, Some(AiSettingsErrorCode::EnvironmentManaged)) => {
+            AiSettingsApiError::EnvironmentManaged
+        }
+        (409, Some(AiSettingsErrorCode::RevisionConflict)) => AiSettingsApiError::RevisionConflict,
+        (400, Some(AiSettingsErrorCode::Invalid)) => AiSettingsApiError::Invalid,
         _ => AiSettingsApiError::Unavailable,
     }
 }
@@ -145,6 +166,78 @@ mod tests {
         assert_eq!(
             AiProviderProtocol::AnthropicMessages.as_str(),
             "anthropic-messages"
+        );
+    }
+
+    #[test]
+    fn ai_settings_error_body_accepts_only_closed_typed_code() {
+        let cases = [
+            (
+                r#"{"code":"AI_SETTINGS_ENVIRONMENT_MANAGED"}"#,
+                AiSettingsErrorCode::EnvironmentManaged,
+            ),
+            (
+                r#"{"code":"AI_SETTINGS_REVISION_CONFLICT"}"#,
+                AiSettingsErrorCode::RevisionConflict,
+            ),
+            (
+                r#"{"code":"AI_SETTINGS_INVALID"}"#,
+                AiSettingsErrorCode::Invalid,
+            ),
+            (
+                r#"{"code":"AI_SETTINGS_UNAVAILABLE"}"#,
+                AiSettingsErrorCode::Unavailable,
+            ),
+        ];
+        for (json, expected) in cases {
+            let body: ErrorBody = serde_json::from_str(json).expect("closed error code");
+            assert_eq!(body.code, expected);
+        }
+
+        assert!(serde_json::from_str::<ErrorBody>(r#"{"code":"AI_SETTINGS_FUTURE"}"#).is_err());
+        assert!(
+            serde_json::from_str::<ErrorBody>(
+                r#"{"code":"AI_SETTINGS_UNAVAILABLE","detail":"private"}"#
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn ai_settings_status_code_matrix_and_mismatch_are_fail_closed() {
+        let cases = [
+            (
+                409,
+                Some(AiSettingsErrorCode::EnvironmentManaged),
+                AiSettingsApiError::EnvironmentManaged,
+            ),
+            (
+                409,
+                Some(AiSettingsErrorCode::RevisionConflict),
+                AiSettingsApiError::RevisionConflict,
+            ),
+            (
+                400,
+                Some(AiSettingsErrorCode::Invalid),
+                AiSettingsApiError::Invalid,
+            ),
+            (
+                500,
+                Some(AiSettingsErrorCode::Unavailable),
+                AiSettingsApiError::Unavailable,
+            ),
+        ];
+        for (status, code, expected) in cases {
+            assert_eq!(map_error_response(status, code), expected);
+        }
+
+        assert_eq!(
+            map_error_response(500, Some(AiSettingsErrorCode::RevisionConflict)),
+            AiSettingsApiError::Unavailable
+        );
+        assert_eq!(
+            map_error_response(409, None),
+            AiSettingsApiError::Unavailable
         );
     }
 }

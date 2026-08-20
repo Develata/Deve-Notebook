@@ -342,6 +342,10 @@
     - runtime_assert: anthropic_alias_selects_anthropic_protocol_and_endpoint true
     - runtime_assert: ambiguous_provider_key_aliases_fail_closed true
     - http_assert: unknown_put_fields_rejected true
+    - http_assert: ai_settings_error_body_is_closed_typed_code true
+    - http_assert: ai_settings_error_body_has_no_free_text_detail true
+    - http_assert: ai_settings_status_code_matrix_exact true
+    - api_assert: ai_settings_status_code_mismatch_is_unavailable true
     - runtime_assert: post_replace_durability_uncertain_seals_until_reload true
     - runtime_assert: new_requests_use_incremented_revision true
     - runtime_assert: in_flight_request_keeps_admission_snapshot true

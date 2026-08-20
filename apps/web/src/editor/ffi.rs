@@ -130,7 +130,9 @@ pub fn try_get_editor_selection() -> Option<String> {
 
 pub fn capture_mobile_gesture_editor_selection() -> Option<u64> {
     let token = bridge_call0("captureMobileGestureEditorSelection")?.as_f64()?;
-    if !token.is_finite() || token < 1.0 || token > 9_007_199_254_740_991.0 || token.fract() != 0.0
+    if !token.is_finite()
+        || !(1.0..=9_007_199_254_740_991.0).contains(&token)
+        || token.fract() != 0.0
     {
         return None;
     }

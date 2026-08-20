@@ -1,14 +1,33 @@
 use super::edge_swipe_left_drawer_view;
 use super::gesture::{
-    EDGE_SWIPE_BLOCKING_SELECTOR, SwipeOutcome, SwipeSession, SwipeTarget, SystemGestureInsets,
-    TouchPoint, clear_swipe_session, edge_activation_bands, normalize_native_gesture_insets,
-    resolve_swipe_outcome, resolve_swipe_start, resolve_swipe_start_for_surface,
-    resolve_touch_end_outcome,
+    EDGE_SWIPE_BLOCKING_SELECTOR, SwipeOutcome, SwipeSession, SwipeStartContext, SwipeTarget,
+    SystemGestureInsets, TouchPoint, clear_swipe_session, edge_activation_bands,
+    normalize_native_gesture_insets, resolve_swipe_outcome, resolve_swipe_start,
+    resolve_swipe_start_for_surface, resolve_touch_end_outcome,
 };
 use crate::components::activity_bar::SidebarView;
 
 fn point(x: i32, y: i32) -> TouchPoint {
     TouchPoint { x, y }
+}
+
+fn work_edit_context(system_gesture_insets: Option<SystemGestureInsets>) -> SwipeStartContext {
+    SwipeStartContext {
+        width: 500,
+        show_sidebar: false,
+        show_outline: false,
+        interactive_target: false,
+        work_edit_surface: true,
+        touch_count: 1,
+        system_gesture_insets,
+    }
+}
+
+fn non_work_edit_context() -> SwipeStartContext {
+    SwipeStartContext {
+        work_edit_surface: false,
+        ..work_edit_context(Some(SystemGestureInsets::web_default()))
+    }
 }
 
 #[test]
@@ -62,13 +81,7 @@ fn mobile_drawer_edge_swipe_opens_right_from_right_edge() {
 fn mobile_drawer_edge_swipe_work_edit_center_opens_both_drawers_by_direction() {
     let rightward = resolve_swipe_start_for_surface(
         point(250, 200),
-        500,
-        false,
-        false,
-        false,
-        true,
-        1,
-        Some(SystemGestureInsets::web_default()),
+        work_edit_context(Some(SystemGestureInsets::web_default())),
     );
     assert_eq!(
         resolve_swipe_outcome(rightward, point(330, 205)),
@@ -77,13 +90,7 @@ fn mobile_drawer_edge_swipe_work_edit_center_opens_both_drawers_by_direction() {
 
     let leftward = resolve_swipe_start_for_surface(
         point(250, 200),
-        500,
-        false,
-        false,
-        false,
-        true,
-        1,
-        Some(SystemGestureInsets::web_default()),
+        work_edit_context(Some(SystemGestureInsets::web_default())),
     );
     assert_eq!(
         resolve_swipe_outcome(leftward, point(170, 195)),
@@ -95,13 +102,7 @@ fn mobile_drawer_edge_swipe_work_edit_center_opens_both_drawers_by_direction() {
 fn mobile_drawer_edge_swipe_work_edit_keeps_edge_bands_directional() {
     let left_band = resolve_swipe_start_for_surface(
         point(10, 200),
-        500,
-        false,
-        false,
-        false,
-        true,
-        1,
-        Some(SystemGestureInsets::web_default()),
+        work_edit_context(Some(SystemGestureInsets::web_default())),
     );
     assert_eq!(
         left_band.map(|session| session.target),
@@ -114,13 +115,7 @@ fn mobile_drawer_edge_swipe_work_edit_keeps_edge_bands_directional() {
 
     let right_band = resolve_swipe_start_for_surface(
         point(490, 200),
-        500,
-        false,
-        false,
-        false,
-        true,
-        1,
-        Some(SystemGestureInsets::web_default()),
+        work_edit_context(Some(SystemGestureInsets::web_default())),
     );
     assert_eq!(
         right_band.map(|session| session.target),
@@ -137,20 +132,11 @@ fn mobile_drawer_edge_swipe_work_edit_rejects_system_region_and_missing_presenta
     let native = normalize_native_gesture_insets(7, 1000.0, 48.0, 48.0, 2.0, 500)
         .expect("valid native gesture insets");
     assert_eq!(
-        resolve_swipe_start_for_surface(
-            point(20, 200),
-            500,
-            false,
-            false,
-            false,
-            true,
-            1,
-            Some(native),
-        ),
+        resolve_swipe_start_for_surface(point(20, 200), work_edit_context(Some(native))),
         None
     );
     assert_eq!(
-        resolve_swipe_start_for_surface(point(250, 200), 500, false, false, false, true, 1, None,),
+        resolve_swipe_start_for_surface(point(250, 200), work_edit_context(None)),
         None
     );
 }
@@ -158,16 +144,7 @@ fn mobile_drawer_edge_swipe_work_edit_rejects_system_region_and_missing_presenta
 #[test]
 fn mobile_drawer_edge_swipe_center_is_rejected_outside_work_edit() {
     assert_eq!(
-        resolve_swipe_start_for_surface(
-            point(250, 200),
-            500,
-            false,
-            false,
-            false,
-            false,
-            1,
-            Some(SystemGestureInsets::web_default()),
-        ),
+        resolve_swipe_start_for_surface(point(250, 200), non_work_edit_context()),
         None
     );
 }

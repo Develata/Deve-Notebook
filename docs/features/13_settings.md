@@ -37,7 +37,8 @@
   key 是否已配置及配置来源。API key 输入是 write-only password；空白保存保留旧 key，清除必须使用独立
   显式控制。清除控制先进入可撤销的“保存时清除”状态，只有保存成功后才显示已删除，关闭 Settings 不得
   暗示服务端 key 已改变。环境变量管理时整个 section 只读并显示“由部署环境管理”；UI-managed 保存后只
-  显示脱敏终态。
+  显示脱敏终态。失败时只显示固定、本地化的可恢复提示；未知响应统一显示“暂不可用”，不展示或透传
+  server/runtime 诊断文本。
 - 切回 Local Backend 是 native-owned lifecycle 操作，不属于 Web Settings。Desktop 原生菜单/托盘保存 host-local preference 并重启壳层；Mobile 的 Android/iOS 平台原生控件交给 native coordinator 销毁远端 WebView并建立新的 embedded runtime。该操作不写浏览器 localStorage、不写 `config.toml`、不保存或复用远端 session/token。
 - Settings 模态框只保留右上角关闭按钮；底部不应再渲染大号关闭按钮。
 - 设置不应表现为“点了没反应”。
