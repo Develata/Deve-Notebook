@@ -140,6 +140,8 @@ test("Android producer receipts bind presentation and lifecycle proof code", () 
     "scripts/lib/android-emulator-targeted-preflight.sh",
     "scripts/lib/android-remote-auth-flow.mjs",
     "scripts/lib/android-document-create-pointer-fixture.mjs",
+    "scripts/android-document-create-pointer.test.mjs",
+    "scripts/android-document-create-settlement.test.mjs",
     "scripts/android-document-create-observation.test.mjs",
     "scripts/lib/android-document-create-observation.mjs",
     "scripts/lib/android-document-create-touch.mjs",

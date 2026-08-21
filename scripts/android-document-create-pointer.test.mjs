@@ -9,6 +9,7 @@ import {
   finalizeExactCreateDocumentClickObservation,
   readExactCreateDocumentClickObservation,
   readExactCreateDocumentPointer,
+  waitExactCreateDocumentClickSettlement,
 } from "./lib/android-document-create-touch.mjs";
 import { tapWebViewPoint } from "./lib/android-webview-pointer.mjs";
 import {
@@ -18,6 +19,30 @@ import {
 
 const exactPath = "notes/exact.md";
 const admittedWriterScope = { repoId: "repo-1", scopeNonce: 7 };
+
+function closedObservation(clicked = true) {
+  return {
+    kind: "observed",
+    clicked,
+    blocked: false,
+    clickState: clicked
+      ? { syncStatus: "ready", repoIdPresent: true, scopeNonceRaw: "7" }
+      : null,
+    inputPhases: {
+      touchstart: clicked,
+      touchend: clicked,
+      pointerdown: clicked,
+      pointerup: clicked,
+      click: clicked,
+    },
+    scrollEvidence: {
+      scrollEvents: 0,
+      documentScrollTopAtArm: 0,
+      targetScrollerTopAtArm: null,
+    },
+    laneSealed: true,
+  };
+}
 
 test("exact Create pointer ignores a stale result and requires a stable hit-tested target", async () => {
   const stale = createResult("Untitled.md");
@@ -53,20 +78,20 @@ test("exact Create pointer sends one native gesture only after identity admissio
         assert.equal(path, exactPath);
         return { kind: "armed", token: 7 };
       }
-      if (fn === readExactCreateDocumentClickObservation) {
+      if (fn === waitExactCreateDocumentClickSettlement) {
         assert.equal(path, 7);
-        return { kind: "observed", clicked: true, blocked: false, clickState: null };
+        return closedObservation();
       }
       if (fn === beginExactCreateDocumentClickSettlement) {
         return { kind: "settling", token: 7 };
       }
       assert.equal(fn, finalizeExactCreateDocumentClickObservation);
       assert.equal(path, 7);
-      return { kind: "observed", clicked: true, clickState: null };
+      return closedObservation();
     },
   };
   const taps = [];
-  await clickExactCreateDocument(
+  const observation = await clickExactCreateDocument(
     page,
     exactPath,
     admittedWriterScope,
@@ -79,6 +104,16 @@ test("exact Create pointer sends one native gesture only after identity admissio
     point: { x: 17, y: 23 },
     contactPoint: { x: 17, y: 23 },
   }]);
+  assert.deepEqual(observation.clickState, {
+    syncStatus: "ready",
+    repoIdPresent: true,
+    scopeNonce: 7,
+  });
+  assert.deepEqual(observation.scrollEvidence, {
+    scrollEvents: 0,
+    documentScrollTopAtArm: 0,
+    targetScrollerTopAtArm: null,
+  });
 
   const changedPage = {
     async call(fn) {
@@ -98,7 +133,7 @@ test("exact Create pointer sends one native gesture only after identity admissio
       admittedWriterScope,
       async (_tapPage, _point, { beforeContact }) => beforeContact(),
     ),
-    /changed before native touch contact/,
+    /android_document_create_native_touch_failed/,
   );
 });
 
@@ -142,7 +177,7 @@ test("exact Create production wiring reports fixed native input phases and one g
   });
 });
 
-test("final atomic observation accepts a click arriving after the last poll", async () => {
+test("final atomic observation confirms the page-side click settlement", async () => {
   const calls = [];
   const page = {
     async call(fn) {
@@ -151,14 +186,14 @@ test("final atomic observation accepts a click arriving after the last poll", as
         return { kind: "ready", count: 1, point: { x: 17, y: 23 } };
       }
       if (fn === armExactCreateDocumentClickObservation) return { kind: "armed", token: 7 };
-      if (fn === readExactCreateDocumentClickObservation) {
-        return { kind: "observed", clicked: false, blocked: false, clickState: null };
+      if (fn === waitExactCreateDocumentClickSettlement) {
+        return closedObservation();
       }
       if (fn === beginExactCreateDocumentClickSettlement) {
         return { kind: "settling", token: 7 };
       }
       if (fn === finalizeExactCreateDocumentClickObservation) {
-        return { kind: "observed", clicked: true, blocked: false, clickState: null };
+        return closedObservation();
       }
       throw new Error(`unexpected page function: ${fn.name}`);
     },
@@ -214,7 +249,7 @@ test("lost finalize transport still expires and seals inside the WebView", async
     const sent = [];
     const page = {
       async call(fn, ...args) {
-        if (fn === readExactCreateDocumentClickObservation) {
+        if (fn === waitExactCreateDocumentClickSettlement) {
           throw new Error("settlement transport lost");
         }
         if (fn === finalizeExactCreateDocumentClickObservation) {
@@ -227,7 +262,7 @@ test("lost finalize transport still expires and seals inside the WebView", async
 
     await assert.rejects(
       clickExactCreateDocument(page, exactPath, admittedWriterScope),
-      /observation_cleanup=finalize never reached page/,
+      /android_document_create_click_settlement_transport_failed/,
     );
     await new Promise((resolve) => setTimeout(resolve, 2025));
     const late = exact.emitClick();
@@ -406,7 +441,7 @@ test("exact Create cleans a committed-unknown arm and release observation", asyn
         admittedWriterScope,
         async (_page, _point, { beforeContact }) => beforeContact(),
       ),
-      /arm response lost; unconfirmed_arm_cleanup=.*"kind":"observed"/,
+      /android_document_create_native_touch_failed/,
     );
     assert.equal(globalThis.__deveAndroidCreatePointerObservation, undefined);
     for (const phase of ["touchstart", "touchend", "pointerdown", "pointerup"]) {
@@ -423,7 +458,7 @@ test("exact Create cleans a committed-unknown arm and release observation", asyn
     };
     await assert.rejects(
       clickExactCreateDocument(releaseLostPage, exactPath, admittedWriterScope),
-      /release response lost; touch_cancel=confirmed; click_observation=.*"clicked":true/,
+      /android_document_create_native_touch_failed/,
     );
     assert.equal(globalThis.__deveAndroidCreatePointerObservation, undefined);
   });

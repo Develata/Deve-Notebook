@@ -40,6 +40,7 @@ export function armExactCreateDocumentClickObservation(
     sealed: false,
     sealListener: null,
     lateClick: null,
+    finalTouchEndTimeStamp: null,
   };
   if (lane.documentRoot !== document) return { kind: "document-mismatch" };
   if (lane.sealed) return { kind: "sealed" };
@@ -91,6 +92,7 @@ export function armExactCreateDocumentClickObservation(
     writerScope: readWriterScope(),
     expiresAt: Date.now() + settlementTimeoutMs,
     expiryTimer: null,
+    settlementResolve: null,
   };
   if (observation.writerScope.syncStatus !== "ready"
     || typeof observation.writerScope.repoIdRaw !== "string"
@@ -111,7 +113,6 @@ export function armExactCreateDocumentClickObservation(
         if (!target) return;
         if (!lane.lateClick) {
           lane.lateClick = {
-            at: Date.now(),
             timeStamp: typeof event.timeStamp === "number" ? event.timeStamp : null,
           };
         }
@@ -188,6 +189,7 @@ export function armExactCreateDocumentClickObservation(
       || !sameWriterScope(observation.writerScope, writerScope)) {
       observation.blocked = true;
       sealLane();
+      observation.settlementResolve?.();
       event.preventDefault();
       event.stopImmediatePropagation();
       return;
@@ -200,6 +202,7 @@ export function armExactCreateDocumentClickObservation(
       scopeNonceRaw: writerScope.scopeNonceRaw,
     };
     sealLane();
+    observation.settlementResolve?.();
   };
   observation.listener = listener;
   globalThis.__deveAndroidCreatePointerObservation = observation;
@@ -215,19 +218,21 @@ export function armExactCreateDocumentClickObservation(
       blocked: observation.blocked,
       clickState: observation.clickState,
       inputPhases: { ...observation.inputPhases },
-      touchStartTimeStamp: observation.touchStartTimeStamp,
-      touchEndTimeStamp: observation.touchEndTimeStamp,
       scrollEvidence: { ...observation.scrollEvidence },
+      laneSealed: lane.sealed === true,
     };
+    lane.finalTouchEndTimeStamp = observation.touchEndTimeStamp;
     delete globalThis.__deveAndroidCreatePointerObservation;
+    observation.settlementResolve?.();
   }, settlementTimeoutMs);
   return { kind: "armed", token };
 }
 
 export function readExactCreateDocumentClickObservation(token) {
+  const lane = globalThis.__deveAndroidCreatePointerLane;
   const observation = globalThis.__deveAndroidCreatePointerObservation;
   if (!observation || observation.token !== token) {
-    const finalObservation = globalThis.__deveAndroidCreatePointerLane?.finalObservation;
+    const finalObservation = lane?.finalObservation;
     return finalObservation?.token === token
       ? { ...finalObservation }
       : { kind: "missing", clicked: false };
@@ -238,9 +243,8 @@ export function readExactCreateDocumentClickObservation(token) {
     blocked: observation.blocked,
     clickState: observation.clickState,
     inputPhases: { ...observation.inputPhases },
-    touchStartTimeStamp: observation.touchStartTimeStamp,
-    touchEndTimeStamp: observation.touchEndTimeStamp,
     scrollEvidence: { ...observation.scrollEvidence },
+    laneSealed: lane?.sealed === true,
   };
 }
 
@@ -263,7 +267,6 @@ export function beginExactCreateDocumentClickSettlement(token, settlementTimeout
         if (!target) return;
         if (!lane.lateClick) {
           lane.lateClick = {
-            at: Date.now(),
             timeStamp: typeof event.timeStamp === "number" ? event.timeStamp : null,
           };
         }
@@ -280,16 +283,50 @@ export function beginExactCreateDocumentClickSettlement(token, settlementTimeout
       blocked: observation.blocked,
       clickState: observation.clickState,
       inputPhases: { ...observation.inputPhases },
-      touchStartTimeStamp: observation.touchStartTimeStamp,
-      touchEndTimeStamp: observation.touchEndTimeStamp,
       scrollEvidence: { ...observation.scrollEvidence },
+      laneSealed: lane.sealed === true,
     };
+    lane.finalTouchEndTimeStamp = observation.touchEndTimeStamp;
     delete globalThis.__deveAndroidCreatePointerObservation;
+    observation.settlementResolve?.();
   };
   clearTimeout(observation.expiryTimer);
   observation.expiresAt = Date.now() + settlementTimeoutMs;
   observation.expiryTimer = setTimeout(expire, settlementTimeoutMs);
   return { kind: "settling", token };
+}
+
+export function waitExactCreateDocumentClickSettlement(token) {
+  const lane = globalThis.__deveAndroidCreatePointerLane;
+  const observation = globalThis.__deveAndroidCreatePointerObservation;
+  if (lane?.documentRoot !== document || !observation || observation.token !== token) {
+    const finalObservation = lane?.finalObservation;
+    return finalObservation?.token === token
+      ? { ...finalObservation }
+      : { kind: "missing", clicked: false };
+  }
+  if (observation.settlementResolve) {
+    return { kind: "wait-active", clicked: false };
+  }
+  const snapshot = () => ({
+    kind: "observed",
+    clicked: observation.clicked,
+    blocked: observation.blocked,
+    clickState: observation.clickState,
+    inputPhases: { ...observation.inputPhases },
+    scrollEvidence: { ...observation.scrollEvidence },
+    laneSealed: lane.sealed === true,
+  });
+  if (observation.clicked || observation.blocked) return snapshot();
+  return new Promise((resolve) => {
+    const finish = () => {
+      if (observation.settlementResolve !== finish) return;
+      observation.settlementResolve = null;
+      resolve(snapshot());
+    };
+    observation.settlementResolve = finish;
+    if (observation.clicked || observation.blocked) finish();
+  });
 }
 
 export function finalizeExactCreateDocumentClickObservation(token) {
@@ -303,7 +340,6 @@ export function finalizeExactCreateDocumentClickObservation(token) {
         if (!target) return;
         if (!lane.lateClick) {
           lane.lateClick = {
-            at: Date.now(),
             timeStamp: typeof event.timeStamp === "number" ? event.timeStamp : null,
           };
         }
@@ -323,14 +359,13 @@ export function finalizeExactCreateDocumentClickObservation(token) {
   clearTimeout(observation.expiryTimer);
   observation.cleanup();
   delete globalThis.__deveAndroidCreatePointerObservation;
+  observation.settlementResolve?.();
   return {
     kind: "observed",
     clicked: observation.clicked,
     blocked: observation.blocked,
     clickState: observation.clickState,
     inputPhases: { ...observation.inputPhases },
-    touchStartTimeStamp: observation.touchStartTimeStamp,
-    touchEndTimeStamp: observation.touchEndTimeStamp,
     scrollEvidence: { ...observation.scrollEvidence },
     laneSealed: lane?.sealed === true,
   };
@@ -338,18 +373,25 @@ export function finalizeExactCreateDocumentClickObservation(token) {
 
 export function readExactCreateDocumentLateClick() {
   const lane = globalThis.__deveAndroidCreatePointerLane;
-  if (!lane || lane.documentRoot !== document) return { kind: "missing", lateClick: null };
-  const finalObservation = lane.finalObservation ?? null;
+  if (!lane || lane.documentRoot !== document) {
+    return { kind: "missing", lateClickObserved: false, lateClickDelayMs: null };
+  }
   const lateClick = lane.lateClick ?? null;
+  const rawDelay = lateClick
+    && typeof lateClick.timeStamp === "number"
+    && typeof lane.finalTouchEndTimeStamp === "number"
+    ? lateClick.timeStamp - lane.finalTouchEndTimeStamp
+    : null;
+  const lateClickDelayMs = Number.isFinite(rawDelay)
+    && rawDelay >= 0
+    && rawDelay <= 60_000
+    ? Math.round(rawDelay)
+    : null;
   return {
     kind: "observed",
     laneSealed: lane.sealed === true,
-    lateClick,
-    lateClickDelayMs: lateClick
-      && typeof lateClick.timeStamp === "number"
-      && typeof finalObservation?.touchEndTimeStamp === "number"
-      ? lateClick.timeStamp - finalObservation.touchEndTimeStamp
-      : null,
+    lateClickObserved: Boolean(lateClick),
+    lateClickDelayMs,
   };
 }
 
@@ -362,6 +404,7 @@ export function consumeExactCreateDocumentClickObservationByPath(expectedPath, a
   clearTimeout(observation.expiryTimer);
   observation.cleanup();
   delete globalThis.__deveAndroidCreatePointerObservation;
+  observation.settlementResolve?.();
   return {
     kind: "observed",
     clicked: observation.clicked,

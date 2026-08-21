@@ -6,11 +6,136 @@ import {
   finalizeExactCreateDocumentClickObservation,
   readExactCreateDocumentClickObservation,
   readExactCreateDocumentLateClick,
+  waitExactCreateDocumentClickSettlement,
 } from "./android-document-create-observation.mjs";
 
 const CREATE_CLICK_SETTLEMENT_MS = 2000;
 const CREATE_TOUCH_TRANSPORT_LEASE_MS = 5000;
 const CREATE_LATE_CLICK_DIAGNOSTIC_MS = 8000;
+const CREATE_TARGET_OBSERVATION_FAILED = "android_document_create_target_observation_failed";
+const CREATE_NATIVE_TOUCH_FAILED = "android_document_create_native_touch_failed";
+const CREATE_SETTLEMENT_TRANSPORT_FAILED =
+  "android_document_create_click_settlement_transport_failed";
+const CREATE_OBSERVATION_CLEANUP_FAILED =
+  "android_document_create_observation_cleanup_failed";
+
+function projectReadyTarget(value) {
+  if (value?.kind !== "ready" || value.count !== 1) return null;
+  const x = value.point?.x;
+  const y = value.point?.y;
+  if (!Number.isFinite(x) || !Number.isFinite(y) || x < 0 || y < 0) return null;
+  return { point: { x, y } };
+}
+
+function projectCreateObservation(value) {
+  if (value?.kind !== "observed"
+    || typeof value.clicked !== "boolean"
+    || typeof value.blocked !== "boolean"
+    || (value.clicked && value.blocked)
+    || value.laneSealed !== true) {
+    return null;
+  }
+  const inputPhases = {};
+  for (const phase of ["touchstart", "touchend", "pointerdown", "pointerup", "click"]) {
+    if (typeof value.inputPhases?.[phase] !== "boolean") return null;
+    inputPhases[phase] = value.inputPhases[phase];
+  }
+  if (inputPhases.click !== value.clicked) return null;
+  let clickState = null;
+  if (value.clicked) {
+    const scopeNonce = /^(?:0|[1-9][0-9]*)$/.test(value.clickState?.scopeNonceRaw ?? "")
+      ? Number(value.clickState.scopeNonceRaw)
+      : null;
+    if (value.clickState?.syncStatus !== "ready"
+      || value.clickState.repoIdPresent !== true
+      || !Number.isSafeInteger(scopeNonce)
+      || scopeNonce <= 0) {
+      return null;
+    }
+    clickState = { syncStatus: "ready", repoIdPresent: true, scopeNonce };
+  } else if (value.clickState !== null) {
+    return null;
+  }
+  const scrollEvents = Number.isSafeInteger(value?.scrollEvidence?.scrollEvents)
+    && value.scrollEvidence.scrollEvents >= 0
+    ? value.scrollEvidence.scrollEvents
+    : null;
+  const projectScrollTop = (offset) => offset === null
+    || (Number.isFinite(offset) && Math.abs(offset) <= 10_000_000)
+    ? offset
+    : undefined;
+  const documentScrollTopAtArm = projectScrollTop(
+    value?.scrollEvidence?.documentScrollTopAtArm,
+  );
+  const targetScrollerTopAtArm = projectScrollTop(
+    value?.scrollEvidence?.targetScrollerTopAtArm,
+  );
+  if (scrollEvents === null
+    || documentScrollTopAtArm === undefined
+    || targetScrollerTopAtArm === undefined) return null;
+  return {
+    kind: "observed",
+    clicked: value.clicked,
+    blocked: value.blocked,
+    clickState,
+    inputPhases,
+    scrollEvidence: {
+      scrollEvents,
+      documentScrollTopAtArm,
+      targetScrollerTopAtArm,
+    },
+    laneSealed: true,
+  };
+}
+
+function createObservationsAgree(settlement, finalObservation) {
+  const clickStateAgrees = settlement.clickState === null
+    ? finalObservation.clickState === null
+    : finalObservation.clickState !== null
+      && settlement.clickState.syncStatus === finalObservation.clickState.syncStatus
+      && settlement.clickState.repoIdPresent === finalObservation.clickState.repoIdPresent
+      && settlement.clickState.scopeNonce === finalObservation.clickState.scopeNonce;
+  return settlement.clicked === finalObservation.clicked
+    && settlement.blocked === finalObservation.blocked
+    && clickStateAgrees
+    && Object.keys(settlement.inputPhases).every(
+      (phase) => settlement.inputPhases[phase] === finalObservation.inputPhases[phase],
+    )
+    && settlement.scrollEvidence.documentScrollTopAtArm
+      === finalObservation.scrollEvidence.documentScrollTopAtArm
+    && settlement.scrollEvidence.targetScrollerTopAtArm
+      === finalObservation.scrollEvidence.targetScrollerTopAtArm
+    && finalObservation.scrollEvidence.scrollEvents
+      >= settlement.scrollEvidence.scrollEvents;
+}
+
+function projectLateClickEvidence(value) {
+  if (value?.kind !== "observed"
+    || typeof value.laneSealed !== "boolean"
+    || typeof value.lateClickObserved !== "boolean"
+    || !(value.lateClickDelayMs === null
+      || (Number.isSafeInteger(value.lateClickDelayMs)
+        && value.lateClickDelayMs >= 0
+        && value.lateClickDelayMs <= 60_000))) {
+    return {
+      kind: "invalid",
+      laneSealed: false,
+      lateClickObserved: false,
+      lateClickDelayMs: null,
+    };
+  }
+  const delay = Number.isSafeInteger(value?.lateClickDelayMs)
+    && value.lateClickDelayMs >= 0
+    && value.lateClickDelayMs <= 60_000
+    ? value.lateClickDelayMs
+    : null;
+  return {
+    kind: "observed",
+    laneSealed: value.laneSealed,
+    lateClickObserved: value.lateClickObserved,
+    lateClickDelayMs: delay,
+  };
+}
 
 export {
   armExactCreateDocumentClickObservation,
@@ -19,6 +144,7 @@ export {
   finalizeExactCreateDocumentClickObservation,
   readExactCreateDocumentClickObservation,
   readExactCreateDocumentLateClick,
+  waitExactCreateDocumentClickSettlement,
 } from "./android-document-create-observation.mjs";
 
 export async function readExactCreateDocumentPointer(expectedPath) {
@@ -74,33 +200,19 @@ export async function readExactCreateDocumentPointer(expectedPath) {
     : { kind: "moving", count: 1 };
 }
 
-async function waitForExactCreateDocumentClickSettlement(page, token, timeoutMs) {
-  const intervalMs = 25;
-  const attempts = Math.ceil(timeoutMs / intervalMs) + 1;
-  let observation = null;
-  for (let attempt = 0; attempt < attempts; attempt += 1) {
-    observation = await page.call(readExactCreateDocumentClickObservation, token);
-    if (observation?.kind !== "observed" || observation.clicked || observation.blocked) {
-      return observation;
-    }
-    if (attempt + 1 < attempts) {
-      await new Promise((resolve) => setTimeout(resolve, intervalMs));
-    }
-  }
-  return observation;
-}
-
 async function waitForLateCreateDocumentClick(page, timeoutMs) {
   const intervalMs = 100;
   const attempts = Math.ceil(timeoutMs / intervalMs) + 1;
   let evidence = null;
   for (let attempt = 0; attempt < attempts; attempt += 1) {
     try {
-      evidence = await page.call(readExactCreateDocumentLateClick);
+      evidence = projectLateClickEvidence(
+        await page.call(readExactCreateDocumentLateClick),
+      );
     } catch {
       break;
     }
-    if (evidence?.lateClick) return evidence;
+    if (evidence?.lateClickObserved) return evidence;
     if (attempt + 1 < attempts) {
       await new Promise((resolve) => setTimeout(resolve, intervalMs));
     }
@@ -117,10 +229,13 @@ export async function clickExactCreateDocument(
 ) {
   const attemptNonce = `${Date.now()}-${clickExactCreateDocument.nextAttemptId}`;
   clickExactCreateDocument.nextAttemptId += 1;
-  const target = await page.call(readExactCreateDocumentPointer, path);
-  if (target?.kind !== "ready" || target.count !== 1 || !target.point) {
-    throw new Error(`exact Create target is not stable and visible: ${JSON.stringify(target)}`);
+  let target;
+  try {
+    target = projectReadyTarget(await page.call(readExactCreateDocumentPointer, path));
+  } catch {
+    throw new Error(CREATE_TARGET_OBSERVATION_FAILED);
   }
+  if (!target) throw new Error(CREATE_TARGET_OBSERVATION_FAILED);
   let armed = null;
   let pointerError = null;
   let armRequestStarted = false;
@@ -128,12 +243,10 @@ export async function clickExactCreateDocument(
   try {
     await tap(page, target.point, {
       beforeContact: async () => {
-        const refreshed = await page.call(readExactCreateDocumentPointer, path);
-        if (refreshed?.kind !== "ready" || refreshed.count !== 1 || !refreshed.point) {
-          throw new Error(
-            `exact Create target was not stable before native touch contact: ${JSON.stringify(refreshed)}`,
-          );
-        }
+        const refreshed = projectReadyTarget(
+          await page.call(readExactCreateDocumentPointer, path),
+        );
+        if (!refreshed) throw new Error(CREATE_TARGET_OBSERVATION_FAILED);
         armRequestStarted = true;
         armed = await page.call(
           armExactCreateDocumentClickObservation,
@@ -144,56 +257,56 @@ export async function clickExactCreateDocument(
           expectedWriterScope,
         );
         armResponseObserved = true;
-        if (armed?.kind !== "armed" || !Number.isSafeInteger(armed.token)) {
-          throw new Error(
-            `exact Create target changed before native touch contact: ${JSON.stringify(armed)}`,
-          );
+        if (armed?.kind !== "armed" || !Number.isSafeInteger(armed.token) || armed.token <= 0) {
+          throw new Error(CREATE_NATIVE_TOUCH_FAILED);
         }
         return refreshed.point;
       },
     });
-  } catch (error) {
-    pointerError = error;
+  } catch {
+    pointerError = new Error(CREATE_NATIVE_TOUCH_FAILED);
   }
   if (armed?.kind !== "armed") {
-    let cleanup = { kind: "not-owned", clicked: false };
     if (armRequestStarted && !armResponseObserved) {
       try {
-        cleanup = await page.call(
+        await page.call(
           consumeExactCreateDocumentClickObservationByPath,
           path,
           attemptNonce,
         );
-      } catch (cleanupError) {
-        throw new Error(
-          `${pointerError?.message ?? "Create pointer arm was not acknowledged"}; `
-            + `unconfirmed_arm_cleanup=${cleanupError.message}`,
-        );
+      } catch {
+        if (pointerError) {
+          throw new Error(
+            `${CREATE_NATIVE_TOUCH_FAILED}; secondary=${CREATE_OBSERVATION_CLEANUP_FAILED}`,
+          );
+        }
+        throw new Error(CREATE_OBSERVATION_CLEANUP_FAILED);
       }
     }
     if (pointerError) {
-      throw new Error(`${pointerError.message}; unconfirmed_arm_cleanup=${JSON.stringify(cleanup)}`);
+      throw new Error(CREATE_NATIVE_TOUCH_FAILED);
     }
     throw new Error("Create pointer driver skipped before-contact identity admission");
   }
   let settlement = null;
-  let settlementError = null;
+  let settlementError = false;
   try {
     const started = await page.call(
       beginExactCreateDocumentClickSettlement,
       armed.token,
       CREATE_CLICK_SETTLEMENT_MS,
     );
-    if (started?.kind !== "settling") {
-      throw new Error(`Create click settlement did not start: ${JSON.stringify(started)}`);
+    if (started?.kind !== "settling" || started.token !== armed.token) {
+      throw new Error(CREATE_SETTLEMENT_TRANSPORT_FAILED);
     }
-    settlement = await waitForExactCreateDocumentClickSettlement(
-      page,
-      armed.token,
-      CREATE_CLICK_SETTLEMENT_MS,
+    settlement = projectCreateObservation(
+      await page.call(waitExactCreateDocumentClickSettlement, armed.token),
     );
-  } catch (error) {
-    settlementError = error;
+    if (!settlement) {
+      throw new Error(CREATE_SETTLEMENT_TRANSPORT_FAILED);
+    }
+  } catch {
+    settlementError = true;
   }
   let lateClickEvidence = null;
   if (!settlementError
@@ -206,21 +319,32 @@ export async function clickExactCreateDocument(
   }
   let observation;
   try {
-    observation = await page.call(finalizeExactCreateDocumentClickObservation, armed.token);
-  } catch (cleanupError) {
-    throw new Error(
-      `${pointerError?.message ?? "Create pointer observation cleanup failed"}; `
-        + `observation_cleanup=${cleanupError.message}`,
+    observation = projectCreateObservation(
+      await page.call(finalizeExactCreateDocumentClickObservation, armed.token),
     );
+    if (!observation) {
+      throw new Error(CREATE_OBSERVATION_CLEANUP_FAILED);
+    }
+  } catch {
+    if (pointerError) throw new Error(CREATE_NATIVE_TOUCH_FAILED);
+    if (settlementError) throw new Error(CREATE_SETTLEMENT_TRANSPORT_FAILED);
+    throw new Error(CREATE_OBSERVATION_CLEANUP_FAILED);
   }
   if (settlementError) {
     throw new Error(
-      `${pointerError?.message ?? "Create click settlement failed"}; `
-        + `settlement=${settlementError.message}; observation_cleanup=${JSON.stringify(observation)}`,
+      `${CREATE_SETTLEMENT_TRANSPORT_FAILED}; `
+        + `observation_cleanup=${JSON.stringify(observation)}`,
     );
   }
   if (pointerError) {
-    throw new Error(`${pointerError.message}; click_observation=${JSON.stringify(observation)}`);
+    throw new Error(CREATE_NATIVE_TOUCH_FAILED);
+  }
+  if (!createObservationsAgree(settlement, observation)) {
+    throw new Error(CREATE_OBSERVATION_CLEANUP_FAILED);
+  }
+  if (observation.clicked
+    && observation.clickState.scopeNonce !== expectedWriterScope.scopeNonce) {
+    throw new Error(CREATE_OBSERVATION_CLEANUP_FAILED);
   }
   if (observation?.kind !== "observed" || observation.clicked !== true) {
     const category = settlement?.kind === "observed" && settlement.blocked !== true

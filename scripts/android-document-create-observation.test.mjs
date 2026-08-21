@@ -11,7 +11,9 @@ import {
   readExactCreateDocumentClickObservation,
   readExactCreateDocumentLateClick,
   readExactCreateDocumentPointer,
+  waitExactCreateDocumentClickSettlement,
 } from "./lib/android-document-create-touch.mjs";
+import { CdpPage } from "./lib/android-webview-cdp-client.mjs";
 import { tapWebViewPoint } from "./lib/android-webview-pointer.mjs";
 import {
   createResult,
@@ -20,6 +22,45 @@ import {
 
 const exactPath = "notes/exact.md";
 const admittedWriterScope = { repoId: "repo-1", scopeNonce: 7 };
+
+class ReplySocket extends EventTarget {
+  constructor(value) {
+    super();
+    this.readyState = 1;
+    this.value = value;
+    this.sent = [];
+  }
+
+  send(raw) {
+    const request = JSON.parse(raw);
+    this.sent.push(request);
+    const event = new Event("message");
+    Object.defineProperty(event, "data", {
+      value: JSON.stringify({
+        id: request.id,
+        result: { result: { value: this.value } },
+      }),
+    });
+    queueMicrotask(() => this.dispatchEvent(event));
+  }
+}
+
+test("Create settlement CDP call awaits the page-side Promise", async () => {
+  const socket = new ReplySocket({ kind: "observed", clicked: true });
+  const page = new CdpPage(socket, async (_label, promise) => promise);
+
+  assert.deepEqual(
+    await page.call(waitExactCreateDocumentClickSettlement, 7),
+    { kind: "observed", clicked: true },
+  );
+
+  assert.equal(socket.sent.length, 1);
+  assert.equal(socket.sent[0].method, "Runtime.evaluate");
+  assert.equal(socket.sent[0].params.awaitPromise, true);
+  assert.equal(socket.sent[0].params.returnByValue, true);
+  assert.equal(socket.sent[0].params.userGesture, true);
+  assert.match(socket.sent[0].params.expression, /waitExactCreateDocumentClickSettlement/);
+});
 
 test("observation functions execute in an isolated CDP serialization realm", async () => {
   const exact = createResult(exactPath);
@@ -54,16 +95,20 @@ test("observation functions execute in an isolated CDP serialization realm", asy
       ).kind,
       "settling",
     );
+    const settlement = callSerialized(waitExactCreateDocumentClickSettlement, armed.token);
+    exact.emitClick();
+    assert.equal((await settlement).clicked, true);
     assert.equal(
       callSerialized(readExactCreateDocumentClickObservation, armed.token).clicked,
-      false,
+      true,
     );
     const finalized = callSerialized(finalizeExactCreateDocumentClickObservation, armed.token);
     assert.equal(finalized.kind, "observed");
     assert.equal(finalized.laneSealed, true);
     const lateClick = callSerialized(readExactCreateDocumentLateClick);
     assert.equal(lateClick.kind, "observed");
-    assert.equal(lateClick.lateClick, null);
+    assert.equal(lateClick.lateClickObserved, false);
+    assert.equal(lateClick.lateClickDelayMs, null);
 
     const cleanupContext = vm.createContext({
       document: globalThis.document,
@@ -137,7 +182,7 @@ test("a concurrent non-owner cannot clean the active Create observation", async 
         admittedWriterScope,
         async (_page, _point, { beforeContact }) => beforeContact(),
       ),
-      /changed before native touch contact.*active.*not-owned/,
+      /android_document_create_native_touch_failed/,
     );
     assert.equal(globalThis.__deveAndroidCreatePointerObservation, firstArmed);
     releaseFirstContact();
@@ -190,7 +235,7 @@ test("exact Create synchronously seals after a blocked click", async () => {
   });
 });
 
-test("Create observation records scroll evidence and gesture timestamps", async () => {
+test("Create observation projects scroll evidence without absolute gesture timestamps", async () => {
   let commits = 0;
   const exact = createResult(exactPath, { onCommit: () => { commits += 1; } });
   await withCreateDom([exact], exact, async () => {
@@ -218,8 +263,8 @@ test("Create observation records scroll evidence and gesture timestamps", async 
     assert.equal(commits, 1);
     assert.equal(finalized.scrollEvidence.scrollEvents, 1);
     assert.equal(finalized.scrollEvidence.documentScrollTopAtArm, 12);
-    assert.equal(typeof finalized.touchStartTimeStamp, "number");
-    assert.equal(typeof finalized.touchEndTimeStamp, "number");
+    assert.equal(Object.hasOwn(finalized, "touchStartTimeStamp"), false);
+    assert.equal(Object.hasOwn(finalized, "touchEndTimeStamp"), false);
     assert.equal(globalThis.document.listenerCount("scroll"), 0);
   });
 });
@@ -246,5 +291,31 @@ test("touch transport lease is renewed only after touchEnd settlement begins", a
     const finalized = finalizeExactCreateDocumentClickObservation(armed.token);
     assert.equal(finalized.clicked, true);
     assert.equal(commits, 1);
+  });
+});
+
+test("a second settlement waiter cannot replace the owner and finalize releases it", async () => {
+  const exact = createResult(exactPath);
+  await withCreateDom([exact], exact, async () => {
+    const armed = armExactCreateDocumentClickObservation(
+      exactPath,
+      { x: 34, y: 42 },
+      "duplicate-waiter",
+      500,
+      admittedWriterScope,
+    );
+    assert.equal(beginExactCreateDocumentClickSettlement(armed.token, 500).kind, "settling");
+
+    const ownedWait = waitExactCreateDocumentClickSettlement(armed.token);
+    assert.deepEqual(
+      waitExactCreateDocumentClickSettlement(armed.token),
+      { kind: "wait-active", clicked: false },
+    );
+    const finalized = finalizeExactCreateDocumentClickObservation(armed.token);
+    const released = await ownedWait;
+
+    assert.equal(finalized.laneSealed, true);
+    assert.equal(released.kind, "observed");
+    assert.equal(released.clicked, false);
   });
 });

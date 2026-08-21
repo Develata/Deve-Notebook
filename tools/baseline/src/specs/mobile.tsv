@@ -1140,29 +1140,43 @@ contains	scripts/android-document-create-flow.test.mjs	Android document create f
 contains	scripts/android-document-create-flow.test.mjs	Android document create rejects duplicate exact-path OpenDoc projections
 contains	scripts/android-document-create-flow.test.mjs	Android document create rejects an old writable editor after OpenDoc acknowledgement
 contains	scripts/android-document-create-pointer.test.mjs	exact Create pointer ignores a stale result and requires a stable hit-tested target
-contains	scripts/android-document-create-pointer.test.mjs	changed before native touch contact
+contains	scripts/android-document-create-observation.test.mjs	Create settlement CDP call awaits the page-side Promise
+contains	scripts/android-document-create-pointer.test.mjs	android_document_create_native_touch_failed
 contains	scripts/android-document-create-pointer.test.mjs	exact Create production wiring reports fixed native input phases and one gesture
 contains	scripts/android-document-create-observation.test.mjs	exact Create synchronously seals after the accepted click
 contains	scripts/android-document-create-observation.test.mjs	exact Create synchronously seals after a blocked click
 contains	scripts/android-document-create-settlement.test.mjs	exact Create waits up to the bounded settlement deadline for a delayed click
+contains	scripts/android-document-create-settlement.test.mjs	exact Create settlement waits inside the WebView without host polling
+contains	scripts/android-document-create-settlement.test.mjs	Create settlement transport failure exposes only a fixed category
+contains	scripts/android-document-create-settlement.test.mjs	Create observation cleanup failure exposes only a fixed category
+contains	scripts/android-document-create-settlement.test.mjs	Create native touch failure exposes only a fixed category
+contains	scripts/android-document-create-settlement.test.mjs	Create target observation failure exposes only a fixed category
+contains	scripts/android-document-create-settlement.test.mjs	Create malformed renderer returns expose only closed evidence
+contains	scripts/android-document-create-settlement.test.mjs	Create contradictory observed evidence always fails closed
+contains	scripts/android-document-create-settlement.test.mjs	Create native touch remains the primary category when compensation cleanup also fails
 contains	scripts/lib/android-document-create-touch.mjs	const CREATE_CLICK_SETTLEMENT_MS = 2000
 contains	scripts/lib/android-document-create-touch.mjs	const CREATE_LATE_CLICK_DIAGNOSTIC_MS = 8000
 contains	scripts/lib/android-document-create-observation.mjs	inputPhases: {
 contains	scripts/lib/android-document-create-observation.mjs	readExactCreateDocumentLateClick
-contains	scripts/android-document-create-observation.test.mjs	Create observation records scroll evidence and gesture timestamps
+contains	scripts/android-document-create-observation.test.mjs	Create observation projects scroll evidence without absolute gesture timestamps
 contains	scripts/android-document-create-settlement.test.mjs	exact Create settlement timeout captures sealed late-click delay evidence
 contains	scripts/android-document-create-settlement.test.mjs	exact Create click settlement timeout never retransmits the committed touch
 contains	scripts/android-document-create-settlement.test.mjs	committed-unknown Create seals the document lane against a late click and retry
-contains	scripts/android-document-create-pointer.test.mjs	final atomic observation accepts a click arriving after the last poll
+contains	scripts/android-document-create-pointer.test.mjs	final atomic observation confirms the page-side click settlement
 contains	scripts/android-document-create-observation.test.mjs	observation functions execute in an isolated CDP serialization realm
+contains	scripts/lib/android-document-create-observation.mjs	waitExactCreateDocumentClickSettlement
+contains	scripts/lib/android-document-create-observation.mjs	lateClickObserved
 contains	scripts/android-document-create-observation.test.mjs	a concurrent non-owner cannot clean the active Create observation
 contains	scripts/android-document-create-observation.test.mjs	touch transport lease is renewed only after touchEnd settlement begins
+contains	scripts/android-document-create-observation.test.mjs	a second settlement waiter cannot replace the owner and finalize releases it
 contains	scripts/android-document-create-pointer.test.mjs	page-side expiry seals a Create when finalize never reaches the WebView
 contains	scripts/android-document-create-pointer.test.mjs	lost finalize transport still expires and seals inside the WebView
 contains	scripts/android-document-create-pointer.test.mjs	Create observation rejects an invalid writer scope before contact
 contains	scripts/android-document-create-pointer.test.mjs	Create observation rejects a scope switch after quiet admission but before arm
 contains	docs/acceptance-cases/07_storage_repo.md	android_first_create_single_touch_waits_for_same_token_click_settlement_and_seals_committed_unknown true
 contains	docs/acceptance-cases/07_storage_repo.md	android_first_create_native_touch_uses_bounded_contact_and_fixed_phase_diagnostics true
+contains	docs/acceptance-cases/07_storage_repo.md	android_first_create_click_settlement_is_page_side_event_driven_without_host_polling true
+contains	docs/acceptance-cases/07_storage_repo.md	android_first_create_failure_diagnostics_are_fixed_and_relative_only true
 contains	scripts/android-document-create-pointer.test.mjs	exact Create cleans a committed-unknown arm and release observation
 contains	scripts/android-document-create-flow.test.mjs	exact OpenDoc selection returns one typed doc identity atomically
 contains	scripts/android-business-flow.test.mjs	Android repo writer admission resets its quiet window after a scope change
@@ -1222,6 +1236,8 @@ contains	scripts/mobile-android-emulator-host.test.mjs	scripts/lib/android-packa
 contains	scripts/mobile-android-emulator-host.test.mjs	scripts/android-package-session.test.sh
 contains	scripts/mobile-android-emulator-host.test.mjs	scripts/lib/android-emulator-targeted-preflight.sh
 contains	scripts/mobile-android-emulator-host.test.mjs	scripts/lib/android-remote-auth-flow.mjs
+contains	scripts/mobile-android-emulator-host.test.mjs	scripts/android-document-create-pointer.test.mjs
+contains	scripts/mobile-android-emulator-host.test.mjs	scripts/android-document-create-settlement.test.mjs
 contains	scripts/smoke-mobile-android-lifecycle.sh	DEVE_MOBILE_ANDROID_TEST_IME_SERVICE="$ANDROID_IME_TEST_SELECTED_SERVICE"
 contains	scripts/lib/mobile-webview-interaction.mjs	android_pending_ack_marker_invalid
 contains	scripts/lib/websocket-delivery-gate.mjs	WebSocket.prototype.send = function gatedSend
