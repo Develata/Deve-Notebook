@@ -1309,6 +1309,11 @@ contains	.github/workflows/native-target-host.yml	mobile-android-journey:
 contains	.github/workflows/native-target-host.yml	mobile-android-parallel-summary:
 contains	.github/workflows/native-target-host.yml	pattern: deve-mobile-android-targeted-receipt-*
 contains	.github/workflows/native-target-host.yml	acceptance-collect
+contains	.github/workflows/native-target-host.yml	--output "${RUNNER_TEMP}/deve-acceptance-android-collected"
+contains	.github/workflows/native-target-host.yml	target/android-targeted-input/*
+contains	.github/workflows/native-target-host.yml	path: ${{ runner.temp }}/deve-acceptance-android-collected
+contains	.github/workflows/native-target-host.yml	DEVE_NATIVE_TARGET_HOST_EVIDENCE_OUT: ${{ runner.temp }}/deve-native-target-host-evidence/mobile-android.md
+absent	.github/workflows/native-target-host.yml	--output target/android-targeted-collected
 absent	scripts/check-mobile-android-emulator-install-startup-smoke.sh	assert_positive_integer()
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- local-quick-gate
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- deep-audit-gate

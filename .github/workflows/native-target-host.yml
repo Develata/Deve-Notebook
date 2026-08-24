@@ -872,13 +872,13 @@ jobs:
           set -euo pipefail
           chmod +x target/android-targeted-harness/debug/deve_baseline
           target/android-targeted-harness/debug/deve_baseline acceptance-collect \
-            --output target/android-targeted-collected \
-            target/android-targeted-input
+            --output "${RUNNER_TEMP}/deve-acceptance-android-collected" \
+            target/android-targeted-input/*
 
       - name: Write parallel Mobile Android target-host evidence
         env:
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_TARGET: Mobile Android
-          DEVE_NATIVE_TARGET_HOST_EVIDENCE_OUT: target/native-target-host-evidence/mobile-android.md
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_OUT: ${{ runner.temp }}/deve-native-target-host-evidence/mobile-android.md
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMANDS: |
             immutable APK producer + immutable Rust harness producer
             isolated LocalBackend/RemoteBrowser consumers
@@ -897,7 +897,7 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: deve-mobile-android-targeted-summary
-          path: target/android-targeted-collected
+          path: ${{ runner.temp }}/deve-acceptance-android-collected
           if-no-files-found: error
 
       - name: Upload Mobile Android target-host evidence
@@ -905,8 +905,8 @@ jobs:
         with:
           name: deve-native-target-host-evidence-android
           path: |
-            target/native-target-host-evidence/mobile-android.md
-            target/android-targeted-collected/**
+            ${{ runner.temp }}/deve-native-target-host-evidence/mobile-android.md
+            ${{ runner.temp }}/deve-acceptance-android-collected/**
           if-no-files-found: error
 
   mobile-android:

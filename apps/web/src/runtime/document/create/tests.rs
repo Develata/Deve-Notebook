@@ -1,3 +1,7 @@
+//! plan_ref:
+//!   - 09_web_thin_client_ledger#document-create-intent
+//!   - 07_network#projection-recovery-contract
+
 use super::*;
 use deve_core::protocol::{
     DocumentCreateProjectionOutcome, DocumentCreateResponseContext, ServerErrorCode,
