@@ -473,9 +473,10 @@ jobs:
             --key-pass env:ANDROID_KEY_PASSWORD \
             --out "$signed" "$RUNNER_TEMP/aligned.apk"
           "$buildtools/apksigner" verify --verbose --print-certs "$signed" | tee "$RUNNER_TEMP/apksigner.txt"
-          signer="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' "$RUNNER_TEMP/apksigner.txt" | head -n1 | tr '[:upper:]' '[:lower:]')"
-          [[ "$signer" =~ ^[0-9a-f]{64}$ ]]
-          printf 'sha256:%s\n' "$signer" >dist-native/android-signer-sha256.txt
+          signer="$(DEVE_ANDROID_APKSIGNER="$buildtools/apksigner" \
+            bash scripts/check-android-apk-signer.sh --print-fingerprint "$signed")"
+          [[ "$signer" =~ ^sha256:[0-9a-f]{64}$ ]]
+          printf '%s\n' "$signer" >dist-native/android-signer-sha256.txt
 
       - name: Upload exact signed Android candidate bytes
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

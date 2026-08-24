@@ -66,7 +66,7 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `desktop-install-root.test.ps1` | Executes real Windows install-root, prefix-escape, and junction containment regressions |
 | `lib/desktop-install-root.ps1` | Canonical Win32 install-root validator shared by the packaged Desktop RemoteBrowser smoke and tests |
 | `check-release-candidate-bundle.sh` | Recomputes the Rust-owned sealed candidate contract, re-extracts the APK signer, and verifies fixed provenance/SPDX bundles against exact workflow/HEAD |
-| `check-android-apk-signer{,.test}.sh` | Verifies a sealed APK has exactly one expected SHA-256 signer without trusting a companion manifest value |
+| `check-android-apk-signer{,.test}.sh` | Extracts or verifies the unique sealed APK SHA-256 signer across supported `apksigner` output labels without trusting a companion manifest value |
 | `check-release-tag-binding.sh` | Revalidates the remote annotated tag object and its directly peeled candidate commit before public mutations |
 | `probe-release-remote.sh` | Distinguishes GitHub Release and GHCR present/explicit-404-absent/error states before promotion |
 | `install-native-target-host-tools.sh` | Installs pinned Trunk and Tauri CLI release binaries for manual target-host workflows without compiling those tools from source |

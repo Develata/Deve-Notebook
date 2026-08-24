@@ -108,6 +108,7 @@ pub(super) fn check(root: &Path) -> Result<()> {
         "--ks-pass env:ANDROID_KEYSTORE_PASSWORD",
         "--key-pass env:ANDROID_KEY_PASSWORD",
         "apksigner\" verify --verbose --print-certs",
+        "check-android-apk-signer.sh --print-fingerprint",
         "android-signer-sha256.txt",
     ] {
         require_text(&native, required, "release-native.yml")?;
