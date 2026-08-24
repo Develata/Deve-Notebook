@@ -186,6 +186,22 @@ export async function waitForDrawerVisualState(page, side, open, waitUntil, time
   return lastState;
 }
 
+async function closeDrawerWithFocusedPlatformBack(page, {
+  adbCommand,
+  side,
+  waitUntil,
+  waitForInputFocus = waitForCurrentWebViewInputFocus,
+  waitForVisualState = waitForDrawerVisualState,
+}) {
+  await waitForInputFocus(page, waitUntil);
+  try {
+    adbCommand("shell", "input", "keyevent", "4");
+  } catch {
+    throw new Error(`${side} drawer platform Back failed`);
+  }
+  await waitForVisualState(page, side, false, waitUntil);
+}
+
 export async function openDrawerWithObservedNativeSwipe(page, {
   adbCommand,
   side,
@@ -212,14 +228,18 @@ export async function openDrawerWithObservedNativeSwipe(page, {
   }
   if (drawerVisualStateIsSemanticallyOpen(initialState)) {
     // A reloaded document can legitimately retain an open presentation. One
-    // typed Back normalizes the setup; closed-but-inconsistent state still fails.
-    try {
-      adbCommand("shell", "input", "keyevent", "4");
-    } catch {
-      throw new Error(`${side} drawer initial Back normalization failed`);
-    }
+    // typed Back normalizes the setup, but only after the current document owns
+    // stable WebView input focus; closed-but-inconsistent state still fails.
+    await closeDrawerWithFocusedPlatformBack(page, {
+      adbCommand,
+      side,
+      waitUntil,
+      waitForInputFocus,
+      waitForVisualState,
+    });
+  } else {
+    await waitForVisualState(page, side, false, waitUntil);
   }
-  await waitForVisualState(page, side, false, waitUntil);
   let lastDelivery = "missing";
   let lastEvents = [];
 
@@ -334,15 +354,13 @@ export async function proveAndroidWorkEditDrawerGestures(page, {
     adbCommand, side: "left", startPx, distancePx, density: presentation.density,
     waitUntil, requiredClosestSelector,
   });
-  adbCommand("shell", "input", "keyevent", "4");
-  await waitForDrawerVisualState(page, "left", false, waitUntil);
+  await closeDrawerWithFocusedPlatformBack(page, { adbCommand, side: "left", waitUntil });
 
   const right = await openDrawerWithObservedNativeSwipe(page, {
     adbCommand, side: "right", startPx, distancePx, density: presentation.density,
     waitUntil, requiredClosestSelector,
   });
-  adbCommand("shell", "input", "keyevent", "4");
-  await waitForDrawerVisualState(page, "right", false, waitUntil);
+  await closeDrawerWithFocusedPlatformBack(page, { adbCommand, side: "right", waitUntil });
 
   const after = await readWorkEditSwipeState(page);
   assert.ok(after, "Work Edit swipe surface must remain mounted after drawer gestures");
@@ -385,15 +403,13 @@ export async function proveAndroidDrawerGesturesAfterReload(page, {
     adbCommand, side: "left", startPx: leftStartPx, distancePx,
     density: presentation.density, waitUntil,
   });
-  adbCommand("shell", "input", "keyevent", "4");
-  await waitForDrawerVisualState(page, "left", false, waitUntil);
+  await closeDrawerWithFocusedPlatformBack(page, { adbCommand, side: "left", waitUntil });
 
   const right = await openDrawerWithObservedNativeSwipe(page, {
     adbCommand, side: "right", startPx: rightStartPx, distancePx,
     density: presentation.density, waitUntil,
   });
-  adbCommand("shell", "input", "keyevent", "4");
-  await waitForDrawerVisualState(page, "right", false, waitUntil);
+  await closeDrawerWithFocusedPlatformBack(page, { adbCommand, side: "right", waitUntil });
 
   const pidAfter = adbOutput("shell", "pidof", appId).trim();
   assert.equal(pidAfter, pidBefore, "native drawer gestures must keep the app PID stable");

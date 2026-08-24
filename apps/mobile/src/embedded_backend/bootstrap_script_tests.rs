@@ -57,6 +57,15 @@ fn mobile_embedded_backend_android_initial_session_source_binds_markers_to_proce
     assert!(first_android.contains("initialBootstrapStatus"));
     assert!(first_android.contains("fallback.capabilities"));
     assert!(first_android.contains(",false,true)"));
+    assert!(first_android.contains("storage_unconfirmed"));
+    for phase in [
+        "bootstrap-storage-failed",
+        "bridge-readiness-failed",
+        "native-prepare-failed",
+        "session-marker-failed",
+    ] {
+        assert!(first_android.contains(phase));
+    }
     validate_mobile_embedded_script_source(&first_android)
         .expect("Android initial session source hygiene");
     assert!(first_android.contains("root.sessionStorage.getItem(key) !== installId"));

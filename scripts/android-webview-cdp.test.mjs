@@ -504,7 +504,7 @@ test("stable discovery failure preserves only the latest sanitized page snapshot
 
 test("stable discovery diagnostics allowlist native session prepare phase", async () => {
   const clock = fakeClock();
-  const page = mockPage([pageSnapshot({ sessionPreparePhase: "bootstrap-storage" })]);
+  const page = mockPage([pageSnapshot({ sessionPreparePhase: "bootstrap-storage-failed" })]);
 
   await assert.rejects(
     findStableAppPage(discoveryArgs({
@@ -516,7 +516,7 @@ test("stable discovery diagnostics allowlist native session prepare phase", asyn
       stableTimeoutMs: 100,
     })),
     (error) => {
-      assert.match(error.message, /"nativeSessionPreparePhase":"bootstrap-storage"/);
+      assert.match(error.message, /"nativeSessionPreparePhase":"bootstrap-storage-failed"/);
       assert.doesNotMatch(error.message, /installId|43123|cookie-value|token=|secret=/i);
       return true;
     },

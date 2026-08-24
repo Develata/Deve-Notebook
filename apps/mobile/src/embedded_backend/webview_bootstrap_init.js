@@ -88,6 +88,6 @@
     root.__DEVE_NATIVE_BOOTSTRAP = current;
     return "ready";
   }
-  fail();
-  return "invalid_storage_identity";
+  if (!deferStorageFailure) fail();
+  return "storage_unconfirmed";
 })

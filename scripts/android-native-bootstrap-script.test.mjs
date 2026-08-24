@@ -38,6 +38,7 @@ function storageWith(raw, behavior = {}) {
     },
     setItem(key, value) {
       if (behavior.setThrows) throw new Error("storage set failed");
+      if (behavior.ignoreSet) return;
       values.set(key, value);
     },
     snapshot(key) {
@@ -132,6 +133,17 @@ test("replacement storage failure projects session invalid", () => {
   assert.deepEqual(harness.events, ["deve-native-service-error"]);
 });
 
+test("unconfirmed bootstrap write fails closed outside deferred initial admission", () => {
+  const harness = bootstrapRoot(storageWith(undefined, { ignoreSet: true }));
+  assert.equal(
+    initialize(harness.root, fallback, installId, false),
+    "storage_unconfirmed",
+  );
+  assert.equal(harness.root.__DEVE_NATIVE_SESSION_STORAGE_READY, false);
+  assert.equal(harness.root.__DEVE_NATIVE_BOOTSTRAP.service_state, "session_invalid");
+  assert.deepEqual(harness.events, ["deve-native-service-error"]);
+});
+
 function prepareRoot(storage) {
   const scheduled = [];
   const events = [];
@@ -202,7 +214,7 @@ test("storage admission failure does not invoke or reload", async () => {
     reloads: 0,
     events: ["deve-native-service-error"],
   });
-  assert.equal(harness.root.__DEVE_NATIVE_SESSION_PREPARE_PHASE__, "failed");
+  assert.equal(harness.root.__DEVE_NATIVE_SESSION_PREPARE_PHASE__, "bootstrap-storage-failed");
   assert.deepEqual(harness.root.__DEVE_NATIVE_BOOTSTRAP, {
     service_state: "session_invalid",
     platform_lifecycle_authority: "native",
@@ -219,6 +231,7 @@ test("installed-marker read failure does not invoke or reload", async () => {
     reloads: 0,
     events: ["deve-native-service-error"],
   });
+  assert.equal(harness.root.__DEVE_NATIVE_SESSION_PREPARE_PHASE__, "bootstrap-storage-failed");
 });
 
 test("confirmed marker skips native handoff and reload", () => {
@@ -294,6 +307,7 @@ test("Tauri invoke bridge admission exhaustion fails closed without a late invok
     reloads: 0,
     events: ["deve-native-service-error"],
   });
+  assert.equal(harness.root.__DEVE_NATIVE_SESSION_PREPARE_PHASE__, "bridge-readiness-failed");
 
   harness.root.__TAURI_INTERNALS__ = { invoke };
   assert.deepEqual(harness.scheduled, []);
@@ -320,6 +334,7 @@ test("rejected native handoff does not reload", async () => {
   assert.deepEqual(harness.scheduled, []);
   assert.equal(harness.observation().reloads, 0);
   assert.deepEqual(harness.observation().events, ["deve-native-service-error"]);
+  assert.equal(harness.root.__DEVE_NATIVE_SESSION_PREPARE_PHASE__, "native-prepare-failed");
 });
 
 test("late command-route readiness after admission timeout cannot submit prepare", async () => {
@@ -347,6 +362,7 @@ test("late command-route readiness after admission timeout cannot submit prepare
   assert.equal(harness.observation().reloads, 0);
   assert.deepEqual(harness.observation().events, ["deve-native-service-error"]);
   assert.deepEqual(harness.scheduled, []);
+  assert.equal(harness.root.__DEVE_NATIVE_SESSION_PREPARE_PHASE__, "bridge-readiness-failed");
 });
 
 test("marker storage failure after handoff does not reload", async () => {
@@ -358,6 +374,7 @@ test("marker storage failure after handoff does not reload", async () => {
     reloads: 0,
     events: ["deve-native-service-error"],
   });
+  assert.equal(harness.root.__DEVE_NATIVE_SESSION_PREPARE_PHASE__, "session-marker-failed");
 });
 
 test("transient bootstrap storage becomes ready within the single admission window", async () => {
@@ -374,6 +391,28 @@ test("transient bootstrap storage becomes ready within the single admission wind
   assert.deepEqual(harness.observation(), { invokes: 0, reloads: 0, events: [] });
 
   behavior.getThrows = false;
+  await takeScheduled(harness, 25).callback();
+  assert.equal(harness.root.__DEVE_NATIVE_SESSION_STORAGE_READY, true);
+  assert.deepEqual(harness.observation(), { invokes: 2, reloads: 1, events: [] });
+  assert.equal(harness.root.__DEVE_NATIVE_SESSION_PREPARE_PHASE__, "reload-pending");
+  assert.deepEqual(harness.scheduled, []);
+});
+
+test("transient unconfirmed bootstrap write becomes readable within the single admission window", async () => {
+  const behavior = { ignoreSet: true };
+  const harness = prepareRoot(storageWith(undefined, behavior));
+  const initializeBootstrap = deferredInitialize(harness);
+  const initialStatus = initializeBootstrap();
+  assert.equal(initialStatus, "storage_unconfirmed");
+  assert.equal(harness.root.__DEVE_NATIVE_SESSION_STORAGE_READY, false);
+  assert.deepEqual(harness.observation().events, []);
+
+  prepare(harness.root, installId, initializeBootstrap, initialStatus, fallback.capabilities);
+  await takeScheduled(harness, 0).callback();
+  assert.equal(harness.root.__DEVE_NATIVE_SESSION_PREPARE_PHASE__, "bootstrap-storage");
+  assert.deepEqual(harness.observation(), { invokes: 0, reloads: 0, events: [] });
+
+  behavior.ignoreSet = false;
   await takeScheduled(harness, 25).callback();
   assert.equal(harness.root.__DEVE_NATIVE_SESSION_STORAGE_READY, true);
   assert.deepEqual(harness.observation(), { invokes: 2, reloads: 1, events: [] });

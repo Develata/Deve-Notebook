@@ -49,9 +49,13 @@ const NATIVE_SESSION_PREPARE_PHASE_VALUES = new Set([
   "bootstrap-storage",
   "bridge-readiness",
   "native-prepare",
+  "session-marker",
   "reload-pending",
   "installed",
-  "failed",
+  "bootstrap-storage-failed",
+  "bridge-readiness-failed",
+  "native-prepare-failed",
+  "session-marker-failed",
 ]);
 
 function readPageSnapshot() {

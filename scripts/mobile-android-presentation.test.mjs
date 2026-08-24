@@ -330,6 +330,18 @@ test("drawer proof normalizes only a semantically open initial drawer before con
     ["shell", "input", "keyevent", "4"],
     ["shell", "input", "swipe", "80", "200", "240", "200", "350"],
   ]);
+  assert.deepEqual(initialOpen.calls.order, [
+    "focus", "adb",
+    "focus", "select", "begin", "adb", "take",
+  ]);
+
+  const initialOpenWithoutFocus = createSwipeHarness({
+    initialState: leftOpen,
+    focusFailure: true,
+  });
+  await assert.rejects(runLeftSwipe(initialOpenWithoutFocus), /synthetic focus timeout/);
+  assert.deepEqual(initialOpenWithoutFocus.calls.order, ["focus"]);
+  assert.equal(initialOpenWithoutFocus.calls.adb, 0);
 
   const inconsistentClosed = createSwipeHarness({
     initialState: { ...leftClosed, right: 40 },

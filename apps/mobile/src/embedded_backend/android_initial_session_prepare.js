@@ -5,6 +5,12 @@
   const setPhase = (phase) => {
     root[phaseKey] = phase;
   };
+  const failedPhase = (phase) => ({
+    "bootstrap-storage": "bootstrap-storage-failed",
+    "bridge-readiness": "bridge-readiness-failed",
+    "native-prepare": "native-prepare-failed",
+    "session-marker": "session-marker-failed",
+  })[phase] ?? "native-prepare-failed";
   const fail = () => {
     root.__DEVE_NATIVE_BOOTSTRAP = {
       service_state: "session_invalid",
@@ -32,12 +38,12 @@
     root.clearTimeout(admissionTimer);
     admissionTimer = undefined;
   };
-  const failOnce = () => {
+  const failOnce = (phase = root[phaseKey], projectFailure = true) => {
     if (terminal) return;
     terminal = true;
     retireAdmissionTimer();
-    setPhase("failed");
-    fail();
+    setPhase(failedPhase(phase));
+    if (projectFailure) fail();
   };
   const retryReadiness = () => {
     if (terminal) return;
@@ -58,15 +64,13 @@
       try {
         status = initializeBootstrap();
       } catch (_error) {
-        failOnce();
+        failOnce("bootstrap-storage");
         return false;
       }
     }
     if (status === "ready" && root.__DEVE_NATIVE_SESSION_STORAGE_READY === true) return true;
-    if (status !== "storage_unavailable") {
-      terminal = true;
-      retireAdmissionTimer();
-      setPhase("failed");
+    if (!["storage_unavailable", "storage_unconfirmed"].includes(status)) {
+      failOnce("bootstrap-storage", false);
     }
     return false;
   };
@@ -80,7 +84,7 @@
     try {
       installed = root.sessionStorage.getItem(key) === installId;
     } catch (_error) {
-      failOnce();
+      failOnce("bootstrap-storage");
       return undefined;
     }
     if (installed) {
@@ -111,6 +115,7 @@
       })
       .then(() => {
         if (!prepareStarted || terminal) return;
+        setPhase("session-marker");
         root.sessionStorage.setItem(key, installId);
         if (root.sessionStorage.getItem(key) !== installId) {
           throw new Error("native session install marker unavailable");
