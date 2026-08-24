@@ -363,7 +363,11 @@ editor load session 身份只由当前 editor host、OpenDoc request、doc、rep
 replacement。target-host 必须从 Web 已准入的 presentation state 投影固定、无敏感信息的 generation/epoch marker；键盘与
 IME Back 证明仍须单独要求 generation 不变且 epoch 不倒退，不能因拆分 editor 身份而放宽 current-generation 准入。
 Android 正式 target-host/emulator receipt 必须继续以默认 package session 在退出时卸载精确应用包，保证跨运行隔离；
-uninstall 也必须返回唯一规范 `Success`，不得吞掉命令失败或异常输出后生成成功 receipt。
+uninstall 也必须返回唯一规范 `Success`，不得吞掉命令失败或异常输出后生成成功 receipt。该命令 acknowledgement
+不等价于 Android 已完成异步进程退休；正式 startup smoke 只有在 package 与 launcher 均不可解析、且精确 app process
+在同一有界 deadline 内连续两次观测为 absent 后才可确认 cleanup。uninstall 后短暂仍可见的原进程必须在该 deadline
+内等待收敛，不得以单次瞬时 `ps` 误报失败；process probe 失败、出现持续存活或 deadline 到期仍必须使用固定、无敏感信息
+的分类 fail-closed，不能重试 uninstall 或把未证明的退休冒充成功。
 本地物理设备诊断可显式设置 `DEVE_MOBILE_ANDROID_PRESERVE_PACKAGE=1` 选择覆盖更新：该模式只有在精确包已安装时才准入，
 使后续 `adb install -r` 不触发 fresh-install 授权，并在每次已准入退出时先停止应用、再以 `pm clear` 清除测试数据但保留包。
 保留模式只用于本地快速定位，不得生成或替代正式 receipt；`pm clear` 必须返回唯一规范 `Success`，否则固定分类并 fail-closed。

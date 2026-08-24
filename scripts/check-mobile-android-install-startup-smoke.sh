@@ -5,6 +5,7 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 source "$ROOT_DIR/scripts/lib/android-tools.sh"
 source "$ROOT_DIR/scripts/lib/android-startup-diagnostics.sh"
+source "$ROOT_DIR/scripts/lib/android-package-session.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
 APK_PATH="${DEVE_MOBILE_ANDROID_APK_PATH:-apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk}"
 APP_ID="${DEVE_MOBILE_ANDROID_APP_ID:-dev.deve.notebook.mobile}"
@@ -12,6 +13,7 @@ UNINSTALL_AFTER="${DEVE_MOBILE_ANDROID_INSTALL_SMOKE_UNINSTALL:-1}"
 STARTUP_WAIT_SECS="${DEVE_MOBILE_ANDROID_STARTUP_WAIT_SECS:-3}"
 ADB_SERIAL="${DEVE_MOBILE_ANDROID_SERIAL:-}"
 ADB_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS:-60}"
+PROCESS_RETIREMENT_WAIT_SECS="${DEVE_MOBILE_ANDROID_PROCESS_RETIREMENT_WAIT_SECS:-10}"
 readonly ADB_KILL_AFTER_SECS=5
 ANDROID_INSTALL_RETRY_LOG_PREFIX="mobile-android-install-startup-smoke-check"
 source "$ROOT_DIR/scripts/lib/android-install-retry.sh"
@@ -83,14 +85,58 @@ require_app_running_after_launch() {
   fi
 }
 
+process_retirement_now() {
+  printf '%s\n' "$SECONDS"
+}
+
+process_retirement_delay() {
+  sleep "$1"
+}
+
+wait_for_app_process_retirement() {
+  local started_at
+  local deadline
+  local now
+  local remaining
+  local process_listing=""
+  local missing_samples=0
+
+  started_at="$(process_retirement_now)" \
+    || { echo "mobile-android-install-startup-smoke-check: Android process retirement clock failed" >&2; return 1; }
+  deadline=$((started_at + PROCESS_RETIREMENT_WAIT_SECS))
+  while true; do
+    now="$(process_retirement_now)" \
+      || { echo "mobile-android-install-startup-smoke-check: Android process retirement clock failed" >&2; return 1; }
+    remaining=$((deadline - now))
+    (( remaining > 0 )) || break
+    process_listing="$(adb_with_timeout "$remaining" shell ps -A 2>/dev/null | tr -d '\r')" \
+      || { echo "mobile-android-install-startup-smoke-check: Android process retirement probe failed: $APP_ID" >&2; return 1; }
+    if printf '%s\n' "$process_listing" \
+      | awk -v app="$APP_ID" '$NF == app { found = 1 } END { exit !found }'; then
+      missing_samples=0
+    else
+      missing_samples=$((missing_samples + 1))
+      if (( missing_samples >= 2 )); then
+        return 0
+      fi
+    fi
+    now="$(process_retirement_now)" \
+      || { echo "mobile-android-install-startup-smoke-check: Android process retirement clock failed" >&2; return 1; }
+    remaining=$((deadline - now))
+    (( remaining > 0 )) || break
+    process_retirement_delay 1 \
+      || { echo "mobile-android-install-startup-smoke-check: Android process retirement delay failed" >&2; return 1; }
+  done
+  echo "mobile-android-install-startup-smoke-check: Android app process remained after bounded cleanup: $APP_ID" >&2
+  return 1
+}
+
 cleanup() {
   local package_listing=""
   local launcher_resolution=""
-  local process_listing=""
 
   [[ "$UNINSTALL_AFTER" == "1" ]] || return 0
-  adb_timed uninstall "$APP_ID" >/dev/null 2>&1 \
-    || { echo "mobile-android-install-startup-smoke-check: Android package uninstall failed: $APP_ID" >&2; return 1; }
+  android_package_session_cleanup 0 adb_timed "$APP_ID" >/dev/null || return 1
 
   package_listing="$(adb_timed shell pm list packages "$APP_ID" 2>/dev/null | tr -d '\r')" \
     || { echo "mobile-android-install-startup-smoke-check: Android package retirement probe failed: $APP_ID" >&2; return 1; }
@@ -107,12 +153,7 @@ cleanup() {
     return 1
   fi
 
-  process_listing="$(adb_timed shell ps -A 2>/dev/null | tr -d '\r')" \
-    || { echo "mobile-android-install-startup-smoke-check: Android process retirement probe failed: $APP_ID" >&2; return 1; }
-  if printf '%s\n' "$process_listing" | awk -v app="$APP_ID" '$NF == app { found = 1 } END { exit !found }'; then
-    echo "mobile-android-install-startup-smoke-check: Android app process remained after cleanup: $APP_ID" >&2
-    return 1
-  fi
+  wait_for_app_process_retirement
 }
 
 cleanup_on_exit() {
@@ -132,6 +173,8 @@ fi
 
 [[ "$ADB_TIMEOUT_SECS" =~ ^[1-9][0-9]*$ ]] \
   || fail "DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS must be a positive integer"
+[[ "$PROCESS_RETIREMENT_WAIT_SECS" =~ ^[1-9][0-9]*$ ]] \
+  || fail "DEVE_MOBILE_ANDROID_PROCESS_RETIREMENT_WAIT_SECS must be a positive integer"
 
 run_deve_baseline "$ROOT_DIR" "mobile-android-install-startup-smoke" "mobile-android-install-startup-smoke-check"
 run "$ROOT_DIR/scripts/check-native-track-boundary.sh"

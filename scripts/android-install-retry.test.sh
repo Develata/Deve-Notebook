@@ -498,34 +498,54 @@ verify_operation_timeout_cap() {
 verify_operation_timeout_cap
 
 verify_install_startup_cleanup_case() (
-  local mode="$1"
+  local cleanup_case="$1"
   local expected="$2"
+  local expected_error="${3:-}"
+  local error_path="$temporary/cleanup-$cleanup_case.err"
   local status
   UNINSTALL_AFTER=1
+  PROCESS_RETIREMENT_WAIT_SECS=4
+  local retirement_clock=0
   eval "$PRODUCTION_INSTALL_STARTUP_CLEANUP"
+
+  process_retirement_now() {
+    printf '%s\n' "$retirement_clock"
+  }
+
+  process_retirement_delay() {
+    retirement_clock=$((retirement_clock + $1))
+  }
+
+  fake_process_listing() {
+    printf 'USER PID PPID VSZ RSS WCHAN ADDR S NAME\n'
+    case "$cleanup_case:$retirement_clock" in
+      process-remains:*|process-transient:0|process-flicker:1)
+        printf 'u0_a1 123 1 0 0 0 0 S %s\n' "$APP_ID"
+        ;;
+    esac
+  }
 
   adb_timed() {
     case "$*" in
       "uninstall $APP_ID")
-        [[ "$mode" != "uninstall-fail" ]]
+        [[ "$cleanup_case" != "uninstall-fail" ]] || return 7
+        if [[ "$cleanup_case" == "uninstall-output-invalid" ]]; then
+          printf 'secret-bearing-unexpected-response\n'
+        else
+          printf 'Success\n'
+        fi
         ;;
       "shell pm list packages $APP_ID")
-        [[ "$mode" != "package-probe-fail" ]] || return 19
-        [[ "$mode" != "package-remains" ]] || printf 'package:%s\n' "$APP_ID"
+        [[ "$cleanup_case" != "package-probe-fail" ]] || return 19
+        [[ "$cleanup_case" != "package-remains" ]] || printf 'package:%s\n' "$APP_ID"
         return 0
         ;;
       "shell cmd package resolve-activity --brief -a android.intent.action.MAIN -c android.intent.category.LAUNCHER $APP_ID")
-        if [[ "$mode" == "launcher-remains" ]]; then
+        if [[ "$cleanup_case" == "launcher-remains" ]]; then
           printf '%s/.MainActivity\n' "$APP_ID"
         else
           printf 'No activity found\n'
         fi
-        return 0
-        ;;
-      "shell ps -A")
-        printf 'USER PID PPID VSZ RSS WCHAN ADDR S NAME\n'
-        [[ "$mode" != "process-remains" ]] \
-          || printf 'u0_a1 123 1 0 0 0 0 S %s\n' "$APP_ID"
         return 0
         ;;
       *)
@@ -534,21 +554,45 @@ verify_install_startup_cleanup_case() (
     esac
   }
 
+  adb_with_timeout() {
+    local timeout_secs="$1"
+    shift
+    [[ "$timeout_secs" =~ ^[1-9][0-9]*$ ]] || return 98
+    [[ "$*" == "shell ps -A" ]] || return 97
+    [[ "$cleanup_case" != "process-probe-fail" ]] || return 19
+    fake_process_listing
+  }
+
   set +e
-  cleanup >/dev/null 2>&1
+  cleanup >/dev/null 2>"$error_path"
   status=$?
   set -e
   [[ "$status" == "$expected" ]] \
     || { printf 'android-install-retry.test: cleanup %s status %s, expected %s\n' \
-      "$mode" "$status" "$expected" >&2; return 1; }
+      "$cleanup_case" "$status" "$expected" >&2; return 1; }
+  if [[ -n "$expected_error" ]]; then
+    grep -Fx "$expected_error" "$error_path" >/dev/null \
+      || { printf 'android-install-retry.test: cleanup %s error category drifted\n' "$cleanup_case" >&2; return 1; }
+  elif [[ "$expected" == "0" && -s "$error_path" ]]; then
+    printf 'android-install-retry.test: cleanup %s emitted an unexpected error\n' "$cleanup_case" >&2
+    return 1
+  fi
 )
 
 verify_install_startup_cleanup_case retired 0
-verify_install_startup_cleanup_case uninstall-fail 1
+verify_install_startup_cleanup_case uninstall-fail 1 \
+  "android-package-session: formal package uninstall failed"
+verify_install_startup_cleanup_case uninstall-output-invalid 1 \
+  "android-package-session: formal package uninstall failed"
 verify_install_startup_cleanup_case package-probe-fail 1
 verify_install_startup_cleanup_case package-remains 1
 verify_install_startup_cleanup_case launcher-remains 1
-verify_install_startup_cleanup_case process-remains 1
+verify_install_startup_cleanup_case process-transient 0
+verify_install_startup_cleanup_case process-flicker 0
+verify_install_startup_cleanup_case process-probe-fail 1 \
+  "mobile-android-install-startup-smoke-check: Android process retirement probe failed: $APP_ID"
+verify_install_startup_cleanup_case process-remains 1 \
+  "mobile-android-install-startup-smoke-check: Android app process remained after bounded cleanup: $APP_ID"
 
 verify_cleanup_status_precedence() {
   local status

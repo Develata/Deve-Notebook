@@ -88,6 +88,8 @@ test("minified release startup precedes the debuggable CDP journey", () => {
   assert.match(orchestrator, /DEBUG_APK="apps\/mobile\/gen\/android\/app\/build\/outputs\/apk\/universal\/debug\/app-universal-debug\.apk"/);
   assert.match(orchestrator, /DEVE_MOBILE_ANDROID_INSTALL_SMOKE_UNINSTALL=1/);
   assert.match(installSmoke, /trap cleanup_on_exit EXIT/);
+  assert.match(installSmoke, /source "\$ROOT_DIR\/scripts\/lib\/android-package-session\.sh"/);
+  assert.match(installSmoke, /android_package_session_cleanup 0 adb_timed "\$APP_ID"/);
   assert.doesNotMatch(installSmoke, /uninstall "\$APP_ID"[^\n]*\|\| true/);
   assert.match(installSmoke, /shell pm list packages "\$APP_ID"/);
   assert.match(installSmoke, /shell cmd package resolve-activity --brief/);
