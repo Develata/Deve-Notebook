@@ -22,6 +22,13 @@ printf 'debug-apk\n' >"$fixture/$debug_apk"
 android_prebuilt_apk_manifest_verify "$fixture" "$manifest" "$release_apk" "$debug_apk" \
   || fail "valid exact two-APK manifest was rejected"
 
+# GNU sha256sum uses a binary marker on Windows and two spaces on Unix. Both
+# encodings bind the same digest and path and must remain portable.
+sed 's/  / */' "$manifest" >"$fixture/binary-mode.sha256"
+android_prebuilt_apk_manifest_verify \
+  "$fixture" "$fixture/binary-mode.sha256" "$release_apk" "$debug_apk" \
+  || fail "valid binary-mode two-APK manifest was rejected"
+
 printf 'tampered\n' >>"$fixture/$debug_apk"
 if android_prebuilt_apk_manifest_verify "$fixture" "$manifest" "$release_apk" "$debug_apk"; then
   fail "tampered APK was accepted"

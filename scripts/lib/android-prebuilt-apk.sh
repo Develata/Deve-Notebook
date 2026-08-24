@@ -24,7 +24,7 @@ android_prebuilt_apk_manifest_verify() {
   for expected in "$release_apk" "$debug_apk"; do
     local matches=0
     for line in "${lines[@]}"; do
-      [[ "$line" =~ ^([0-9a-f]{64})[[:space:]][[:space:]](.+)$ ]] || return 1
+      [[ "$line" =~ ^([0-9a-f]{64})[[:space:]][\ \*](.+)$ ]] || return 1
       digest="${BASH_REMATCH[1]}"
       path="${BASH_REMATCH[2]}"
       [[ "$path" == "$release_apk" || "$path" == "$debug_apk" ]] || return 1

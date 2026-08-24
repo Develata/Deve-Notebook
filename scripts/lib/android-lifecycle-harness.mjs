@@ -205,10 +205,14 @@ export function createAndroidLifecycleHarness({
       return await waitUntil("root Back lifecycle rebind", async () => {
         let raw;
         try {
+          // Resolve the remaining budget before starting the readonly sample. If
+          // the harness deadline has already elapsed, invoking readState first
+          // would leave its rejection without the bounded diagnostic wrapper.
+          const sampleLimit = Math.min(sampleBudget, remainingMs());
           raw = await withDeadline(
             "Android root Back reentry readonly sample",
             Promise.resolve().then(readState),
-            Math.min(sampleBudget, remainingMs()),
+            sampleLimit,
           );
         } catch {
           sampleFailures += 1;
