@@ -54,7 +54,7 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: app_activ
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_swipe_point_is_hit_tested_outside_action_controls true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_adb_swipe_waits_for_stable_current_webview_input_focus true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_input_focus_settlement_restarts_after_document_replacement true
-case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: missing_or_cancelled_adb_touch_allows_at_most_one_bounded_retry true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: missing_or_cancelled_adb_touch_allows_at_most_two_fixed_lane_bounded_retries true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: complete_webview_touch_without_drawer_open_fails_immediately true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: opposite_swipe_waits_for_closed_drawer_transition_settlement true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: inner_left_and_right_swipes_open_expected_drawers true

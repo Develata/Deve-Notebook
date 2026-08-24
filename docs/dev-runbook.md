@@ -1338,6 +1338,17 @@ same evidence path to `deve_baseline acceptance-receipt --claims`; tag-ready
 validates the bound smoke producer, current provider, real probe, and completed
 writable lifecycle instead of accepting an arbitrary exit-zero command.
 
+Run the bounded host-side Document Create contract group before an Android
+runtime journey when changing Create request/confirmation or CDP settlement:
+
+```bash
+scripts/check-android-document-create-contract.sh
+```
+
+This entry runs the typed Rust Create tests together with the Android flow,
+pointer, settlement, and observation contracts. It is a fast producer input;
+it does not replace a real WebView/emulator receipt.
+
 For Android `RemoteBrowser`, prebuild the same debug APK and expose a temporary
 HTTPS Deve origin with random test credentials. The harness writes the remote
 preference into app-private storage before launch, verifies that no embedded
@@ -1382,14 +1393,21 @@ Native Target Host -> target=mobile-ios
 
 The workflow is manual-only. It runs Android/iOS preflight by default. Android
 package execution runs only when `run_mobile_android_package_build=true`.
-Set `run_mobile_android_install_startup_smoke=true` together with package build
-to start a GitHub-hosted Android emulator, build an `x86_64` debug APK, install
-it, and launch the shell. It uploads `deve-native-target-host-evidence-android`
-with emulator logs and, when package build is requested,
-`deve-mobile-android-packages`. The Android job skips host Linux
-native-packaging cargo checks because the target evidence is
-`cargo tauri android build` plus emulator install/startup, not a desktop
-Wry/GTK host build.
+When `run_mobile_android_install_startup_smoke=true` is enabled with package
+build, the targeted path builds one immutable exact-HEAD Web dist, then runs
+the APK producer and Rust harness producer in parallel. Both consume that same
+Web-dist artifact. After both producers pass, isolated LocalBackend and optional
+RemoteBrowser jobs reuse the same release/debug APK manifest on independent
+GitHub-hosted emulators; a final fail-closed job aggregates their typed receipts
+outside the worktree. The targeted summary remains diagnostic evidence and does
+not replace a formal candidate receipt. The workflow uploads
+`deve-native-target-host-evidence-android`, `deve-mobile-android-packages`, the
+isolated journey receipts, and the targeted summary.
+
+The Rust harness producer installs the required Linux GTK3, WebKitGTK 4.1, and
+Rsvg development packages before the Mobile native-packaging cargo checks.
+Only Desktop native-packaging tests are disabled in this scoped Android job;
+the Mobile host contract is not bypassed.
 
 It runs iOS preflight by default and only runs
 `cargo tauri ios init` / `cargo tauri ios build` when
@@ -1566,6 +1584,7 @@ scripts/check-desktop-package-preflight.sh
 scripts/check-desktop-platform-package-build.sh
 scripts/check-mobile-platform-package-preflight.sh
 scripts/check-graph-baseline.sh
+scripts/check-android-document-create-contract.sh
 scripts/check-diff-color-baseline.sh
 scripts/check-large-doc-baseline.sh
 scripts/check-mobile-baseline.sh

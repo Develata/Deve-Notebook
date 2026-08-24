@@ -13,8 +13,8 @@ const ACTIVATION_OFFSET_CSS = 18;
 const SWIPE_DISTANCE_CSS = 80;
 const DRAWER_TRANSITION_SETTLE_MS = 250;
 const SWIPE_DELIVERY_TIMEOUT_MS = 4000;
-const MAX_SWIPE_DELIVERY_ATTEMPTS = 2;
 const SWIPE_Y_FRACTIONS = [0.35, 0.58, 0.76];
+const MAX_SWIPE_DELIVERY_ATTEMPTS = SWIPE_Y_FRACTIONS.length;
 
 export function drawerVisualStateMatches(state, side, open) {
   if (!state || !["left", "right"].includes(side)) return false;
@@ -230,8 +230,14 @@ export async function openDrawerWithObservedNativeSwipe(page, {
       if (lastDelivery === "complete") {
         throw new Error(`${side} drawer stayed closed after complete WebView touch delivery: ${JSON.stringify(lastEvents)}`, { cause: error });
       }
-      if (!shouldRetryAndroidDrawerGestureDelivery(lastDelivery, attempt + 1)) {
-        throw new Error(`${side} drawer swipe delivery ${lastDelivery} after bounded retry: ${JSON.stringify(lastEvents)}`, { cause: error });
+      if (!shouldRetryAndroidDrawerGestureDelivery(
+        lastDelivery, attempt + 1, MAX_SWIPE_DELIVERY_ATTEMPTS,
+      )) {
+        const attemptLabel = `${attempt + 1} bounded ${attempt === 0 ? "attempt" : "attempts"}`;
+        throw new Error(
+          `${side} drawer swipe delivery ${lastDelivery} after ${attemptLabel}: ${JSON.stringify(lastEvents)}`,
+          { cause: error },
+        );
       }
       await waitForVisualState(page, side, false, waitUntil);
       continue;

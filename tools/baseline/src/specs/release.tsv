@@ -738,7 +738,7 @@ contains	docs/dev-runbook.md	DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED=
 contains	docs/dev-runbook.md	DEVE_MOBILE_ANDROID_APK_PATH=/path/to/signed.apk
 contains	docs/dev-runbook.md	DEVE_MOBILE_ANDROID_SERIAL=<adb-serial>
 contains	docs/dev-runbook.md	DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS
-contains	docs/dev-runbook.md	skips host Linux
+contains	docs/dev-runbook.md	builds one immutable exact-HEAD Web dist
 contains	docs/dev-runbook.md	native-packaging cargo checks
 contains	docs/dev-runbook.md	DEVE_MOBILE_IOS_INSTALL_STARTUP_SMOKE_REQUIRED=1
 contains	docs/dev-runbook.md	DEVE_DESKTOP_SIGNING_PREFLIGHT_REQUIRED=1

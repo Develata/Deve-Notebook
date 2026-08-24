@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-08-20`
+- `Last Review`: `2026-08-24`
 - `Counterpart Feature`: `docs/features/08_ui_design_03_mobile.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`, `docs/acceptance-cases/12_tech_release.md`, `docs/acceptance-cases/13_ui_mobile_chat_regression.md`, `docs/acceptance-cases/17_mobile_surface_switcher.md`
 - `Primary Code Areas`: `apps/web/src/components/mobile_layout/`, `apps/web/src/components/`, `apps/mobile/`
@@ -437,9 +437,11 @@ Task 按钮必须发送 `10_rendering.md` 定义的 `InsertTaskItem` 语义 inte
     同时满足 `visibilityState = visible` 与 `document.hasFocus() = true`，并连续稳定至少 `250ms`；CDP 已连接、
     presentation hint 已 ready 或 Activity 进程仍存活都不能单独证明 WebView 已获得系统输入焦点。稳定窗口
     必须绑定当代 Document 身份（target-host 使用有限的 `performance.timeOrigin`）；Document 替换、身份异常或
-    采样 execution-context 失败都必须清空候选并从零重新累计。每次真实 swipe（包括一次允许的
-    missing/cancelled retry）都必须重新通过该准入，再安装页面触摸探针并注入输入。准入超时必须
-    fail-closed；不得增加随机重试、通过重新创建业务 surface 掩盖焦点缺失，或把没有完整
+    采样 execution-context 失败都必须清空候选并从零重新累计。每次真实 swipe（包括最多两次允许的
+    missing/cancelled retry）都必须重新通过该准入，再安装页面触摸探针并注入输入。三个 attempt
+    必须绑定既有固定 hit-test 候选线的数量并按其顺序选择；可用候选少于 attempt 数时只能复用最后一条
+    已验证的 non-interactive 候选线，不得随机坐标、扩大输入区域或形成无界重试。准入超时必须
+    fail-closed；不得通过重新创建业务 surface 掩盖焦点缺失，或把没有完整
     `touchstart + touchend` 的 ADB 命令计为 Drawer 成功。
 
 ## 4. Visual Adaptations

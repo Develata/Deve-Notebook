@@ -30,8 +30,13 @@ export function classifyAndroidDrawerGestureDelivery(events, expected) {
   return dx * expected.direction > 0 && Math.abs(dx) > Math.abs(dy) ? "complete" : "invalid";
 }
 
-export function shouldRetryAndroidDrawerGestureDelivery(delivery, completedAttempts, maximum = 2) {
-  return ["missing", "cancelled"].includes(delivery) && completedAttempts < maximum;
+export function shouldRetryAndroidDrawerGestureDelivery(delivery, completedAttempts, maximum) {
+  return ["missing", "cancelled"].includes(delivery)
+    && Number.isSafeInteger(completedAttempts)
+    && Number.isSafeInteger(maximum)
+    && completedAttempts > 0
+    && maximum > 0
+    && completedAttempts < maximum;
 }
 
 export async function waitForCurrentWebViewInputFocus(page, waitUntil, timeout = 30000) {

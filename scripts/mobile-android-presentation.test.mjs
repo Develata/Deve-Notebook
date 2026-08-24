@@ -108,7 +108,10 @@ test("native presentation is re-admitted after same-WebView reload before drawer
   assert.match(touchProof, /document\.elementFromPoint\(x, y\)/);
   assert.match(touchProof, /target\.closest\(blockingSelector\)/);
   assert.match(presentationProof, /DRAWER_TRANSITION_SETTLE_MS/);
-  assert.match(presentationProof, /MAX_SWIPE_DELIVERY_ATTEMPTS = 2/);
+  assert.match(
+    presentationProof,
+    /MAX_SWIPE_DELIVERY_ATTEMPTS = SWIPE_Y_FRACTIONS\.length/,
+  );
   assert.match(presentationProof, /assert\.equal\(pidAfter, pidBefore/);
   assert.match(writableEvidence, /nativeDrawerGesturesAfterReload:/);
   assert.match(writableEvidence, /drawerGestureProof\.workEditSelectionStable/);
@@ -313,14 +316,19 @@ test("drawer proof requires an initially closed drawer and a complete observed t
   assert.deepEqual(success.calls.order, ["focus", "select", "begin", "adb", "take"]);
 });
 
-test("drawer proof retries one missing delivery but not complete or invalid delivery", async () => {
-  const retry = createSwipeHarness({ deliveries: [[], completeLeftDelivery()], openFailures: [1] });
-  assert.deepEqual(await runLeftSwipe(retry), { attempts: 2, targetTag: "main" });
+test("drawer proof retries two missing deliveries but not complete or invalid delivery", async () => {
+  const retry = createSwipeHarness({
+    deliveries: [[], [], completeLeftDelivery()],
+    openFailures: [1, 2],
+  });
+  assert.deepEqual(await runLeftSwipe(retry), { attempts: 3, targetTag: "main" });
   assert.deepEqual(
     { adb: retry.calls.adb, begin: retry.calls.begin, focus: retry.calls.focus, take: retry.calls.take, select: retry.calls.select },
-    { adb: 2, begin: 2, focus: 2, take: 2, select: 2 },
+    { adb: 3, begin: 3, focus: 3, take: 3, select: 3 },
   );
   assert.deepEqual(retry.calls.visual, [
+    { side: "left", open: false },
+    { side: "left", open: true },
     { side: "left", open: false },
     { side: "left", open: true },
     { side: "left", open: false },
@@ -329,7 +337,15 @@ test("drawer proof retries one missing delivery but not complete or invalid deli
   assert.deepEqual(retry.calls.order, [
     "focus", "select", "begin", "adb", "take",
     "focus", "select", "begin", "adb", "take",
+    "focus", "select", "begin", "adb", "take",
   ]);
+
+  const exhausted = createSwipeHarness({
+    deliveries: [[], [], []],
+    openFailures: [1, 2, 3],
+  });
+  await assert.rejects(runLeftSwipe(exhausted), /missing after 3 bounded attempts/);
+  assert.equal(exhausted.calls.adb, 3);
 
   const completeClosed = createSwipeHarness({ deliveries: [completeLeftDelivery()], openFailures: [1] });
   await assert.rejects(runLeftSwipe(completeClosed), /stayed closed after complete WebView touch delivery/);
@@ -339,7 +355,7 @@ test("drawer proof retries one missing delivery but not complete or invalid deli
     deliveries: [[completeLeftDelivery()[0], { ...completeLeftDelivery()[1], identifier: 8 }]],
     openFailures: [1],
   });
-  await assert.rejects(runLeftSwipe(invalidClosed), /swipe delivery invalid after bounded retry/);
+  await assert.rejects(runLeftSwipe(invalidClosed), /swipe delivery invalid after 1 bounded attempt/);
   assert.equal(invalidClosed.calls.adb, 1);
 });
 

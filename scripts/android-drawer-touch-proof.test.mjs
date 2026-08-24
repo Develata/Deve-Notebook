@@ -74,11 +74,12 @@ test("drawer delivery classifier binds identifier, coordinates, direction, and r
     completeLeftDelivery()[0],
     { ...completeLeftDelivery()[1], x: 10 },
   ], expectedLeftDelivery), "invalid");
-  assert.equal(shouldRetryAndroidDrawerGestureDelivery("missing", 1), true);
-  assert.equal(shouldRetryAndroidDrawerGestureDelivery("cancelled", 1), true);
-  assert.equal(shouldRetryAndroidDrawerGestureDelivery("complete", 1), false);
-  assert.equal(shouldRetryAndroidDrawerGestureDelivery("invalid", 1), false);
-  assert.equal(shouldRetryAndroidDrawerGestureDelivery("missing", 2), false);
+  assert.equal(shouldRetryAndroidDrawerGestureDelivery("missing", 1, 3), true);
+  assert.equal(shouldRetryAndroidDrawerGestureDelivery("cancelled", 2, 3), true);
+  assert.equal(shouldRetryAndroidDrawerGestureDelivery("complete", 1, 3), false);
+  assert.equal(shouldRetryAndroidDrawerGestureDelivery("invalid", 1, 3), false);
+  assert.equal(shouldRetryAndroidDrawerGestureDelivery("missing", 3, 3), false);
+  assert.equal(shouldRetryAndroidDrawerGestureDelivery("missing", 1), false);
 });
 
 test("ADB drawer input waits for a continuously visible and focused current WebView", async () => {
