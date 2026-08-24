@@ -231,16 +231,19 @@ admission 或 APK install 前，从 owned emulator 的有界日志解析唯一�
 业务 journey、进程连续性与清理。后续 emulator pin、system image 或 renderer 变化必须重新
 取得不少于三次 cold boot 的 admission 证据，不得把本次结论外推到不同 runtime identity。
 
-任何 candidate / target-host producer 必须先从当前 clean HEAD 重建 `apps/web/dist`，再执行
-任何启用 `native-packaging` 的 Cargo check/test 或 Tauri/Gradle build。原因是 Tauri
+任何 candidate / target-host 执行必须先从当前 clean HEAD 重建 `apps/web/dist`，或从本次 execution
+专用、immutable 的 exact-HEAD Web-dist producer 下载同一 artifact，再执行任何启用
+`native-packaging` 的 Cargo check/test 或 Tauri/Gradle build。原因是 Tauri
 compile-time context 会立即验证 `frontendDist`；preflight 不得隐式依赖工作区中预先存在的
 旧 dist、空目录或占位文件，也不得让 clean-worktree candidate / target-host receipt 在进入
 真实 package build 前失败。
 
-Android 定向验收允许把一次 exact-HEAD 执行拆成两个互不依赖的 immutable producer：APK producer
-只构建 minified release 与 debug journey APK，并发布带相对路径 SHA-256 清单的只读 artifact；harness
-producer 只编译 Rust `deve_baseline` 与内部 RemoteBrowser fixture backend，并执行 host-only contract
-tests。二者完成后，LocalBackend 与 RemoteBrowser consumer 必须在不同 runner 上各自启动独占 emulator，
+Android 定向验收先由单一 Web-dist producer 从 clean exact HEAD 构建一次 embedded frontend 并发布
+immutable artifact；下游 APK producer 与 harness producer 必须下载该同一 artifact，且不得各自重建
+Web dist。两个下游 producer 在 Web dist 封存后并行：APK producer 只构建 minified release 与 debug
+journey APK，并发布带相对路径 SHA-256 清单的只读 artifact；harness producer 只编译 Rust
+`deve_baseline` 与内部 RemoteBrowser fixture backend，并执行 host-only contract tests。三者完成后，
+LocalBackend 与 RemoteBrowser consumer 必须在不同 runner 上各自启动独占 emulator，
 下载并校验同一 APK 清单，且必须以 prebuilt 模式禁止 Tauri/Gradle rebuild。每个 consumer 独立生成原有
 typed producer receipt；汇总 job 只检查 producer/job 结果、execution group 完整性与 artifact digest，
 不得把两个 journey 合并成一个虚构 receipt，也不得将 targeted evidence 冒充正式 candidate receipt。

@@ -552,8 +552,42 @@ jobs:
             target/desktop-installer-smoke/**
           if-no-files-found: error
 
+  mobile-android-web-dist-producer:
+    if: ${{ (inputs.target == 'all' || inputs.target == 'mobile-android') && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+          targets: wasm32-unknown-unknown
+
+      - name: Install Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install exact Web build tool
+        env:
+          DEVE_NATIVE_INSTALL_TRUNK: "1"
+          DEVE_NATIVE_INSTALL_TAURI_CLI: "0"
+        run: scripts/install-native-target-host-tools.sh
+
+      - name: Build exact-HEAD web dist once
+        run: scripts/build-web-dist-ci.sh
+
+      - name: Upload immutable Android targeted Web dist
+        uses: actions/upload-artifact@v7
+        with:
+          name: deve-mobile-android-targeted-web-dist
+          path: apps/web/dist
+          if-no-files-found: error
+
   mobile-android-apk-producer:
     if: ${{ (inputs.target == 'all' || inputs.target == 'mobile-android') && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
+    needs: mobile-android-web-dist-producer
     runs-on: ubuntu-latest
     env:
       DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: "0"
@@ -564,7 +598,7 @@ jobs:
         uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
         with:
           toolchain: "1.97.0"
-          targets: wasm32-unknown-unknown,aarch64-linux-android,x86_64-linux-android
+          targets: aarch64-linux-android,x86_64-linux-android
 
       - name: Install Node.js 24
         uses: actions/setup-node@v6
@@ -589,12 +623,15 @@ jobs:
 
       - name: Install native target-host tools
         env:
-          DEVE_NATIVE_INSTALL_TRUNK: "1"
+          DEVE_NATIVE_INSTALL_TRUNK: "0"
           DEVE_NATIVE_INSTALL_TAURI_CLI: "1"
         run: scripts/install-native-target-host-tools.sh
 
-      - name: Build exact-HEAD web dist once
-        run: scripts/build-web-dist-ci.sh
+      - name: Download immutable exact-HEAD Web dist
+        uses: actions/download-artifact@v8
+        with:
+          name: deve-mobile-android-targeted-web-dist
+          path: apps/web/dist
 
       - name: Build minified release and debug journey APKs
         env:
@@ -627,6 +664,7 @@ jobs:
 
   mobile-android-harness-producer:
     if: ${{ (inputs.target == 'all' || inputs.target == 'mobile-android') && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
+    needs: mobile-android-web-dist-producer
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v6
@@ -635,18 +673,17 @@ jobs:
         uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
         with:
           toolchain: "1.97.0"
-          targets: wasm32-unknown-unknown,aarch64-linux-android,x86_64-linux-android
 
       - name: Install Node.js 24
         uses: actions/setup-node@v6
         with:
           node-version: 24
 
-      - name: Install native target-host tools
-        env:
-          DEVE_NATIVE_INSTALL_TRUNK: "1"
-          DEVE_NATIVE_INSTALL_TAURI_CLI: "1"
-        run: scripts/install-native-target-host-tools.sh
+      - name: Download immutable exact-HEAD Web dist
+        uses: actions/download-artifact@v8
+        with:
+          name: deve-mobile-android-targeted-web-dist
+          path: apps/web/dist
 
       - name: Install Mobile Linux native-packaging test dependencies
         run: |
@@ -655,9 +692,6 @@ jobs:
             libwebkit2gtk-4.1-dev \
             libgtk-3-dev \
             librsvg2-dev
-
-      - name: Build exact-HEAD web dist for harness compilation
-        run: scripts/build-web-dist-ci.sh
 
       - name: Compile Rust acceptance and RemoteBrowser fixture programs
         run: |
@@ -687,6 +721,7 @@ jobs:
   mobile-android-journey:
     if: ${{ (inputs.target == 'all' || inputs.target == 'mobile-android') && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
     needs:
+      - mobile-android-web-dist-producer
       - mobile-android-apk-producer
       - mobile-android-harness-producer
     strategy:
@@ -841,6 +876,7 @@ jobs:
   mobile-android-parallel-summary:
     if: ${{ always() && (inputs.target == 'all' || inputs.target == 'mobile-android') && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
     needs:
+      - mobile-android-web-dist-producer
       - mobile-android-apk-producer
       - mobile-android-harness-producer
       - mobile-android-journey
@@ -850,6 +886,7 @@ jobs:
 
       - name: Require every immutable producer and isolated journey
         run: |
+          test '${{ needs.mobile-android-web-dist-producer.result }}' = success
           test '${{ needs.mobile-android-apk-producer.result }}' = success
           test '${{ needs.mobile-android-harness-producer.result }}' = success
           test '${{ needs.mobile-android-journey.result }}' = success
@@ -880,10 +917,12 @@ jobs:
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_TARGET: Mobile Android
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_OUT: ${{ runner.temp }}/deve-native-target-host-evidence/mobile-android.md
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMANDS: |
-            immutable APK producer + immutable Rust harness producer
+            single immutable Web-dist producer
+            parallel immutable APK producer + immutable Rust harness producer
             isolated LocalBackend/RemoteBrowser consumers
             Rust acceptance-collect summary
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMAND_RESULTS: |
+            web_dist_producer=${{ needs.mobile-android-web-dist-producer.result }}
             apk_producer=${{ needs.mobile-android-apk-producer.result }}
             harness_producer=${{ needs.mobile-android-harness-producer.result }}
             journeys=${{ needs.mobile-android-journey.result }}

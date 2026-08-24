@@ -1303,10 +1303,16 @@ contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOB
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_EMULATOR_STATIC_CHECKS_REQUIRED
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android_prebuilt_apk_manifest_verify
 contains	scripts/android-prebuilt-apk-contract.test.sh	android-prebuilt-apk-contract-test: ok
+contains	.github/workflows/native-target-host.yml	mobile-android-web-dist-producer:
 contains	.github/workflows/native-target-host.yml	mobile-android-apk-producer:
 contains	.github/workflows/native-target-host.yml	mobile-android-harness-producer:
 contains	.github/workflows/native-target-host.yml	mobile-android-journey:
 contains	.github/workflows/native-target-host.yml	mobile-android-parallel-summary:
+contains	.github/workflows/native-target-host.yml	deve-mobile-android-targeted-web-dist
+contains	.github/workflows/native-target-host.yml	needs: mobile-android-web-dist-producer
+absent	.github/workflows/native-target-host.yml	Build exact-HEAD web dist for harness compilation
+contains	docs/plan/18_release.md	下游 APK producer 与 harness producer 必须下载该同一 artifact
+case_contains	docs/acceptance-cases/12_tech_release.md	REL-005	contract_assert: android_targeted_shared_web_dist_feeds_parallel_apk_and_harness_producers true
 contains	.github/workflows/native-target-host.yml	pattern: deve-mobile-android-targeted-receipt-*
 contains	.github/workflows/native-target-host.yml	acceptance-collect
 contains	.github/workflows/native-target-host.yml	--output "${RUNNER_TEMP}/deve-acceptance-android-collected"

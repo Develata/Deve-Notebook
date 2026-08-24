@@ -199,7 +199,7 @@
     - platform evidence 只声明 target-host package、startup、install 与 native runtime smoke
     - platform evidence 不声明 signed release、store distribution、physical-device readiness 或 native authority writes
     - process runtime evidence 只表达默认 no-Tauri closed、Desktop LocalBackend controlled child-process 与 Mobile child-process closed
-    - Android targeted smoke 拆为 immutable APK producer、Rust harness producer、独立 LocalBackend/RemoteBrowser consumer 与 fail-closed summary；两个 consumer 校验同一 APK SHA-256 清单且不得 rebuild
+    - Android targeted smoke 拆为单一 exact-HEAD Web-dist producer、并行的 immutable APK/Rust harness producer、独立 LocalBackend/RemoteBrowser consumer 与 fail-closed summary；APK/harness 下载同一 Web dist 且不得各自重建，两个 journey consumer 校验同一 APK SHA-256 清单且不得 rebuild
   steps:
     - run: scripts/check-release-baseline.sh
     - run: cargo run -p deve_baseline -- release
@@ -242,7 +242,7 @@
     - run: cargo test -p deve_cli graph -- --nocapture
   assertions:
     - exit_code_eq: 0
-    - contract_assert: android_targeted_apk_and_harness_producers_run_in_parallel true
+    - contract_assert: android_targeted_shared_web_dist_feeds_parallel_apk_and_harness_producers true
     - contract_assert: android_targeted_journeys_use_isolated_runners_and_same_prebuilt_apk_manifest true
     - contract_assert: android_targeted_summary_does_not_upgrade_receipt_authority true
     - stdout_contains: "release-baseline-check: ok"
