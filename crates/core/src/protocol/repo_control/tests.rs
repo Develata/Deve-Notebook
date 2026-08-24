@@ -1,7 +1,7 @@
 //! plan_ref:
 //!   - 07_network#repo-control-wire-contract
 //!
-//! F4/v5 repo-control wire and opaque-capability tests.
+//! F4/v6 repo-control wire and opaque-capability tests.
 
 use super::*;
 use crate::protocol::frame::{
@@ -27,7 +27,7 @@ fn opaque_removal_secrets_validate_shape_and_redact_debug() {
 }
 
 #[test]
-fn repo_control_nested_wire_roundtrips_in_f4_v5_binary_and_versioned_json() {
+fn repo_control_nested_wire_roundtrips_in_f4_v6_binary_and_versioned_json() {
     let request_id = Uuid::from_u128(0x401);
     let preparation_id = Uuid::from_u128(0x402);
     let repo_id = Uuid::from_u128(0x403);
@@ -102,7 +102,7 @@ fn repo_control_nested_wire_roundtrips_in_f4_v5_binary_and_versioned_json() {
 }
 
 #[test]
-fn direct_remove_lifecycle_intent_is_absent_from_f4_v5() {
+fn direct_remove_lifecycle_intent_is_absent_from_f4_v6() {
     let legacy = serde_json::json!({
         "protocol_version": WS_PROTOCOL_VERSION,
         "message": {
@@ -179,7 +179,7 @@ fn repo_removal_wire_rejects_malformed_opaque_confirmation_values() {
 
 fn assert_client_message_roundtrips(message: ClientMessage) {
     let expected = serde_json::to_value(&message).expect("serialize expected client message");
-    let binary = encode_client_binary(&message).expect("encode F4/v5 client frame");
+    let binary = encode_client_binary(&message).expect("encode F4/v6 client frame");
     assert!(binary.starts_with(WS_FRAME_MAGIC));
     assert_eq!(
         serde_json::to_value(decode_client_binary(&binary).expect("decode client message"))
@@ -197,7 +197,7 @@ fn assert_client_message_roundtrips(message: ClientMessage) {
 
 fn assert_server_message_roundtrips(message: ServerMessage) {
     let expected = serde_json::to_value(&message).expect("serialize expected server message");
-    let binary = encode_server_binary(&message).expect("encode F4/v5 server frame");
+    let binary = encode_server_binary(&message).expect("encode F4/v6 server frame");
     assert!(binary.starts_with(WS_FRAME_MAGIC));
     assert_eq!(
         serde_json::to_value(decode_server_binary(&binary).expect("decode server message"))

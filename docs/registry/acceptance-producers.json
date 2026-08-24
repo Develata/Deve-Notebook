@@ -102,9 +102,9 @@
       "note": "Run the typed diff projection and public protocol epoch selectors"
     },
     {
-      "producer_id": "network.ws-f4-v5",
+      "producer_id": "network.ws-f4-v6",
       "evidence_ids": [
-        "smoke.network.ws-f4-v5"
+        "smoke.network.ws-f4-v6"
       ],
       "dependencies": [],
       "tiers": [
@@ -130,6 +130,19 @@
             { "literal": "deve_core" },
             { "literal": "--lib" },
             { "literal": "protocol::frame::tests" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_core" },
+            { "literal": "--lib" },
+            { "literal": "protocol::document_create::tests" },
             { "literal": "--" },
             { "literal": "--nocapture" }
           ]
@@ -188,7 +201,83 @@
           ]
         }
       ],
-      "note": "Atomically prove the first public F4/v5 epoch, fail-closed version admission, typed nested wires, explicit debug JSON and FullPeer binary-only transport"
+      "note": "Atomically prove the first public F4/v6 epoch, fail-closed version admission, typed nested wires including idempotent Document Create, explicit debug JSON and FullPeer binary-only transport"
+    },
+    {
+      "producer_id": "ci.document-create-idempotence",
+      "evidence_ids": [
+        "test.core.document-create",
+        "test.cli.document-create",
+        "test.web.document-create",
+        "script.android.document-create-contract"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "ci"
+      ],
+      "host_os": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "timeout_seconds": 1200,
+      "required_env": [],
+      "environment": {},
+      "claims_env": {},
+      "artifacts": [
+        "scripts/android-document-create-flow.test.mjs",
+        "scripts/android-document-create-settlement.test.mjs",
+        "scripts/check-android-document-create-contract.sh"
+      ],
+      "steps": [
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_core" },
+            { "literal": "--lib" },
+            { "literal": "document_create" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_cli" },
+            { "literal": "--lib" },
+            { "literal": "document_create" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" },
+            { "literal": "--locked" },
+            { "literal": "-p" },
+            { "literal": "deve_web" },
+            { "literal": "--bin" },
+            { "literal": "deve_web" },
+            { "literal": "document_create" },
+            { "literal": "--" },
+            { "literal": "--nocapture" }
+          ]
+        },
+        {
+          "program": "bash",
+          "args": [
+            { "literal": "scripts/check-android-document-create-contract.sh" }
+          ]
+        }
+      ],
+      "note": "Atomically prove typed idempotent Document Create across authority, server, Web settlement and Android harness contracts"
     },
     {
       "producer_id": "ci.native-ai-provider-settings",
@@ -617,7 +706,7 @@
           ]
         }
       ],
-      "note": "Atomically prove host-local alias CAS, F4/v5 isolation, server admission and exact Web projection without moving workspace or changing repo scope"
+      "note": "Atomically prove host-local alias CAS, F4/v6 isolation, server admission and exact Web projection without moving workspace or changing repo scope"
     },
     {
       "producer_id": "desktop.macos-target-host",
@@ -727,6 +816,8 @@
       "artifacts": [
         "scripts/prepare-android-emulator-host.sh",
         "scripts/check-mobile-android-emulator-install-startup-smoke.sh",
+        "scripts/lib/android-prebuilt-apk.sh",
+        "scripts/android-prebuilt-apk-contract.test.sh",
         "scripts/sign-mobile-android-target-host-release-apk.sh",
         "scripts/check-mobile-android-install-startup-smoke.sh",
         "scripts/android-guest-service-readiness.test.sh",
@@ -868,6 +959,8 @@
       "artifacts": [
         "scripts/prepare-android-emulator-host.sh",
         "scripts/check-mobile-android-emulator-install-startup-smoke.sh",
+        "scripts/lib/android-prebuilt-apk.sh",
+        "scripts/android-prebuilt-apk-contract.test.sh",
         "scripts/sign-mobile-android-target-host-release-apk.sh",
         "scripts/check-mobile-android-install-startup-smoke.sh",
         "scripts/android-guest-service-readiness.test.sh",

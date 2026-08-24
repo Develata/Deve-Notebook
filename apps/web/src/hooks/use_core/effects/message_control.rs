@@ -30,6 +30,7 @@ pub fn handle_branch_switched(
             set_active_branch: signals.set_active_branch,
         },
     ) {
+        signals.set_pending_document_create.set(None);
         refresh_after_branch_switch(switch_nonce, ws, signals);
     }
 }
@@ -102,11 +103,25 @@ pub fn handle_repo_switched(
                 "Rebound {rebound} pending edits after same-repo internal session restore"
             );
         }
+        let mut create_rebound = false;
+        signals.set_pending_document_create.update(|pending| {
+            create_rebound = pending.as_mut().is_some_and(|pending| {
+                pending.rebind_internal_reconnect(repo_id, previous_scope_nonce, next_scope_nonce)
+            });
+        });
+        if create_rebound {
+            leptos::logging::log!(
+                "Rebound one pending Document Create after same-repo internal session restore"
+            );
+        }
     }
     if outcome.accepted && explicit_repo_selection {
         signals.set_explicit_repo_selection_required.set(false);
     }
     if outcome.should_refresh {
+        if session_restore_rebind.is_none() {
+            signals.set_pending_document_create.set(None);
+        }
         refresh_after_repo_switch(ws, signals);
     }
 }

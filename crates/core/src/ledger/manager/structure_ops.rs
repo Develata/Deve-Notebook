@@ -43,7 +43,17 @@ impl RepoManager {
         path: &str,
         peer_label: &str,
     ) -> Result<(NodeId, Vec<StructureOp>)> {
-        let plan = dir_structure_plan::plan_create(self, repo_name, path)?;
+        self.apply_dir_create_structure_with_id_in_local_repo(repo_name, path, None, peer_label)
+    }
+
+    pub fn apply_dir_create_structure_with_id_in_local_repo(
+        &self,
+        repo_name: &str,
+        path: &str,
+        node_id_hint: Option<NodeId>,
+        peer_label: &str,
+    ) -> Result<(NodeId, Vec<StructureOp>)> {
+        let plan = dir_structure_plan::plan_create(self, repo_name, path, node_id_hint)?;
         self.append_structure_ops_in_local_repo(repo_name, peer_label, &plan.ops)?;
         Ok((plan.node_id, plan.ops))
     }

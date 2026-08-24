@@ -4,6 +4,7 @@
 //!   - 07_network#server-ws-runtime
 //!   - 07_network#projection-recovery-contract
 //!   - 09_web_thin_client_ledger#web-edit-intent
+//!   - 09_web_thin_client_ledger#document-create-intent
 
 use super::confirmed_op::ConfirmedOp;
 use super::error::ServerError;
@@ -14,7 +15,8 @@ use crate::protocol::ScopeNonce;
 use crate::protocol::SyncPushHeader;
 use crate::protocol::SyncSourceProof;
 use crate::protocol::{
-    RemoteImportResponse, RemoteProjectionPushResponse, RepoControlResponse, RepoReadiness,
+    DocumentCreateResponse, RemoteImportResponse, RemoteProjectionPushResponse,
+    RepoControlResponse, RepoReadiness,
 };
 use crate::security::EncryptedOp;
 use crate::source_control::diff_projection::DiffProjection;
@@ -45,6 +47,7 @@ pub enum ServerMessage {
     ChatChunk { req_id: String, delta: Option<String>, finish_reason: Option<String> },
     NewOp { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, entry: ConfirmedOp },
     ProjectionRecoveryRequired(ProjectionRecoveryRequired),
+    DocumentCreate(DocumentCreateResponse),
     Snapshot { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, request_id: u64, content: String, base_seq: u64, version: u64, delta_ops: Vec<ConfirmedOp> },
     History { repo_id: RepoId, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, doc_id: DocId, request_id: u64, ops: Vec<ConfirmedOp> },
     DocList { #[serde(default)] request_id: Option<String>, #[serde(default)] repo_id: Option<RepoId>, #[serde(default)] branch: Option<PeerId>, #[serde(default)] scope_nonce: Option<u64>, docs: Vec<(DocId, String)> },

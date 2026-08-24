@@ -552,8 +552,365 @@ jobs:
             target/desktop-installer-smoke/**
           if-no-files-found: error
 
+  mobile-android-apk-producer:
+    if: ${{ (inputs.target == 'all' || inputs.target == 'mobile-android') && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
+    runs-on: ubuntu-latest
+    env:
+      DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: "0"
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+          targets: wasm32-unknown-unknown,aarch64-linux-android,x86_64-linux-android
+
+      - name: Install Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install Android SDK platform tools
+        run: |
+          test -n "${ANDROID_HOME:-}"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/emulator" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "emulator"
+
+      - name: Install native target-host tools
+        env:
+          DEVE_NATIVE_INSTALL_TRUNK: "1"
+          DEVE_NATIVE_INSTALL_TAURI_CLI: "1"
+        run: scripts/install-native-target-host-tools.sh
+
+      - name: Build exact-HEAD web dist once
+        run: scripts/build-web-dist-ci.sh
+
+      - name: Build minified release and debug journey APKs
+        env:
+          DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED: "1"
+          DEVE_MOBILE_ANDROID_PACKAGE_TARGET: x86_64
+          DEVE_MOBILE_ANDROID_WEB_DIST_PREBUILT: "1"
+        run: |
+          DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=0 scripts/check-mobile-android-shell-package-build.sh
+          DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=1 scripts/check-mobile-android-shell-package-build.sh
+
+      - name: Seal Android targeted APK input manifest
+        run: |
+          set -euo pipefail
+          release_apk=apps/mobile/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
+          debug_apk=apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
+          test -f "$release_apk"
+          test -f "$debug_apk"
+          sha256sum "$release_apk" "$debug_apk" > target/android-apk-input.sha256
+          bash scripts/android-prebuilt-apk-contract.test.sh
+
+      - name: Upload immutable Android targeted APK input
+        uses: actions/upload-artifact@v7
+        with:
+          name: deve-mobile-android-packages
+          path: |
+            apps/mobile/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk
+            apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
+            target/android-apk-input.sha256
+          if-no-files-found: error
+
+  mobile-android-harness-producer:
+    if: ${{ (inputs.target == 'all' || inputs.target == 'mobile-android') && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+          targets: wasm32-unknown-unknown,aarch64-linux-android,x86_64-linux-android
+
+      - name: Install Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install native target-host tools
+        env:
+          DEVE_NATIVE_INSTALL_TRUNK: "1"
+          DEVE_NATIVE_INSTALL_TAURI_CLI: "1"
+        run: scripts/install-native-target-host-tools.sh
+
+      - name: Install Mobile Linux native-packaging test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libwebkit2gtk-4.1-dev \
+            libgtk-3-dev \
+            librsvg2-dev
+
+      - name: Build exact-HEAD web dist for harness compilation
+        run: scripts/build-web-dist-ci.sh
+
+      - name: Compile Rust acceptance and RemoteBrowser fixture programs
+        run: |
+          cargo build --locked -p deve_baseline
+          cargo build --locked --release -p deve_cli
+
+      - name: Native process and Android host-only contracts
+        env:
+          DEVE_BASELINE_BIN: ${{ github.workspace }}/target/debug/deve_baseline
+          DEVE_NATIVE_PROCESS_ADAPTER_RUN_DESKTOP_NATIVE_PACKAGING_TESTS: "0"
+          DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED: "0"
+        run: |
+          scripts/check-native-process-adapter-gate.sh
+          bash scripts/remote-browser-fixture.test.sh
+          bash scripts/dispatch-native-target-host-workflow.test.sh
+          bash scripts/check-mobile-android-emulator-install-startup-smoke.sh
+
+      - name: Upload immutable Android targeted harness programs
+        uses: actions/upload-artifact@v7
+        with:
+          name: deve-mobile-android-targeted-harness
+          path: |
+            target/debug/deve_baseline
+            target/release/deve_cli
+          if-no-files-found: error
+
+  mobile-android-journey:
+    if: ${{ (inputs.target == 'all' || inputs.target == 'mobile-android') && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
+    needs:
+      - mobile-android-apk-producer
+      - mobile-android-harness-producer
+    strategy:
+      fail-fast: false
+      matrix:
+        journey: ${{ fromJSON(inputs.run_mobile_android_remote_browser_smoke && '["local","remote"]' || '["local"]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Install Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Install Android SDK platform tools
+        run: |
+          test -n "${ANDROID_HOME:-}"
+          echo "$ANDROID_HOME/platform-tools" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/emulator" >> "$GITHUB_PATH"
+          echo "$ANDROID_HOME/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+          export PATH="$ANDROID_HOME/platform-tools:$ANDROID_HOME/emulator:$ANDROID_HOME/cmdline-tools/latest/bin:$PATH"
+          yes | sdkmanager --licenses >/dev/null || true
+          sdkmanager "platform-tools" "emulator"
+
+      - name: Download immutable Android targeted APK input
+        uses: actions/download-artifact@v8
+        with:
+          name: deve-mobile-android-packages
+          path: .
+
+      - name: Download immutable Android targeted harness programs
+        uses: actions/download-artifact@v8
+        with:
+          name: deve-mobile-android-targeted-harness
+          path: target/android-targeted-harness
+
+      - name: Verify downloaded producer artifacts
+        run: |
+          set -euo pipefail
+          chmod +x target/android-targeted-harness/debug/deve_baseline target/android-targeted-harness/release/deve_cli
+          source scripts/lib/android-prebuilt-apk.sh
+          android_prebuilt_apk_manifest_verify \
+            "$GITHUB_WORKSPACE" \
+            "$GITHUB_WORKSPACE/target/android-apk-input.sha256" \
+            apps/mobile/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk \
+            apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
+
+      - name: Prepare Android emulator host
+        run: bash scripts/prepare-android-emulator-host.sh
+
+      - name: Prepare Android RemoteBrowser HTTPS fixture
+        if: ${{ matrix.journey == 'remote' }}
+        env:
+          EXTERNAL_ORIGIN: ${{ inputs.mobile_android_remote_https_origin }}
+          EXTERNAL_USERNAME: ${{ inputs.mobile_android_remote_username }}
+          EXTERNAL_HEAD_PROOF_URL: ${{ inputs.mobile_android_remote_head_proof_url }}
+          EXTERNAL_PASSWORD: ${{ secrets.DEVE_MOBILE_ANDROID_REMOTE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for value in "$EXTERNAL_ORIGIN" "$EXTERNAL_USERNAME" "$EXTERNAL_HEAD_PROOF_URL" "$EXTERNAL_PASSWORD"; do
+            [[ "$value" != *$'\n'* && "$value" != *$'\r'* ]] || { echo 'Android external override contains a forbidden control character' >&2; exit 1; }
+          done
+          external_count=0
+          for value in "$EXTERNAL_ORIGIN" "$EXTERNAL_USERNAME" "$EXTERNAL_HEAD_PROOF_URL"; do [[ -z "$value" ]] || external_count=$((external_count + 1)); done
+          [[ "$external_count" == 0 || "$external_count" == 3 ]] || { echo 'Android external override requires origin, username, and same-origin HEAD proof URL together' >&2; exit 1; }
+
+          state_root="$RUNNER_TEMP/deve-android-remote-fixture"
+          if [[ "$external_count" == 3 ]]; then
+            [[ -n "$EXTERNAL_PASSWORD" ]] || { echo 'Android external override requires DEVE_MOBILE_ANDROID_REMOTE_PASSWORD' >&2; exit 1; }
+            echo "::add-mask::$EXTERNAL_USERNAME"
+            echo "::add-mask::$EXTERNAL_PASSWORD"
+            external_credentials="$RUNNER_TEMP/deve-android-external-credentials.json"
+            trap 'rm -f -- "$external_credentials"' EXIT
+            node - "$external_credentials" "$EXTERNAL_USERNAME" "$EXTERNAL_PASSWORD" <<'NODE'
+          const fs = require("fs");
+          fs.writeFileSync(process.argv[2], JSON.stringify({username: process.argv[3], password: process.argv[4]}) + "\n", {mode: 0o600});
+          NODE
+            bash scripts/remote-browser-fixture.sh start \
+              --state-dir "$state_root" \
+              --expected-head "$GITHUB_SHA" \
+              --external-origin "$EXTERNAL_ORIGIN" \
+              --external-head-proof-url "$EXTERNAL_HEAD_PROOF_URL" \
+              --external-credentials-file "$external_credentials" >/dev/null
+            rm -f -- "$external_credentials"
+            trap - EXIT
+          else
+            head_proof="$RUNNER_TEMP/deve-android-backend-head.txt"
+            printf '%s' "$GITHUB_SHA" >"$head_proof"
+            bash scripts/remote-browser-fixture.sh start \
+              --state-dir "$state_root" \
+              --expected-head "$GITHUB_SHA" \
+              --backend-executable "$GITHUB_WORKSPACE/target/android-targeted-harness/release/deve_cli" \
+              --backend-head-file "$head_proof" \
+              --password-hasher "$GITHUB_WORKSPACE/target/android-targeted-harness/debug/deve_baseline" \
+              --password-hasher-arg remote-fixture-password-hash >/dev/null
+          fi
+
+      - name: Run isolated Android ${{ matrix.journey }} producer
+        env:
+          DEVE_MOBILE_ANDROID_PACKAGE_TARGET: x86_64
+          DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS: "120"
+          DEVE_MOBILE_ANDROID_PREBUILT_APKS_REQUIRED: "1"
+          DEVE_MOBILE_ANDROID_PREBUILT_APK_MANIFEST: ${{ github.workspace }}/target/android-apk-input.sha256
+          DEVE_MOBILE_ANDROID_EMULATOR_STATIC_CHECKS_REQUIRED: "0"
+        run: |
+          set -euo pipefail
+          baseline="$GITHUB_WORKSPACE/target/android-targeted-harness/debug/deve_baseline"
+          if [[ "${{ matrix.journey }}" == remote ]]; then
+            fixture="$RUNNER_TEMP/deve-android-remote-fixture/fixture-env.json"
+            credentials_file="$(jq -r .credentials_file "$fixture")"
+            export DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN="$(jq -r .https_origin "$fixture")"
+            export DEVE_MOBILE_ANDROID_REMOTE_USERNAME="$(jq -r .username "$credentials_file")"
+            export DEVE_MOBILE_ANDROID_REMOTE_PASSWORD="$(jq -r .password "$credentials_file")"
+            "$baseline" acceptance-run --tier target-host --producer android.remote-browser \
+              --receipt-dir "$RUNNER_TEMP/deve-acceptance-android-remote"
+          else
+            "$baseline" acceptance-run --tier target-host --producer android.local-backend \
+              --receipt-dir "$RUNNER_TEMP/deve-acceptance-android-local"
+          fi
+
+      - name: Stop Android RemoteBrowser HTTPS fixture
+        if: ${{ always() && matrix.journey == 'remote' }}
+        run: |
+          state_root="$RUNNER_TEMP/deve-android-remote-fixture"
+          if [[ -f "$state_root/fixture-state.json" ]]; then
+            bash scripts/remote-browser-fixture.sh stop --state-dir "$state_root"
+          fi
+
+      - name: Upload isolated Android journey receipt
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: deve-mobile-android-targeted-receipt-${{ matrix.journey }}
+          path: ${{ runner.temp }}/deve-acceptance-android-${{ matrix.journey }}
+          if-no-files-found: error
+
+      - name: Upload isolated Android journey diagnostics
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: deve-mobile-android-targeted-diagnostics-${{ matrix.journey }}
+          path: target/mobile-android-emulator-smoke/**
+          if-no-files-found: warn
+
+  mobile-android-parallel-summary:
+    if: ${{ always() && (inputs.target == 'all' || inputs.target == 'mobile-android') && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
+    needs:
+      - mobile-android-apk-producer
+      - mobile-android-harness-producer
+      - mobile-android-journey
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Require every immutable producer and isolated journey
+        run: |
+          test '${{ needs.mobile-android-apk-producer.result }}' = success
+          test '${{ needs.mobile-android-harness-producer.result }}' = success
+          test '${{ needs.mobile-android-journey.result }}' = success
+
+      - name: Download Rust acceptance collector
+        uses: actions/download-artifact@v8
+        with:
+          name: deve-mobile-android-targeted-harness
+          path: target/android-targeted-harness
+
+      - name: Download isolated Android journey receipts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: deve-mobile-android-targeted-receipt-*
+          path: target/android-targeted-input
+          merge-multiple: false
+
+      - name: Collect typed Android receipts without upgrading authority
+        run: |
+          set -euo pipefail
+          chmod +x target/android-targeted-harness/debug/deve_baseline
+          target/android-targeted-harness/debug/deve_baseline acceptance-collect \
+            --output target/android-targeted-collected \
+            target/android-targeted-input
+
+      - name: Write parallel Mobile Android target-host evidence
+        env:
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_TARGET: Mobile Android
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_OUT: target/native-target-host-evidence/mobile-android.md
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMANDS: |
+            immutable APK producer + immutable Rust harness producer
+            isolated LocalBackend/RemoteBrowser consumers
+            Rust acceptance-collect summary
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMAND_RESULTS: |
+            apk_producer=${{ needs.mobile-android-apk-producer.result }}
+            harness_producer=${{ needs.mobile-android-harness-producer.result }}
+            journeys=${{ needs.mobile-android-journey.result }}
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_ARTIFACTS: deve-mobile-android-packages with target/android-apk-input.sha256
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_INSTALL_RESULT: success - inspect separate typed LocalBackend/RemoteBrowser receipts
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_STARTUP_RESULT: success - each journey used an isolated runner/emulator
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_CONCLUSION: targeted diagnostic passed; evidence does not replace the formal release candidate receipt
+        run: scripts/write-native-target-host-evidence.sh
+
+      - name: Upload targeted Android parallel summary
+        uses: actions/upload-artifact@v7
+        with:
+          name: deve-mobile-android-targeted-summary
+          path: target/android-targeted-collected
+          if-no-files-found: error
+
+      - name: Upload Mobile Android target-host evidence
+        uses: actions/upload-artifact@v7
+        with:
+          name: deve-native-target-host-evidence-android
+          path: |
+            target/native-target-host-evidence/mobile-android.md
+            target/android-targeted-collected/**
+          if-no-files-found: error
+
   mobile-android:
-    if: ${{ inputs.target == 'all' || inputs.target == 'mobile-android' }}
+    if: ${{ (inputs.target == 'all' || inputs.target == 'mobile-android') && (! inputs.run_mobile_android_package_build || ! inputs.run_mobile_android_install_startup_smoke) }}
     runs-on: ubuntu-latest
     env:
       DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED: ${{ (inputs.required_preflight || inputs.run_mobile_android_package_build) && '1' || '0' }}

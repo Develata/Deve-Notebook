@@ -34,7 +34,8 @@ pub(super) fn build_doc_callbacks(
             set_pending_navigation: signals.set_pending_navigation,
             set_current_doc: signals.set_current_doc,
             set_sync_banner: signals.set_sync_banner,
-            set_pending_created_doc_path: signals.set_pending_created_doc_path,
+            pending_document_create: signals.pending_document_create,
+            set_pending_document_create: signals.set_pending_document_create,
             set_explicit_home: signals.set_explicit_home,
         },
     )

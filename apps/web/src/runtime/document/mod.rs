@@ -34,5 +34,6 @@
 //! Decision context: `docs/report/web-runtime-band-convergence-decision-2026-05-29.md`.
 
 pub mod confirm;
+pub mod create;
 pub mod pending;
 pub mod write_state;

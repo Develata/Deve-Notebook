@@ -79,7 +79,7 @@ UI / HTTP / WS handlers
 - the Web shell renders typed blocker/health state only. It does not parse failure detail, decide restart policy or perform watcher recovery.
 
 The owned supervisor, exact-slot mounted admission, runtime failure cut, public aggregate health,
-E2 final-state shutdown, zero-repo composition, F4/v5 preview-token admission and host-owned
+E2 final-state shutdown, zero-repo composition, current F4/v6 preview-token admission and host-owned
 lifecycle jobs are implemented. R4 also implements signed D1-SQ/O1-FREEZE settlement, cut-debt
 reconstruction and two-phase authority finalization. `flow.repo.lifecycle` remains active drift for
 Option A negative/fresh cross-platform proof, explicit drift repair and R5/R6 product evidence.

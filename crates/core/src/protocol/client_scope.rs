@@ -3,6 +3,7 @@
 //! plan_ref:
 //!   - 07_network#web-ws-runtime
 //!   - 09_web_thin_client_ledger#web-edit-intent
+//!   - 09_web_thin_client_ledger#document-create-intent
 
 use super::client::ClientMessage;
 
@@ -58,8 +59,11 @@ impl ClientMessage {
 
     pub fn document_scope_gate(&self) -> Option<ClientMessageScopeGate> {
         match self {
-            Self::CreateDoc { scope_nonce, .. }
-            | Self::RenameDoc { scope_nonce, .. }
+            Self::DocumentCreate(request) => Some(ClientMessageScopeGate::new(
+                Some(request.scope_nonce.get()),
+                "document create",
+            )),
+            Self::RenameDoc { scope_nonce, .. }
             | Self::DeleteDoc { scope_nonce, .. }
             | Self::CopyDoc { scope_nonce, .. }
             | Self::MoveDoc { scope_nonce, .. } => {

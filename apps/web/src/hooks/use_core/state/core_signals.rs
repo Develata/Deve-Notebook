@@ -19,6 +19,7 @@ use super::super::types::{
     PendingRepoSwitch, SearchHit, SyncModeState,
 };
 use super::state_types::PluginResponse;
+use crate::runtime::document::create::PendingDocumentCreate;
 use crate::runtime::document::pending::PendingLocalEdits;
 use crate::runtime::repo_control_client::RepoRemovalPresentation;
 use crate::runtime::source_control_client::diff_session::DiffSessionWire;
@@ -29,8 +30,8 @@ pub struct CoreSignals {
     pub set_docs: WriteSignal<Vec<(DocId, String)>>,
     pub current_doc: ReadSignal<Option<DocId>>,
     pub set_current_doc: WriteSignal<Option<DocId>>,
-    pub pending_created_doc_path: ReadSignal<Option<String>>,
-    pub set_pending_created_doc_path: WriteSignal<Option<String>>,
+    pub pending_document_create: ReadSignal<Option<PendingDocumentCreate>>,
+    pub set_pending_document_create: WriteSignal<Option<PendingDocumentCreate>>,
     pub stats: ReadSignal<EditorStats>,
     pub set_stats: WriteSignal<EditorStats>,
     pub peers: ReadSignal<HashMap<PeerId, PeerSession>>,

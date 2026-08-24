@@ -126,13 +126,13 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `07_network#server-ws-runtime` | `### 12.3 Server WS Runtime` | Server WebSocket runtime、sync handler 与 scoped outbound 合同 |
 | `07_network#web-ws-runtime` | `### 12.4 Web Runtime` | WebSocket/API client runtime、握手与消息同步合同 |
 | `07_network#projection-recovery-contract` | `### 4.3.3 Projection Recovery Wire Contract` | scoped typed projection recovery、后端刷新计划与 External Apply ack/receipt wire |
-| `07_network#repo-control-wire-contract` | `### 4.3.2 Repo Control Wire Contract` | F4/v5 nested host-local alias/create 与 ownership-aware removal Prepare/Execute projection |
+| `07_network#repo-control-wire-contract` | `### 4.3.2 Repo Control Wire Contract` | F4/v6 nested host-local alias/create 与 ownership-aware removal Prepare/Execute projection |
 | `07_network#native-full-peer-runtime` | `### 12.5 Native Full Peer Runtime` | CLI/native FullPeer transport、repo-scoped admission 与宿主 runtime 边界 |
 | `04_repository#repo-catalog-contract` | `### 3.3 Catalog Rule` | local/remote repo catalog 作为 selector/listing 输入层的 fail-closed 合同 |
 | `04_repository#repo-catalog-repair-contract` | `### 7.2 Catalog Repair` | repo catalog metadata/name/url/file-stem 修复与隔离合同 |
 | `04_repository#repo-health-and-repair` | `## 7. Recovery / Repair Contract` | repo degraded/repair/quarantine 与 projection repair 的恢复合同 |
 | `04_repository#repo-selector-resolution-contract` | `### 2.5 Selector Inputs and Logical Identity` | UUID-first selector 解析、别名恢复与歧义 fail-closed 合同 |
-| `04_repository#host-repo-alias-contract` | `### 2.1.1 Host-local Repo Alias Contract` | host-local alias ownership、CAS、JSON import/export 与跨宿主禁止边界；alias core/CLI/F4-v4 path已承载，F4/v5 removal不改变alias authority |
+| `04_repository#host-repo-alias-contract` | `### 2.1.1 Host-local Repo Alias Contract` | host-local alias ownership、CAS、JSON import/export 与跨宿主禁止边界；alias core/CLI/F4-v4 path已承载，F4/v6 removal不改变alias authority |
 | `04_repository#local-repo-removal-contract` | `### 7.6 Local Repo Removal Contract` | ownership manifest、confirmation token、authority retirement、owner cleanup、repair与NoScope合同 |
 | `04_repository#repo-lifecycle-coordinator` | `### 7.9 Repo Lifecycle Coordinator` | host-owned lifecycle job、prepare/cut/settle 与 immutable committed/settled plans |
 | `04_repository#tree-projection-contract` | `## 5. Tree Projection Contract` | Structure Facts 到 tree projection 的权威与修复合同 |
@@ -156,7 +156,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `06_backup#remote-import-resource-contract` | `### 4.2 Resource Contract` | B1 已落地 capture 文件、字节与路径预算；wire 分页预算待 B4 |
 | `06_backup#remote-import-runtime-boundary` | `## 10. Runtime Boundary` | B1 已落地 store/capture，B2 已落地 transport 依赖边界，B3 已落地 sealed authority writer；产品接线待 B4，UI 待 B5 |
 | `06_backup#projection-backup-failure-modes` | `## 8. Failure Modes` | Remote Projection transport 与 Remote Import capture/session/apply 的 typed failure、fail-closed 与 cleanup 边界 |
-| `07_network#remote-import-wire-contract` | `### 4.3.1 Remote Import Wire Contract` | F4/v5 nested request/response、typed errors 与不泄密投影 |
+| `07_network#remote-import-wire-contract` | `### 4.3.1 Remote Import Wire Contract` | F4/v6 nested request/response、typed errors 与不泄密投影 |
 | `09_web_thin_client_ledger#remote-import-client-contract` | `### 11.4 Remote Import Client Contract` | B5 scope/revision/generation-bound typed client、reconnect reload 与 stale response 丢弃 |
 | `09_web_thin_client_ledger#repo-control-client-contract` | `### 11.5 Repo Control Client Contract` | exact RepoId/alias revision/job status thin client |
 | `12_source_control_ui#remote-import-sibling-view` | `## 4.2 Remote Import Sibling View` | B5 Remote Import 与 Source Control/External Changes 同级但独立的薄壳层 |
@@ -239,6 +239,7 @@ Plan 与代码必须保持强制对应关系。本机制分三层落地：
 | `18_release#release-versioning` | `## 3. Versioning` | SemVer tag、Cargo/app version 与 release promotion 顺序合同 |
 | `09_web_thin_client_ledger#write-readiness` | `### 2.3 Write Readiness` | Web thin client repo-scoped 写入就绪状态合同 |
 | `09_web_thin_client_ledger#web-edit-intent` | `### 4.1 Edit Intent` | Web thin client 写意图、writer identity 与服务端权威提交边界 |
+| `09_web_thin_client_ledger#document-create-intent` | `### 4.2.1 Document Create Confirmation` | 客户端提议 UUID、typed Create confirmation、幂等 replay 与 authority projection 双重确认边界 |
 | `09_web_thin_client_ledger#projection-recovery-coordinator` | `### 8.1.1 Projection Recovery Coordinator` | Web generation-bound projection recovery、pending 保留、gap reconnect 与显式 Retry |
 | `19_plugins#skills-cli-extension-boundary` | `### MCP Retirement Boundary` | MCP 退役后 Skills + 受控 CLI 扩展边界 |
 | `19_plugins#plugin-runtime-boundary` | `## 2. Existing Rhai Plugin Host Boundary` | 外围 Rhai/plugin-host/PluginCall 兼容运行时边界，禁止升级为默认插件平台 |

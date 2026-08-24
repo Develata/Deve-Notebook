@@ -4,8 +4,8 @@
 
 - `Layer`: `Runtime Protocols`
 - `Status`: `Approved Runtime Architecture`
-- `Version`: `0.0.1`
-- `Last Review`: `2026-07-22`
+- `Version`: `0.1.0`
+- `Last Review`: `2026-08-24`
 - `Counterpart Feature`: `docs/features/16_web_thin_client_ledger.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`, `docs/acceptance-cases/07_storage_repo.md`
 - `Primary Code Areas`: `apps/web/src/runtime/document/pending.rs`, `apps/web/src/runtime/document/write_state.rs`, `apps/web/src/runtime/document/confirm.rs`, `apps/web/src/hooks/use_core/effects/message_*.rs`, `apps/cli/src/server/handlers/document/edit*.rs`, `apps/cli/src/server/handlers/document/write_confirmation.rs`, `crates/core/src/protocol/`
@@ -50,6 +50,7 @@ State_auth = L_confirmed
 - `repo_id`
 - `scope_nonce`
 - `switch_nonce`
+- `proposed_node_id`
 
 ### 2.3 Write Readiness {#write-readiness}
 
@@ -70,6 +71,8 @@ State_auth = L_confirmed
    typed projection，不得把它并入 editor pending overlay、External Changes 或 Source Control state。
 7. Repo alias revision、lifecycle job/completion 与 catalog membership 都由 backend runtime 持有；
    Web 只保存 request correlation 与 backend-produced list/status projection。
+8. document Create 的客户端 UUID 只是一项提议身份与 request correlation；只有后端 typed result
+   与随后精确匹配的 authority-derived DocList/tree projection 共同成立时，Web 才能把目标显示为已创建。
 
 ### 3.1 Write Serialization and Merge Boundary
 
@@ -131,6 +134,52 @@ version，不能比较不同 peer 的局部序号。
 - 同一个 `(client_id, client_op_id)` 重发时，服务端 SHOULD 返回第一次成功写入的同一 ack 内容，而不是再次落 ledger。
 - Ack 清理 pending overlay 后，该变化 MAY 出现在 Source Control 的 `Confirmed Ledger Changes`；它仍然不得重新进入 pending overlay 或 `pending_fs_ops`。
 
+### 4.2.1 Document Create Confirmation {#document-create-intent}
+
+Document Create 使用 nested `DocumentCreateRequest / DocumentCreateResponse` typed family，不得再以
+“DOM click 已发生”、搜索面板已关闭、最终页面 timeout 或无关联 `ProtocolError` 推断创建结果。
+
+`DocumentCreateRequest` MUST 携带：
+
+- `proposed_node_id: NodeId`：由客户端为本次用户意图生成并在重放时保持不变；
+- `repo_id + branch + scope_nonce`：绑定 exact writable scope；首版只允许 local branch，`branch`
+  必须为 `None`；
+- `path`：未经信任的目标输入，由后端规范化、校验并决定文件或目录语义。
+
+身份与幂等规则：
+
+- 对 Markdown 文件，后端 MUST 令 `DocId` 与 `proposed_node_id` 使用同一个 UUID；对目录，
+  `NodeId = proposed_node_id` 且不存在 `DocId`。
+- 后端是 path validation、Ledger Structure Fact append、projection writeback 与最终结果的唯一 authority；
+  客户端不得因为提出 UUID 就预写 confirmed tree/docs。
+- 同一 repo 中，同一 `proposed_node_id` 与同一规范化目标的重放 MUST 返回第一次提交对应的同一
+  `Created` 结果，不得追加重复 Structure Facts。
+- `proposed_node_id` 已绑定不同 path/kind，或目标 path 已由不同 NodeId 占用时 MUST fail-closed，
+  返回 `Rejected`；不得把 path 冲突当作重放成功。
+- create helper 跨越 authority append 与 projection writeback而无法证明“完全未提交”时，后端 MUST
+  回查 Ledger Structure projection：仅当精确 UUID/path/kind 已存在时返回 `Created` 并标记 projection
+  degraded/recovery required；否则返回 typed `Rejected`，不得诱导客户端盲目生成新 UUID 重试。
+
+`DocumentCreateResponse::Created` MUST 回显：
+
+- exact `proposed_node_id + repo_id + branch + scope_nonce`；
+- authority-resolved `node_id` 与可选 `doc_id`；
+- backend authority 实际接受的 normalized `path`；
+- typed `projection_outcome`（`Written | RecoveryRequired`）。
+
+`DocumentCreateResponse::Rejected` MUST 回显相同 scope/correlation 与 typed `ServerError`，但产品 UI
+只消费错误 code，不显示原始后端 detail/path。observer 仍通过 `ProjectionRecoveryRequired` 收敛；
+typed Create response 只关联发起请求，不能替代 observer recovery。
+
+Web pending Create 以 `proposed_node_id` 为键，只保存原始请求 path、backend-confirmed normalized path、exact repo/local-branch scope、ack 状态和
+一次有界 replay 状态：
+
+- fresh `Created` 到达前，DocList 即使先观察到同一身份也只能记录 projection observation，不能打开文档；
+- `Created` 与 authority-derived DocList 中精确 `(doc_id, backend-confirmed path)` 任意顺序到达后，才允许选择新文档；
+- `Rejected`、用户 repo/branch switch、RemoteBrowser 导航或页面 reload 必须退休 pending Create；
+- 只有同一页面 internal reconnect 恢复同一 repo/local branch，并获得 fresh `WriteReady` 后，才允许
+  使用原 `proposed_node_id` 和新 `scope_nonce` 自动 replay 一次；不得生成新 UUID，也不得无限重试。
+
 ### 4.3 Reject Contract
 
 `ServerMessage::EditRejected` MUST 至少携带：
@@ -182,7 +231,7 @@ version，不能比较不同 peer 的局部序号。
 
 #### Remove Scope Finalization Projection
 
-F4/v5 只能使用单个 backend-produced typed finalization；不得复用 Source Control error或依赖两个frame的顺序来推断lifecycle成功：
+F4/v6 只能使用单个 backend-produced typed finalization；不得复用 Source Control error或依赖两个frame的顺序来推断lifecycle成功：
 
 ```text
 RepoRemovalScopeFinalized {
@@ -476,7 +525,7 @@ notice detail 的路径；B6 已登记独立 provider/browser producer，最终 
 - lifecycle observer 与当前 connection/scope epoch 精确绑定；旧 connection 的 completion 只能触发
   status refresh，不能在新 scope 自动切换 repo。editor pending overlay 与 repo-control state 分离。
 
-当前F4/v5 protocol/server与`repo_control_client`已实现完整的Prepare/Execute、仅内存confirmation state、
+当前F4/v6 protocol/server与`repo_control_client`已实现完整的Prepare/Execute、仅内存confirmation state、
 单层typed确认面及initiator/observer single typed finalization。旧的`RepoList -> ProtocolError`两帧
 partial slot和direct Remove adapter均已删除；NoScope/fallback只投影backend结果，editor pending overlay
 保持独立。该client在R5产品路径上已落地，但runtime registry在explicit drift repair与R6 fresh browser/

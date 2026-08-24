@@ -9,6 +9,7 @@ source "$ROOT_DIR/scripts/lib/android-emulator-boot-readiness.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-pin.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-renderer.sh"
 source "$ROOT_DIR/scripts/lib/android-emulator-feature-policy.sh"
+source "$ROOT_DIR/scripts/lib/android-prebuilt-apk.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
 API_LEVEL="${DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL:-37.0}"
 SYSTEM_TARGET="${DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET:-google_apis}"
@@ -31,6 +32,9 @@ DEBUG_APK="apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-uni
 OWNER_FILE="$(android_emulator_owner_file "$LOG_DIR")" || exit 1
 AVD_HOME="${DEVE_MOBILE_ANDROID_AVD_HOME:-$ROOT_DIR/target/mobile-android-avd}"
 JOURNEY="${DEVE_MOBILE_ANDROID_EMULATOR_JOURNEY:-local}"
+STATIC_CHECKS_REQUIRED="${DEVE_MOBILE_ANDROID_EMULATOR_STATIC_CHECKS_REQUIRED:-1}"
+PREBUILT_APKS_REQUIRED="${DEVE_MOBILE_ANDROID_PREBUILT_APKS_REQUIRED:-0}"
+PREBUILT_APK_MANIFEST="${DEVE_MOBILE_ANDROID_PREBUILT_APK_MANIFEST:-}"
 DIAGNOSTICS_PRINTED=0
 
 run_deve_baseline "$ROOT_DIR" "mobile-android-emulator-install-startup-smoke" "mobile-android-emulator-install-startup-smoke-check"
@@ -323,30 +327,37 @@ ensure_emulator_process_alive() {
     fail "owned Android emulator process exited unexpectedly"
   fi
 }
-run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
-run node --test "$ROOT_DIR/scripts/webcrypto-capability.test.mjs"
-run node --test "$ROOT_DIR/scripts/android-target-capability.test.mjs"
-run node --test "$ROOT_DIR/apps/web/js/editor_lifecycle.test.mjs"
-run node --test "$ROOT_DIR/scripts/android-webview-cdp.test.mjs" "$ROOT_DIR/scripts/android-app-process-observation.test.mjs" "$ROOT_DIR/scripts/android-logcat-observation.test.mjs" "$ROOT_DIR/scripts/android-business-flow.test.mjs" "$ROOT_DIR/scripts/android-document-create-flow.test.mjs" "$ROOT_DIR/scripts/android-document-create-pointer.test.mjs" "$ROOT_DIR/scripts/android-document-create-settlement.test.mjs" "$ROOT_DIR/scripts/android-document-create-observation.test.mjs" "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.test.mjs"
-run node --test "$ROOT_DIR/scripts/mobile-webview-interaction.test.mjs" "$ROOT_DIR/scripts/mobile-editor-session-observation.test.mjs" "$ROOT_DIR/scripts/mobile-keyboard-presentation.test.mjs" "$ROOT_DIR/scripts/android-webview-pointer.test.mjs" "$ROOT_DIR/scripts/android-drawer-touch-proof.test.mjs" "$ROOT_DIR/scripts/mobile-android-presentation.test.mjs"
-run node --test "$ROOT_DIR/scripts/mobile-android-emulator-journey.test.mjs" "$ROOT_DIR/scripts/mobile-android-emulator-host.test.mjs" "$ROOT_DIR/scripts/android-lifecycle-harness.test.mjs" "$ROOT_DIR/scripts/android-native-bootstrap-script.test.mjs"
-run node --test "$ROOT_DIR/scripts/websocket-delivery-gate.test.mjs"
-run node --check "$ROOT_DIR/scripts/lib/android-webview-cdp.mjs"
-run node --check "$ROOT_DIR/scripts/lib/android-webview-cdp-client.mjs"
-run node --check "$ROOT_DIR/scripts/lib/mobile-source-control-interaction.mjs"
-run bash "$ROOT_DIR/scripts/android-emulator-capacity.test.sh"
-run bash "$ROOT_DIR/scripts/android-guest-service-readiness.test.sh"
-run bash "$ROOT_DIR/scripts/android-emulator-boot-readiness.test.sh"
-run bash "$ROOT_DIR/scripts/android-install-retry.test.sh"
-run bash "$ROOT_DIR/scripts/android-startup-diagnostics.test.sh"
-run bash "$ROOT_DIR/scripts/android-app-process-readiness.test.sh"
-run bash "$ROOT_DIR/scripts/android-ime-test-session.test.sh"
-run bash "$ROOT_DIR/scripts/android-package-session.test.sh"
-run bash "$ROOT_DIR/scripts/android-emulator-pin.test.sh"
-run bash "$ROOT_DIR/scripts/android-emulator-renderer.test.sh"
-run bash "$ROOT_DIR/scripts/android-emulator-feature-policy.test.sh"
-verify_sdk_package_reuse_contract
-run bash "$ROOT_DIR/scripts/android-emulator-cleanup.test.sh"
+case "$STATIC_CHECKS_REQUIRED" in
+  1)
+    run "$ROOT_DIR/scripts/check-native-track-boundary.sh"
+    run node --test "$ROOT_DIR/scripts/webcrypto-capability.test.mjs"
+    run node --test "$ROOT_DIR/scripts/android-target-capability.test.mjs"
+    run node --test "$ROOT_DIR/apps/web/js/editor_lifecycle.test.mjs"
+    run node --test "$ROOT_DIR/scripts/android-webview-cdp.test.mjs" "$ROOT_DIR/scripts/android-app-process-observation.test.mjs" "$ROOT_DIR/scripts/android-logcat-observation.test.mjs" "$ROOT_DIR/scripts/android-business-flow.test.mjs" "$ROOT_DIR/scripts/android-document-create-flow.test.mjs" "$ROOT_DIR/scripts/android-document-create-pointer.test.mjs" "$ROOT_DIR/scripts/android-document-create-settlement.test.mjs" "$ROOT_DIR/scripts/android-document-create-observation.test.mjs" "$ROOT_DIR/scripts/smoke-mobile-android-remote-browser.test.mjs"
+    run node --test "$ROOT_DIR/scripts/mobile-webview-interaction.test.mjs" "$ROOT_DIR/scripts/mobile-editor-session-observation.test.mjs" "$ROOT_DIR/scripts/mobile-keyboard-presentation.test.mjs" "$ROOT_DIR/scripts/android-webview-pointer.test.mjs" "$ROOT_DIR/scripts/android-drawer-touch-proof.test.mjs" "$ROOT_DIR/scripts/mobile-android-presentation.test.mjs"
+    run node --test "$ROOT_DIR/scripts/mobile-android-emulator-journey.test.mjs" "$ROOT_DIR/scripts/mobile-android-emulator-host.test.mjs" "$ROOT_DIR/scripts/android-lifecycle-harness.test.mjs" "$ROOT_DIR/scripts/android-native-bootstrap-script.test.mjs"
+    run node --test "$ROOT_DIR/scripts/websocket-delivery-gate.test.mjs"
+    run node --check "$ROOT_DIR/scripts/lib/android-webview-cdp.mjs"
+    run node --check "$ROOT_DIR/scripts/lib/android-webview-cdp-client.mjs"
+    run node --check "$ROOT_DIR/scripts/lib/mobile-source-control-interaction.mjs"
+    run bash "$ROOT_DIR/scripts/android-emulator-capacity.test.sh"
+    run bash "$ROOT_DIR/scripts/android-guest-service-readiness.test.sh"
+    run bash "$ROOT_DIR/scripts/android-emulator-boot-readiness.test.sh"
+    run bash "$ROOT_DIR/scripts/android-install-retry.test.sh"
+    run bash "$ROOT_DIR/scripts/android-startup-diagnostics.test.sh"
+    run bash "$ROOT_DIR/scripts/android-app-process-readiness.test.sh"
+    run bash "$ROOT_DIR/scripts/android-ime-test-session.test.sh"
+    run bash "$ROOT_DIR/scripts/android-package-session.test.sh"
+    run bash "$ROOT_DIR/scripts/android-emulator-pin.test.sh"
+    run bash "$ROOT_DIR/scripts/android-emulator-renderer.test.sh"
+    run bash "$ROOT_DIR/scripts/android-emulator-feature-policy.test.sh"
+    run bash "$ROOT_DIR/scripts/android-prebuilt-apk-contract.test.sh"
+    verify_sdk_package_reuse_contract
+    run bash "$ROOT_DIR/scripts/android-emulator-cleanup.test.sh"
+    ;;
+  0) ;;
+  *) fail "DEVE_MOBILE_ANDROID_EMULATOR_STATIC_CHECKS_REQUIRED must be 0 or 1" ;;
+esac
 validate_emulator_port
 validate_emulator_ram
 validate_emulator_partition
@@ -383,19 +394,33 @@ ensure_avd
 # minified release variant proves R8/JNI startup; the debuggable variant owns
 # CDP business journeys. Neither diagnostic signer nor debug APK is a release
 # candidate identity.
-(
-  export DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1
-  export DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=0
-  export DEVE_MOBILE_ANDROID_PACKAGE_TARGET="$PACKAGE_TARGET"
-  run "$ROOT_DIR/scripts/check-mobile-android-shell-package-build.sh"
-)
-(
-  export DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1
-  export DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=1
-  export DEVE_MOBILE_ANDROID_PACKAGE_TARGET="$PACKAGE_TARGET"
-  run "$ROOT_DIR/scripts/check-mobile-android-shell-package-build.sh"
-)
-stop_android_gradle_daemon
+case "$PREBUILT_APKS_REQUIRED" in
+  1)
+    [[ -n "$PREBUILT_APK_MANIFEST" ]] \
+      || fail "DEVE_MOBILE_ANDROID_PREBUILT_APK_MANIFEST is required in prebuilt mode"
+    android_prebuilt_apk_manifest_verify \
+      "$ROOT_DIR" "$PREBUILT_APK_MANIFEST" \
+      "$TARGET_HOST_RELEASE_UNSIGNED_APK" "$DEBUG_APK" \
+      || fail "prebuilt Android APK manifest verification failed"
+    echo "mobile-android-emulator-install-startup-smoke-check: verified prebuilt APK manifest"
+    ;;
+  0)
+    (
+      export DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1
+      export DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=0
+      export DEVE_MOBILE_ANDROID_PACKAGE_TARGET="$PACKAGE_TARGET"
+      run "$ROOT_DIR/scripts/check-mobile-android-shell-package-build.sh"
+    )
+    (
+      export DEVE_MOBILE_ANDROID_PACKAGE_BUILD_REQUIRED=1
+      export DEVE_MOBILE_ANDROID_PACKAGE_DEBUG=1
+      export DEVE_MOBILE_ANDROID_PACKAGE_TARGET="$PACKAGE_TARGET"
+      run "$ROOT_DIR/scripts/check-mobile-android-shell-package-build.sh"
+    )
+    stop_android_gradle_daemon
+    ;;
+  *) fail "DEVE_MOBILE_ANDROID_PREBUILT_APKS_REQUIRED must be 0 or 1" ;;
+esac
 
 ensure_emulator_serial_available
 

@@ -17,9 +17,18 @@ pub(super) fn create_file_from_content(
     rel_path: &str,
     content: &str,
     peer_label: &str,
+    doc_id_hint: Option<DocId>,
 ) -> Result<(DocId, Vec<StructureOp>)> {
     let patch = state::compute_diff("", content)?;
-    create_file_from_patch(state, scope, rel_path, content, &patch, peer_label)
+    create_file_from_patch(
+        state,
+        scope,
+        rel_path,
+        content,
+        &patch,
+        peer_label,
+        doc_id_hint,
+    )
 }
 
 pub(super) fn create_file_from_patch(
@@ -29,6 +38,7 @@ pub(super) fn create_file_from_patch(
     content: &str,
     patch: &[Op],
     peer_label: &str,
+    doc_id_hint: Option<DocId>,
 ) -> Result<(DocId, Vec<StructureOp>)> {
     let path = local_repo_path(state, scope, rel_path)?;
     if checked_exists(&path, "file register target")? {
@@ -44,7 +54,7 @@ pub(super) fn create_file_from_patch(
     let (doc_id, ops) = state.repo.apply_file_structure_in_local_repo(
         &scope.repo_name,
         rel_path,
-        None,
+        doc_id_hint,
         peer_label,
     )?;
     if !patch.is_empty() {

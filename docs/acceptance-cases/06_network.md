@@ -47,18 +47,19 @@
     - watcher_health_exposes_no_repo_identity_generation_path_or_failure_detail: true
 
 - case_id: NET-004
-  goal: 首发 F4/v5 协议格式、version admission、Repo Control removal preview-token 与 debug JSON 边界可证明。
+  goal: 首发 F4/v6 协议格式、version admission、Repo Control removal preview-token、Document Create typed confirmation 与 debug JSON 边界可证明。
   preconditions:
     - Server-to-Server 与 Client-Server 连接已建立
-    - 当前代码已切换至未发布F4/v5 lockstep
+    - 当前代码已切换至未发布F4/v6 lockstep
   steps:
-    - receipt: `network.ws-f4-v5` 在当前候选HEAD原子执行完整F4/v5 wire、negative admission、debug JSON与FullPeer binary-only证据
+    - receipt: `network.ws-f4-v6` 在当前候选HEAD原子执行完整F4/v6 wire、negative admission、typed Document Create、debug JSON与FullPeer binary-only证据
     - run: cargo test -p deve_core first_public_ws_epoch_is_lockstep -- --nocapture
     - run: cargo test -p deve_core unversioned_json_text_is_rejected -- --nocapture
     - run: cargo test -p deve_core unsupported_json_version_is_checked_before_message_schema -- --nocapture
-    - run: cargo test -p deve_core --lib remote_import_nested_wire_roundtrip_in_f4_v5_binary_and_versioned_json -- --nocapture
-    - run: cargo test -p deve_core --lib repo_control_nested_wire_roundtrips_in_f4_v5_binary_and_versioned_json -- --nocapture
-    - run: cargo test -p deve_core --lib direct_remove_lifecycle_intent_is_absent_from_f4_v5 -- --nocapture
+    - run: cargo test -p deve_core --lib remote_import_nested_wire_roundtrip_in_f4_v6_binary_and_versioned_json -- --nocapture
+    - run: cargo test -p deve_core --lib repo_control_nested_wire_roundtrips_in_f4_v6_binary_and_versioned_json -- --nocapture
+    - run: cargo test -p deve_core --lib direct_remove_lifecycle_intent_is_absent_from_f4_v6 -- --nocapture
+    - run: cargo test -p deve_core --lib document_create_v6_wire_roundtrips_client_identity_and_typed_result -- --nocapture
     - run: cargo test -p deve_core --lib repo_removal_execute_wire_binds_distinct_request_and_preparation_ids -- --nocapture
     - run: cargo test -p deve_core --lib repo_removal_wire_rejects_malformed_opaque_confirmation_values -- --nocapture
     - run: cargo test -p deve_core --lib optional_revision_none_is_exact_for_precandidate_failure_only -- --nocapture
@@ -70,9 +71,9 @@
     - packet_format_eq: ["server", "versioned-postcard"]
     - packet_format_any_of: ["client", "versioned-postcard", "text-versioned-json-debug"]
     - binary_packet_magic_eq: "DEVEWSF4"
-    - versioned_packet_protocol_version_eq: 5
-    - min_supported_packet_protocol_version_eq: 5
-    - unpublished_protocol_v1_v2_v3_v4_rejected_without_adapter: true
+    - versioned_packet_protocol_version_eq: 6
+    - min_supported_packet_protocol_version_eq: 6
+    - unpublished_protocol_v1_v2_v3_v4_v5_rejected_without_adapter: true
     - p2p_v1_protocol_policy_eq: "lockstep_until_version_adapter_exists"
     - explicit_versioned_json_debug_only: true
     - legacy_json_fallback_absent: true
@@ -444,4 +445,27 @@
     - unrelated_document_recovery_keeps_editor_writable true
     - stale_generation_cannot_restore_writer_ready true
     - repeated_adapter_failure_requires_explicit_retry true
+
+- case_id: NET-021
+  goal: Document Create 使用客户端提议 UUID、后端 typed confirmation 与 authority projection 双重确认，并可幂等恢复。
+  preconditions:
+    - browser session 已绑定 local writable repo 与 fresh WriteReady
+    - 测试入口可控制 Create response、ProjectionRecoveryRequired 与 DocList 的到达顺序
+  steps:
+    - run: cargo test -p deve_core --lib document_create -- --nocapture
+    - run: cargo test -p deve_cli --lib document_create -- --nocapture
+    - run: cargo test -p deve_web document_create -- --nocapture
+    - run: scripts/check-android-document-create-contract.sh
+    - ui_run: WEBWRITE-FEAT-04
+  assertions:
+    - create_request_carries_exact_repo_local_branch_scope_and_proposed_node_id true
+    - markdown_doc_id_uses_proposed_node_uuid true
+    - created_returns_backend_normalized_target_for_exact_doc_list_settlement true
+    - same_uuid_same_normalized_target_replay_returns_same_created_result_without_new_facts true
+    - same_uuid_different_target_and_different_uuid_same_target_fail_closed true
+    - created_and_exact_doc_list_are_both_required_before_selection true
+    - created_and_doc_list_arrival_order_is_irrelevant true
+    - same_page_same_repo_internal_reconnect_replays_original_uuid_once_after_fresh_write_ready true
+    - repo_or_branch_switch_remote_navigation_and_page_reload_retire_pending_create true
+    - typed_reject_ui_does_not_render_raw_backend_detail true
 ```

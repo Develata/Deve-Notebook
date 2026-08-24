@@ -1,10 +1,11 @@
 use super::enqueue_with_limit;
 use super::is_write_message;
 use super::prepare_queue_for_new_connection;
-use deve_core::models::{DocId, PeerId, VersionVector};
+use deve_core::models::{DocId, NodeId, PeerId, RepoId, VersionVector};
 use deve_core::protocol::ScPathTarget;
 use deve_core::protocol::{
-    ClientMessage, RepoControlRequest, RepoLifecycleIntent, ScopeNonce, SwitchNonce,
+    ClientMessage, DocumentCreateRequest, RepoControlRequest, RepoLifecycleIntent, ScopeNonce,
+    SwitchNonce,
 };
 use std::collections::VecDeque;
 
@@ -61,10 +62,15 @@ fn prepare_queue_for_new_connection_keeps_reads_and_prepends_ping() {
 
 #[test]
 fn output_write_classification_distinguishes_reads_from_writes() {
-    assert!(is_write_message(&ClientMessage::CreateDoc {
-        name: "Untitled.md".into(),
-        scope_nonce: Some(1),
-    }));
+    assert!(is_write_message(&ClientMessage::DocumentCreate(
+        DocumentCreateRequest {
+            proposed_node_id: NodeId::new(),
+            repo_id: RepoId::new_v4(),
+            branch: None,
+            scope_nonce: ScopeNonce::new(1),
+            path: "Untitled.md".into(),
+        }
+    )));
     assert!(is_write_message(&ClientMessage::StageFile {
         target: ScPathTarget::from_path("note.md"),
         scope_nonce: Some(1),

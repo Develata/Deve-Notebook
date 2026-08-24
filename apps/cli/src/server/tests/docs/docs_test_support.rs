@@ -8,7 +8,9 @@ use super::{
 use deve_core::config::SyncMode;
 use deve_core::ledger::database::DatabaseHandle;
 use deve_core::models::PeerId;
-use deve_core::protocol::{ServerError, ServerMessage};
+use deve_core::protocol::{
+    DocumentCreateResponse, DocumentCreateResponseContext, ServerError, ServerMessage,
+};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::{path::PathBuf, sync::Arc};
 use tempfile::{tempdir, TempDir};
@@ -127,5 +129,20 @@ pub(crate) async fn recv_protocol_error(
             error, scope_nonce, ..
         }) => (error, scope_nonce),
         other => panic!("expected ProtocolError, got {:?}", other),
+    }
+}
+
+pub(crate) async fn recv_document_create_error(
+    rx: &mut mpsc::Receiver<ServerMessage>,
+) -> (DocumentCreateResponseContext, ServerError) {
+    loop {
+        match rx.recv().await {
+            Some(ServerMessage::DocumentCreate(DocumentCreateResponse::Rejected {
+                context,
+                error,
+            })) => return (context, error),
+            Some(ServerMessage::ProjectionRecoveryRequired(_)) => continue,
+            other => panic!("expected typed Document Create rejection, got {:?}", other),
+        }
     }
 }

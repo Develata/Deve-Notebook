@@ -9,8 +9,8 @@ use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 
-pub const WS_PROTOCOL_VERSION: u16 = 5;
-pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 5;
+pub const WS_PROTOCOL_VERSION: u16 = 6;
+pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 6;
 pub const MAX_WS_FRAME_BYTES: u64 = 16 * 1024 * 1024;
 /// Bound fact-count allocation before a transfer payload is materialized.
 pub const MAX_SYNC_FACTS_PER_PAYLOAD: u64 = 16 * 1024;

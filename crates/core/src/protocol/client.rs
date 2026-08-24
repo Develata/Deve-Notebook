@@ -4,6 +4,7 @@
 //!   - 07_network#web-ws-runtime
 //!   - 07_network#projection-recovery-contract
 //!   - 09_web_thin_client_ledger#web-edit-intent
+//!   - 09_web_thin_client_ledger#document-create-intent
 
 use crate::models::{DocId, Op, PeerFactSeq, PeerId, VersionVector};
 use crate::protocol::ScPathTarget;
@@ -11,7 +12,9 @@ use crate::protocol::ScopeNonce;
 use crate::protocol::SessionProof;
 use crate::protocol::SyncPushHeader;
 use crate::protocol::SyncSourceProof;
-use crate::protocol::{RemoteImportRequest, RemoteProjectionPushRequest, RepoControlRequest};
+use crate::protocol::{
+    DocumentCreateRequest, RemoteImportRequest, RemoteProjectionPushRequest, RepoControlRequest,
+};
 use crate::security::EncryptedOp;
 use crate::source_control::CommitFileDiffTarget;
 use serde::{Deserialize, Serialize};
@@ -88,11 +91,7 @@ pub enum ClientMessage {
         #[serde(default)]
         scope_nonce: Option<u64>,
     },
-    CreateDoc {
-        name: String,
-        #[serde(default)]
-        scope_nonce: Option<u64>,
-    },
+    DocumentCreate(DocumentCreateRequest),
     RenameDoc {
         old_path: String,
         new_path: String,

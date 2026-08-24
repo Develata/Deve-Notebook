@@ -6,6 +6,7 @@ use crate::api::WsService;
 use crate::hooks::use_core::navigation::PendingNavigation;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use crate::i18n::Locale;
+use crate::runtime::document::create::PendingDocumentCreate;
 use crate::runtime::document::pending::PendingLocalEdits;
 use crate::runtime::scope_client::LocalScopeSignals;
 use deve_core::models::DocId;
@@ -36,7 +37,8 @@ pub struct DocCallbackSignals {
     pub set_pending_navigation: WriteSignal<Option<PendingNavigation>>,
     pub set_current_doc: WriteSignal<Option<DocId>>,
     pub set_sync_banner: WriteSignal<Option<String>>,
-    pub set_pending_created_doc_path: WriteSignal<Option<String>>,
+    pub pending_document_create: ReadSignal<Option<PendingDocumentCreate>>,
+    pub set_pending_document_create: WriteSignal<Option<PendingDocumentCreate>>,
     pub set_explicit_home: WriteSignal<bool>,
 }
 
@@ -58,7 +60,8 @@ pub fn create_doc_callbacks(ws: &WsService, signals: DocCallbackSignals) -> DocC
             local_scope: signals.local_scope,
             write_gate: signals.write_gate,
             set_sync_banner: signals.set_sync_banner,
-            set_pending_created_doc_path: signals.set_pending_created_doc_path,
+            pending_document_create: signals.pending_document_create,
+            set_pending_document_create: signals.set_pending_document_create,
             set_explicit_home: signals.set_explicit_home,
         },
     );

@@ -22,7 +22,7 @@ Keep this block stable. The graph generator reads the drift registry below.
 | Area | Status | Notes |
 |---|---|---|
 | Flow set | drifted | 82 approved flow labels exist on both sides；四个 Remote Import flow已由独立B5 typed client承载，`repo lifecycle` 保留fresh跨平台/候选交付证据gap |
-| User operations | drifted | current F4/v5 Repo Control已删除direct submit-remove并接入Prepare/Execute、thin Web确认面、single typed finalization与normal CLI；Remote Import B5 sibling view已覆盖Prepare/Review/Apply/Manage；repo lifecycle R6 evidence尚未收敛 |
+| User operations | drifted | current F4/v6 wire上的Repo Control已删除direct submit-remove并接入Prepare/Execute、thin Web确认面、single typed finalization与normal CLI；Document Create使用客户端提议稳定UUID与typed confirmation；Remote Import B5 sibling view已覆盖Prepare/Review/Apply/Manage；repo lifecycle R6 evidence尚未收敛 |
 | Instruction interfaces | aligned | response taxonomy matches across the modeled slice |
 | Coordination/execution mapping | drifted | Shared transport、immutable session、typed review、Mounted sealed Apply、post-commit writeback、Remote Import independent client、repo catalog cut、per-RepoId DB owner/lease、zero-repo composition与owned-state settlement已存在；repo lifecycle fresh evidence尚未收敛 |
 | Scope hygiene | aligned | legacy inventory is outside this slice |
@@ -36,7 +36,7 @@ Use one entry per divergent flow. Labels must match the flow registry.
 
 Active drift facts:
 
-1. `repo lifecycle`: host-owned jobs、session-scoped publication、R1 per-RepoId authority owner/non-clone lease、R2 zero-repo `BootstrapUnbound(scope_nonce=0)`/configured first Create、R3 F4/v5 exact manifest/issuer-bound preview token/atomic `ExecuteAdmitted`，以及R4 O1-FREEZE、manifest-bound quarantine、cut recovery与two-phase terminal settlement均已落地。Option A two-stage owner-prepared same-RepoId reincarnation、R5 single typed finalization、thin Web确认面、normal offline/proxy CLI、explicit drift repair与distinct process exit status已实现；R6 fresh Windows/Linux及候选Desktop/Mobile证据仍未封存。
+1. `repo lifecycle`: host-owned jobs、session-scoped publication、R1 per-RepoId authority owner/non-clone lease、R2 zero-repo `BootstrapUnbound(scope_nonce=0)`/configured first Create、R3 current F4/v6 wire的exact manifest/issuer-bound preview token/atomic `ExecuteAdmitted`，以及R4 O1-FREEZE、manifest-bound quarantine、cut recovery与two-phase terminal settlement均已落地。Option A two-stage owner-prepared same-RepoId reincarnation、R5 single typed finalization、thin Web确认面、normal offline/proxy CLI、explicit drift repair与distinct process exit status已实现；R6 fresh Windows/Linux及候选Desktop/Mobile证据仍未封存。
 
 ## Flow Registry
 
@@ -184,7 +184,7 @@ Within the currently modeled operation slice:
 
 - 81 flows remain aligned; `repo lifecycle` is explicitly drifted
 - Remote Projection push、B4 Remote Import backend/CLI/product wire与四个B5 client flow均已对齐
-- Redb v4、sealed writer、Mounted admission、post-commit writeback、current F4/v5 Repo Control admission、B5 Remote Import client 与 immutable locator are implemented；ownership-aware lifecycle freshness、B6 与 first-tag freshness evidence remain release blockers
+- Redb v4、sealed writer、Mounted admission、post-commit writeback、current F4/v6 Repo Control admission、typed idempotent Document Create、B5 Remote Import client 与 immutable locator are implemented；ownership-aware lifecycle freshness、B6 与 first-tag freshness evidence remain release blockers
 - no drift is hidden as compatibility support or document-only runtime evidence
 
 The slice is bijective at the registry/label level and intentionally carries one active drift marker. B5 has closed four independent client gaps；ownership-aware lifecycle仍需R6 fresh证据，B6 provider/browser receipts也必须独立封存，二者不得由架构标签对齐替代。

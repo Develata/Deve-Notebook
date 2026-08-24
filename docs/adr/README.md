@@ -58,4 +58,5 @@ blueprint in `docs/plan/`.
 | [0011](./0011-immutable-ledger-first-remote-import.md) | Immutable ledger-first Remote Import | Accepted |
 | [0012](./0012-repo-local-redb-projection-fault-store.md) | Repo-local Redb Projection Fault store | Accepted |
 | [0013](./0013-immutable-repo-id-host-local-alias.md) | Immutable RepoId and host-local repo alias | Accepted |
-| [0014](./0014-ownership-aware-local-repo-removal.md) | Ownership-aware local repository removal | Accepted |
+| [0014](./0014-ownership-aware-local-repo-removal.md) | Ownership-aware local repository removal | Accepted; wire-epoch portion amended by 0015 |
+| [0015](./0015-typed-idempotent-document-create.md) | Typed idempotent Document Create | Accepted |

@@ -21,6 +21,18 @@
 - 服务端确认后，pending 应消失并进入已确认状态。
 - 明确 reject 后，pending 不得永久悬挂。
 
+### 2.1 Typed Document Create
+
+- 用户触发 Create 后，搜索面板关闭只表示意图已提交给客户端 runtime，不表示文档已创建。
+- 页面为该意图生成一个稳定 UUID。服务端以该 UUID 作为提议节点身份，校验 path/scope 后写入
+  Ledger；相同 UUID 与相同目标的安全重放不会生成第二篇文档。
+- 新文档只有在服务端 typed `Created` 与 authority-derived DocList 中都出现同一个 `DocId + path`
+  后才自动打开；两条消息先后顺序不影响结果。
+- typed `Rejected` 会结束 pending 并显示本地化错误；页面不会解析原始 detail，也不会换一个 UUID
+  静默重试。
+- 同页、同 repo、本地 branch 的内部重连可在 fresh WriteReady 后重放一次原意图；切 repo/branch、
+  RemoteBrowser 导航或刷新页面都会退休它。
+
 ### 3. Repo-Scoped Write Readiness
 
 - 当前 repo 未握手完成时，页面不能假装可写。
@@ -33,7 +45,7 @@
 - recovery plan 未命中当前文档时，仅刷新后端指定的列表投影，当前编辑器不得被无谓锁住。
 - active repo remove 已提交后，发起connection与仍exact绑定removed RepoId的observer只消费backend单帧typed `RepoRemovalScopeFinalized`；它原子携带final RepoList与RepoBound/NoScope结果。fallback binding失效时发起者进入NoScope而不报删除失败，observer使用各自新scope epoch进入NoScope；已独立切离的observer不受影响。页面不得从列表自动选择其它repo，也不得解析detail或Source Control error决定结果。
 - removal Prepare preview、preparation_id与confirmation token只绑定当前authenticated connection epoch并驻留内存；Execute必须使用新的request_id引用exact preparation_id。断线、刷新或scope mismatch立即丢弃未消费token，不写入URL、browser storage或telemetry，也不在前端计算TTL/blocker。
-- finalization必须在一次state update中应用RepoList与scope、关闭旧writer-ready并保留editor pending overlay。F4/v5不存在旧`RepoList -> SC_REPO_NOT_SELECTED`两帧stage、10秒partial timeout或旧epoch第二帧。
+- finalization必须在一次state update中应用RepoList与scope、关闭旧writer-ready并保留editor pending overlay。F4/v6不存在旧`RepoList -> SC_REPO_NOT_SELECTED`两帧stage、10秒partial timeout或旧epoch第二帧。
 
 ### 3.1 Remote Import Thin-Client State
 
@@ -127,6 +139,24 @@ Snapshot/History，writer-ready 恢复后 pending 只重发一次。对无关文
 
 - 只读 scope 下不能假装可写。
 - 回到健康 repo 后，写入状态与当前 scope 精确一致。
+
+### WEBWRITE-FEAT-04: Create Typed Confirmation 与幂等恢复
+
+前置条件：本地 writable repo 已达到 fresh WriteReady。
+
+步骤：
+
+1. 通过 `+notes/typed-create.md` 提交 Create。
+2. 分别注入“recovery/DocList 先到、Created 后到”和“Created 先到、DocList 后到”。
+3. 在首次发送后断开连接，并以同一页面、同一 repo/local branch 恢复 fresh WriteReady。
+4. 以同一 UUID 重放，再以相同 UUID/不同 path 和不同 UUID/相同 path 发送冲突请求。
+
+期望结果：
+
+- DOM click 或面板关闭后不会提前打开文档。
+- 两种消息顺序都只打开 exact `DocId + path` 一次。
+- 内部重连只重放一次，Ledger 中只有一组 Create Structure Facts。
+- UUID/path 任一不一致都得到 typed reject，不覆盖既有文档、不泄漏后端 detail。
 
 ### WEBNAV-FEAT-01: Pending 编辑离开提示
 

@@ -15,6 +15,10 @@ pub(super) async fn route_docs(
     session: &mut WsSession,
     msg: ClientMessage,
 ) {
+    if let ClientMessage::DocumentCreate(request) = msg {
+        docs::handle_create_doc_request(state, ch, session, request).await;
+        return;
+    }
     if let Some(scope) = msg.document_scope_gate()
         && super::scope_guard::reject_invalid_browser_scope_nonce(
             ch,
@@ -26,9 +30,6 @@ pub(super) async fn route_docs(
         return;
     }
     match msg {
-        ClientMessage::CreateDoc { name, .. } => {
-            docs::handle_create_doc(state, ch, session, name).await;
-        }
         ClientMessage::RenameDoc {
             old_path, new_path, ..
         } => {

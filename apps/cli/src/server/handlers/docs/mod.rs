@@ -29,7 +29,9 @@ mod rename_dir;
 mod rename_file;
 
 pub use copy::handle_copy_doc;
+#[cfg(test)]
 pub use create::handle_create_doc;
+pub use create::handle_create_doc_request;
 pub use delete::handle_delete_doc;
 pub use path_validation::{normalize_repo_path_input, validate_file_path, validate_folder_path};
 pub use rename::{handle_move_doc, handle_rename_doc};
@@ -43,6 +45,7 @@ use crate::server::repo_scope::{
 use crate::server::session::WsSession;
 use anyhow::Context;
 use deve_core::models::RepoId;
+use deve_core::protocol::ServerError;
 use deve_core::protocol::ServerMessage;
 pub(super) use deve_core::utils::fs::checked_exists;
 use std::path::Path;
@@ -65,13 +68,21 @@ pub(super) fn resolve_local_write_scope(
     session: &mut WsSession,
     scope_nonce: Option<u64>,
 ) -> Option<ResolvedRepo> {
-    let scope = match resolve_session_repo_or_bootstrap_local(state, session) {
-        Ok(scope) => scope,
-        Err(err) => {
-            ch.send_protocol_error_with_scope_nonce(map_repo_scope_error(err), scope_nonce);
-            return None;
+    match resolve_local_write_scope_result(state, session) {
+        Ok(scope) => Some(scope),
+        Err(error) => {
+            ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
+            None
         }
-    };
+    }
+}
+
+pub(super) fn resolve_local_write_scope_result(
+    state: &Arc<AppState>,
+    session: &mut WsSession,
+) -> Result<ResolvedRepo, ServerError> {
+    let scope =
+        resolve_session_repo_or_bootstrap_local(state, session).map_err(map_repo_scope_error)?;
     if scope.branch.is_none()
         && (session.active_repo.as_deref() != Some(scope.session_name.as_str())
             || session.active_repo_id != Some(scope.repo_id))
@@ -80,18 +91,18 @@ pub(super) fn resolve_local_write_scope(
     }
     if scope.branch.is_some() {
         tracing::debug!("Docs write rejected: resolved scope is readonly (remote branch)");
-        errors::remote_branch_readonly_scoped(ch, scope_nonce);
-        return None;
+        return Err(ServerError::new(
+            deve_core::protocol::ServerErrorCode::ScRemoteBranchReadonly,
+        ));
     }
     if let Err(error) = ensure_resolved_local_repo_writable(state, &scope) {
         tracing::debug!(
             repo_name = %scope.repo_name,
             "Docs write rejected: local repo projection is degraded"
         );
-        ch.send_protocol_error_with_scope_nonce(error, scope_nonce);
-        return None;
+        return Err(error);
     }
-    Some(scope)
+    Ok(scope)
 }
 
 pub(super) fn checked_existing_is_dir(path: &Path, context: &str) -> anyhow::Result<Option<bool>> {

@@ -7,8 +7,11 @@ use super::ws_protocol_acceptance_support::{
     connect_harness, expect_sync_hello_and_shadow_list, recv_optional_server_message,
     recv_server_message, send_client_message, switch_to_notes_repo, WsHarness,
 };
-use deve_core::models::{DocId, Op};
-use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
+use deve_core::models::{DocId, NodeId, Op};
+use deve_core::protocol::{
+    ClientMessage, DocumentCreateRequest, DocumentCreateResponse, ScopeNonce, ServerErrorCode,
+    ServerMessage,
+};
 use deve_core::security::IdentityKeyPair;
 use tokio::net::TcpStream;
 use tokio::time::Duration;
@@ -63,27 +66,53 @@ async fn ready_ws(harness: &WsHarness) -> anyhow::Result<TestWs> {
 }
 
 async fn create_doc(ws: &mut TestWs, repo_id: uuid::Uuid) -> anyhow::Result<DocId> {
+    let proposed_node_id = NodeId::new();
+    let expected_doc_id = DocId(proposed_node_id.0);
     send_client_message(
         ws,
-        ClientMessage::CreateDoc {
-            name: "writer-gate.md".into(),
-            scope_nonce: Some(SCOPE),
-        },
+        ClientMessage::DocumentCreate(DocumentCreateRequest {
+            proposed_node_id,
+            repo_id,
+            branch: None,
+            scope_nonce: ScopeNonce::new(SCOPE),
+            path: "writer-gate.md".into(),
+        }),
     )
     .await?;
-    let doc_id = match recv_server_message(ws).await? {
-        ServerMessage::ProjectionRecoveryRequired(required) => {
-            assert_eq!(required.repo_id, repo_id);
-            assert_eq!(required.scope_nonce, Some(SCOPE));
-            match required.plan.documents {
-                deve_core::protocol::DocumentRecoveryScope::Exact(docs) if docs.len() == 1 => {
-                    docs[0]
+    let mut saw_created = false;
+    let mut saw_recovery = false;
+    for _ in 0..2 {
+        match recv_server_message(ws).await? {
+            ServerMessage::ProjectionRecoveryRequired(required) => {
+                assert_eq!(required.repo_id, repo_id);
+                assert_eq!(required.scope_nonce, Some(SCOPE));
+                match required.plan.documents {
+                    deve_core::protocol::DocumentRecoveryScope::Exact(docs)
+                        if docs == vec![expected_doc_id] =>
+                    {
+                        saw_recovery = true;
+                    }
+                    other => anyhow::bail!("create recovery must identify one doc, got {other:?}"),
                 }
-                other => anyhow::bail!("create recovery must identify one doc, got {other:?}"),
             }
+            ServerMessage::DocumentCreate(DocumentCreateResponse::Created {
+                context,
+                node_id,
+                doc_id,
+                ..
+            }) => {
+                assert_eq!(context.proposed_node_id, proposed_node_id);
+                assert_eq!(context.repo_id, repo_id);
+                assert_eq!(context.scope_nonce.get(), SCOPE);
+                assert_eq!(node_id, proposed_node_id);
+                assert_eq!(doc_id, Some(expected_doc_id));
+                saw_created = true;
+            }
+            other => anyhow::bail!("expected create confirmation/recovery, got {other:?}"),
         }
-        other => anyhow::bail!("expected create recovery, got {other:?}"),
-    };
+    }
+    anyhow::ensure!(saw_created && saw_recovery, "missing Create confirmation/recovery");
+    let doc_id = expected_doc_id;
     send_client_message(
         ws,
         ClientMessage::ListDocs {

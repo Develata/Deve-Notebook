@@ -3,7 +3,9 @@
 //!   - 04_repository#repo-scope-runtime
 
 use super::docs_seed_test_support::seed_file;
-use super::docs_test_support::{channel, docs_harness, local_session, recv_protocol_error};
+use super::docs_test_support::{
+    channel, docs_harness, local_session, recv_document_create_error, recv_protocol_error,
+};
 use super::handlers::docs::{
     handle_copy_doc, handle_create_doc, handle_delete_doc, handle_move_doc, handle_rename_doc,
 };
@@ -156,7 +158,7 @@ async fn workspace_ingestion_failure_precedes_docs_workspace_lookups() -> anyhow
     let (ch, mut rx) = channel(&h.state);
     let mut session = local_session(&h.state, h.repo_id);
     handle_create_doc(&h.state, &ch, &mut session, "notes/existing.md".into()).await;
-    assert_unavailable(recv_protocol_error(&mut rx).await.0);
+    assert_unavailable(recv_document_create_error(&mut rx).await.1);
 
     let (ch, mut rx) = channel(&h.state);
     handle_delete_doc(&h.state, &ch, &mut session, "notes/missing.md".into()).await;

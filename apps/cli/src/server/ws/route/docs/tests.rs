@@ -1,15 +1,27 @@
 use super::route_docs;
 use crate::server::sync_hello_test_support::{build_state, unicast_channel};
-use deve_core::protocol::{ClientMessage, ServerErrorCode, ServerMessage};
+use deve_core::models::NodeId;
+use deve_core::protocol::{
+    ClientMessage, DocumentCreateRequest, DocumentCreateResponse, ScopeNonce, ServerErrorCode,
+    ServerMessage,
+};
 use tokio::time::{Duration, timeout};
 
 #[test]
 fn extracts_scope_nonce_from_doc_messages() {
+    let create = ClientMessage::DocumentCreate(DocumentCreateRequest {
+        proposed_node_id: NodeId::new(),
+        repo_id: uuid::Uuid::new_v4(),
+        branch: None,
+        scope_nonce: ScopeNonce::new(3),
+        path: "notes/a.md".into(),
+    });
+    let gate = create.document_scope_gate().expect("create scope gate");
+    assert_eq!(
+        (gate.scope_nonce, gate.scope_name),
+        (Some(3), "document create")
+    );
     let cases = [
-        ClientMessage::CreateDoc {
-            name: "notes".into(),
-            scope_nonce: Some(3),
-        },
         ClientMessage::RenameDoc {
             old_path: "a.md".into(),
             new_path: "b.md".into(),
@@ -35,6 +47,39 @@ fn extracts_scope_nonce_from_doc_messages() {
         assert_eq!((gate.scope_nonce, gate.scope_name), (Some(3), "document"));
     }
     assert_eq!(ClientMessage::Ping.document_scope_gate(), None);
+}
+
+#[tokio::test(flavor = "multi_thread", worker_threads = 2)]
+async fn document_create_stale_scope_returns_typed_rejection() -> anyhow::Result<()> {
+    let (_dir, state, repo_id) = build_state()?;
+    let (ch, mut uni_rx) = unicast_channel(&state);
+    let mut session = browser_session(17);
+    let proposed_node_id = NodeId::new();
+
+    route_docs(
+        &state,
+        &ch,
+        &mut session,
+        ClientMessage::DocumentCreate(DocumentCreateRequest {
+            proposed_node_id,
+            repo_id,
+            branch: None,
+            scope_nonce: ScopeNonce::new(16),
+            path: "notes/a.md".into(),
+        }),
+    )
+    .await;
+
+    match recv_unicast_message(&mut uni_rx).await? {
+        ServerMessage::DocumentCreate(DocumentCreateResponse::Rejected { context, error }) => {
+            assert_eq!(context.proposed_node_id, proposed_node_id);
+            assert_eq!(context.scope_nonce.get(), 16);
+            assert_eq!(error.code, ServerErrorCode::ScStaleScope);
+            assert!(error.detail.is_none());
+        }
+        other => panic!("expected typed Document Create rejection, got {other:?}"),
+    }
+    Ok(())
 }
 
 #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
@@ -136,10 +181,6 @@ fn browser_session(scope_nonce: u64) -> crate::server::session::WsSession {
 
 fn doc_messages_with_scope(scope_nonce: Option<u64>) -> Vec<ClientMessage> {
     vec![
-        ClientMessage::CreateDoc {
-            name: "notes/a.md".into(),
-            scope_nonce,
-        },
         ClientMessage::RenameDoc {
             old_path: "notes/a.md".into(),
             new_path: "notes/b.md".into(),

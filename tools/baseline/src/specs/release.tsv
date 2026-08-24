@@ -481,28 +481,29 @@ contains	docs/plan/18_release.md	Redb schema 冻结为 v4
 contains	docs/plan/03_storage/authority.md	LEDGER_ENTRY_FORMAT_VERSION = 3
 contains	docs/plan/03_storage/authority.md	REDB_SCHEMA_VERSION = 4
 contains	docs/plan/03_storage/authority.md	PROJECTION_FAULTS: TableDefinition<[u8; 32], &[u8]>
-contains	docs/plan/07_network.md	首个公开 wire epoch 固定为 `protocol_version = 5`
+contains	docs/plan/07_network.md	首个公开 wire epoch 固定为 `protocol_version = 6`
 contains	docs/plan/07_network.md	`MIN_SUPPORTED_WS_PROTOCOL_VERSION` **MUST** 等于当前 `WS_PROTOCOL_VERSION`
 contains	docs/registry/first-tag-format-matrix.md	# First-Tag Format Matrix
 contains	docs/registry/first-tag-format-matrix.md	LEDGER_ENTRY_FORMAT_VERSION = 3
 contains	docs/registry/first-tag-format-matrix.md	`REDB_SCHEMA_VERSION = 4`
 contains	docs/registry/first-tag-format-matrix.md	repo-local `PROJECTION_FAULTS`
-contains	docs/registry/first-tag-format-matrix.md	`WS_PROTOCOL_VERSION = 5;`
-contains	docs/registry/first-tag-format-matrix.md	`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 5;`
+contains	docs/registry/first-tag-format-matrix.md	`WS_PROTOCOL_VERSION = 6;`
+contains	docs/registry/first-tag-format-matrix.md	`MIN_SUPPORTED_WS_PROTOCOL_VERSION = 6;`
 contains	docs/registry/first-tag-format-matrix.md	Redb schema v4
-contains	docs/registry/first-tag-format-matrix.md	当前代码已切换F4/v5
+contains	docs/registry/first-tag-format-matrix.md	当前代码目标切换为F4/v6
 contains	docs/registry/first-tag-format-matrix.md	ledger/.host/projection-locators.toml
 contains	docs/registry/first-tag-format-matrix.md	Remote Projection transport / Remote Import
 contains	crates/core/src/models/ledger_decode.rs	pub const LEDGER_ENTRY_FORMAT_VERSION: u16 = 3;
 contains	crates/core/src/ledger/schema.rs	pub const REDB_SCHEMA_VERSION: u16 = 4;
 contains	crates/core/src/ledger/schema.rs	pub(crate) const PROJECTION_FAULTS
-contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 5;
-contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 5;
+contains	crates/core/src/protocol/frame.rs	pub const WS_PROTOCOL_VERSION: u16 = 6;
+contains	crates/core/src/protocol/frame.rs	pub const MIN_SUPPORTED_WS_PROTOCOL_VERSION: u16 = 6;
 contains	docs/adr/0009-first-public-websocket-protocol-epoch.md	DEVEWSF4
 contains	docs/adr/0009-first-public-websocket-protocol-epoch.md	F4/v2 was also never published
 contains	docs/adr/0011-immutable-ledger-first-remote-import.md	Immutable ledger-first Remote Import
 contains	docs/adr/0011-immutable-ledger-first-remote-import.md	ADR 0014 makes WS v5 the first-tag
 contains	docs/adr/0014-ownership-aware-local-repo-removal.md	The unpublished F4/v4 wire target is replaced by F4/v5 lockstep
+contains	docs/adr/0015-typed-idempotent-document-create.md	The F4/v5 target was never published
 contains	docs/features/15_release.md	docs/registry/first-tag-format-matrix.md
 contains	docs/acceptance-cases/12_tech_release.md	legacy_binary_codec_dependency_absent true
 contains	docs/acceptance-cases/12_tech_release.md	first_tag_format_matrix_bound_to_plan_and_code true
@@ -1298,6 +1299,16 @@ contains	.github/workflows/release-native.yml	bash scripts/desktop-installer-win
 contains	docs/registry/acceptance-producers.json	"scripts/lib/desktop-installer-windows.sh"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	run_deve_baseline "$ROOT_DIR" "mobile-android-emulator-install-startup-smoke" "mobile-android-emulator-install-startup-smoke-check"
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_PREBUILT_APKS_REQUIRED
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	DEVE_MOBILE_ANDROID_EMULATOR_STATIC_CHECKS_REQUIRED
+contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	android_prebuilt_apk_manifest_verify
+contains	scripts/android-prebuilt-apk-contract.test.sh	android-prebuilt-apk-contract-test: ok
+contains	.github/workflows/native-target-host.yml	mobile-android-apk-producer:
+contains	.github/workflows/native-target-host.yml	mobile-android-harness-producer:
+contains	.github/workflows/native-target-host.yml	mobile-android-journey:
+contains	.github/workflows/native-target-host.yml	mobile-android-parallel-summary:
+contains	.github/workflows/native-target-host.yml	pattern: deve-mobile-android-targeted-receipt-*
+contains	.github/workflows/native-target-host.yml	acceptance-collect
 absent	scripts/check-mobile-android-emulator-install-startup-smoke.sh	assert_positive_integer()
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- local-quick-gate
 contains	docs/acceptance-cases/12_tech_release.md	cargo run -p deve_baseline -- deep-audit-gate

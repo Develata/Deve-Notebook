@@ -8,6 +8,7 @@ use leptos::prelude::{GetUntracked, Set, Update};
 use super::super::state::CoreSignals;
 use super::message_repo_scope::{accepts_write_ready_message, matches_current_message_scope};
 use crate::runtime::document::{confirm, pending};
+use deve_core::protocol::ClientMessage;
 
 pub fn handle_write_ready_message(
     peer_id: PeerId,
@@ -17,11 +18,20 @@ pub fn handle_write_ready_message(
     ws: &crate::api::WsService,
     signals: CoreSignals,
 ) {
-    let repo_id = repo_id.to_string();
-    if !accepts_write_ready_message(&repo_id, &branch, scope_nonce, signals) {
+    let repo_id_text = repo_id.to_string();
+    if !accepts_write_ready_message(&repo_id_text, &branch, scope_nonce, signals) {
         return;
     }
-    ws.mark_writer_ready(repo_id, scope_nonce, peer_id.as_str());
+    ws.mark_writer_ready(repo_id_text, scope_nonce, peer_id.as_str());
+    let mut replay = None;
+    signals.set_pending_document_create.update(|pending| {
+        replay = pending
+            .as_mut()
+            .and_then(|pending| pending.take_replay_for_write_ready(repo_id, scope_nonce));
+    });
+    if let Some(request) = replay {
+        ws.send(ClientMessage::DocumentCreate(request));
+    }
 }
 
 pub fn handle_ack_message(

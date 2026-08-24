@@ -222,7 +222,7 @@ async fn global_active_job_bound_fails_busy_without_receipt() {
     let runtime =
         RepoLifecycleJobRuntime::start(dir.path(), executor.clone(), Arc::new(TestSink::default()))
             .expect("job runtime");
-    // Removal no longer enters this generic submit path in F4/v5; its exact
+    // Removal no longer enters this generic submit path in F4/v6; its exact
     // RepoId single-flight is owned by Prepare/Execute admission tests.
     for index in 0..4 {
         runtime

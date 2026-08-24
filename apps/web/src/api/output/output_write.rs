@@ -17,7 +17,7 @@ pub(crate) fn is_write_message(msg: &ClientMessage) -> bool {
     matches!(
         msg,
         ClientMessage::Edit { .. }
-            | ClientMessage::CreateDoc { .. }
+            | ClientMessage::DocumentCreate(_)
             | ClientMessage::RenameDoc { .. }
             | ClientMessage::DeleteDoc { .. }
             | ClientMessage::CopyDoc { .. }

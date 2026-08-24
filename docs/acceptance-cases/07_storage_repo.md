@@ -288,7 +288,7 @@
     - WebLightPeer 已认证
     - fixture 可分别启动 zero/one/multi local repo host
   steps:
-    - receipt: `web.repo-alias-set` 原子执行host-local CAS、F4/v5 transport、server admission、Web exact projection与same-scope alias publication证据
+    - receipt: `web.repo-alias-set` 原子执行host-local CAS、F4/v6 transport、server admission、Web exact projection与same-scope alias publication证据
     - run: cargo test -p deve_cli create_repo -- --nocapture
     - run: cargo test -p deve_cli repo_lifecycle -- --nocapture
     - run: cargo test -p deve_cli repo_lifecycle_watcher_mount -- --nocapture
@@ -336,7 +336,7 @@
     - planned_proof: crash matrix必须覆盖reservation后、DB/locator/marker prepare后、Normal fsync后/Active CAS前、Active后/existing-DB repair前的cold host rebuild；exact Normal只能在完整identity重算后admit，catalog-absent residual DB与fully removed restart without Retired proof均fail closed
     - planned_proof: pure activation validation前后DB side tables必须byte-equivalent；generation overflow与final catalog revalidation failure不得留下Active；ordinary lease、repo scope与Remote Import bind不得依赖某功能先偶然reopen
     - planned_proof: activation必须证明DB witness/genesis、authority lock、locator store+row revision及workspace root+marker identity均进入digest，并在Transitioning + locator read + catalog + authority固定锁序中阻止合法owner mutation竞态
-    - planned_proof: 本轮只允许compiled server-composition readmit_retired_repo producer及同路径integration harness；F4/v5 Create仍只生成fresh RepoId，UI/WS/CLI不新增入口且不得持有或构造prepared authority、lock identity、digest或activation判定
+    - planned_proof: 本轮只允许compiled server-composition readmit_retired_repo producer及同路径integration harness；F4/v6 Repo Lifecycle Create仍只生成fresh RepoId，UI/WS/CLI不新增入口且不得持有或构造prepared authority、lock identity、digest或activation判定
     - planned_proof: R5/R6必须覆盖lost Execute response跨runtime replay、explicit drift repair、Windows/Linux第二进程锁与真实Desktop/Mobile backend UI
     - run: scripts/check-storage-repo-baseline.sh
     - chrome_mcp: 展开 repo switcher，点击顶部新增按钮创建 repo
@@ -381,7 +381,7 @@
     - cli_assert: repair_preview_exposes_only_typed_remaining_categories_and_exact_identity_truth true
     - cli_assert: repair_token_is_five_minute_single_use_and_invalidated_by_repreview_or_checkpoint_change true
     - cli_assert: removal_process_exit_codes_are_success_0_not_committed_20_committed_partial_21_repair_required_22 true
-    - ws_assert: websocket_protocol_is_f4_v5_and_direct_remove_intent_is_absent true
+    - ws_assert: websocket_protocol_is_f4_v6_and_direct_remove_intent_is_absent true
     - ui_assert: remove_confirmation_states_irreversible_no_ledger_restore_and_workspace_git_preserved true
     - ui_assert: removal_preview_uses_backend_categories_and_never_exposes_path_digest_or_manifest true
     - ui_assert: last_repo_removal_commits_no_scope_without_error true

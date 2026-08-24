@@ -24,6 +24,7 @@ mod message_dispatch_runtime;
 mod message_dispatch_shadow;
 mod message_dispatch_sync;
 mod message_dispatch_write;
+mod message_document_create;
 mod message_projection;
 mod message_projection_recovery;
 mod message_protocol;

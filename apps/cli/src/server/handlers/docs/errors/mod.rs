@@ -29,13 +29,6 @@ pub(super) fn request_failed_scoped(
     send(ch, ServerErrorCode::RequestFailed, detail, scope_nonce);
 }
 
-pub(super) fn remote_branch_readonly_scoped(ch: &DualChannel, scope_nonce: Option<u64>) {
-    ch.send_protocol_error_with_scope_nonce(
-        ServerError::new(ServerErrorCode::ScRemoteBranchReadonly),
-        scope_nonce,
-    );
-}
-
 pub(super) fn storage_not_found_scoped(
     ch: &DualChannel,
     detail: impl Into<String>,
@@ -77,4 +70,8 @@ pub(super) fn classified_failure_scoped(
         detail,
         scope_nonce,
     );
+}
+
+pub(super) fn classified_error(detail: impl AsRef<str>) -> ServerError {
+    ServerError::new(classify::classify_failure_code(detail.as_ref()))
 }

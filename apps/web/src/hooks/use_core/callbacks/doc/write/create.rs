@@ -1,9 +1,10 @@
 //! plan_ref:
 //!   - 10_rendering#document-authority-bridge
-//!   - 09_web_thin_client_ledger#web-edit-intent
+//!   - 09_web_thin_client_ledger#document-create-intent
 //!
 use crate::api::WsService;
 use crate::hooks::use_core::write_gate_banner::WriteGateAction;
+use crate::runtime::document::create::PendingDocumentCreate;
 use deve_core::protocol::ClientMessage;
 use leptos::prelude::*;
 
@@ -26,15 +27,25 @@ pub(super) fn create_doc_create_callback(
         ) else {
             return;
         };
-        if signals.current_doc.get_untracked().is_none() {
-            signals.set_explicit_home.set(false);
-            signals.set_pending_created_doc_path.set(Some(name.clone()));
-        } else {
-            signals.set_pending_created_doc_path.set(None);
+        if signals.pending_document_create.get_untracked().is_some() {
+            leptos::logging::warn!("Document Create ignored while one typed intent is pending");
+            return;
         }
-        ws.send(ClientMessage::CreateDoc {
-            name,
-            scope_nonce: Some(scope_nonce),
-        });
+        let Some(repo_id) = signals
+            .local_scope
+            .current_repo_id
+            .get_untracked()
+            .and_then(|repo_id| repo_id.parse().ok())
+        else {
+            return;
+        };
+        let select_when_projected = signals.current_doc.get_untracked().is_none();
+        if select_when_projected {
+            signals.set_explicit_home.set(false);
+        }
+        let pending = PendingDocumentCreate::new(repo_id, scope_nonce, name, select_when_projected);
+        let request = pending.request();
+        signals.set_pending_document_create.set(Some(pending));
+        ws.send(ClientMessage::DocumentCreate(request));
     })
 }

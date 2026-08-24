@@ -5,6 +5,7 @@
 - Amended: 2026-07-21 (`A1-S + B1-S + C2′-S` safety refinement)
 - Amended: 2026-07-22 (`D1-SQ + O1-FREEZE` path-safety refinement)
 - Amended: 2026-07-22 (Option A two-stage owner-prepared same-RepoId reincarnation)
+- Amended: 2026-08-24 (ADR 0015 replaces only the unpublished F4/v5 wire-epoch target; repository removal semantics remain accepted)
 
 ## Context
 
@@ -97,8 +98,9 @@ removable, leaving a useful zero-repo host.
   has lost the live Retired proof cannot be reincarnated from pathname or pruned receipts; durable
   cross-restart lineage is a separate future decision rather than an implicit tombstone.
 - The first implementation exposes only a compiled server-composition producer for a live Retired
-  RepoId. Existing F4/v5 Create remains fresh-UUID-only and Remote Import remains scoped to an
-  admitted repo; no UI, CLI or wire surface is added by this amendment.
+  RepoId. ADR 0015 later advances the unpublished wire target to F4/v6 and gives Document Create a
+  client-proposed stable NodeId idempotence contract. Remote Import remains scoped to an admitted
+  repo; no repository-removal UI, CLI or wire surface is added by this amendment.
 
 ## References
 

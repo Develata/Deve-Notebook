@@ -16,6 +16,7 @@ pub(super) fn plan_create(
     repo: &RepoManager,
     repo_name: &str,
     path: &str,
+    node_id_hint: Option<NodeId>,
 ) -> Result<StructuredDirTarget> {
     let path = to_forward_slash(path);
     if let Some(node_id) =
@@ -31,7 +32,7 @@ pub(super) fn plan_create(
         });
     }
     let (mut ops, parent_id, name) = plan_parent_chain(repo, repo_name, &path)?;
-    let node_id = NodeId::new();
+    let node_id = node_id_hint.unwrap_or_default();
     ops.push(StructureOp::CreateDir {
         node_id,
         parent_id,

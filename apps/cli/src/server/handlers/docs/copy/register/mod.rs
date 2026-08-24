@@ -181,6 +181,7 @@ pub(super) fn commit_registration(
             &file.content,
             &file.patch,
             "local_copy",
+            None,
         ) {
             Ok((doc_id, _ops)) => {
                 committed = true;

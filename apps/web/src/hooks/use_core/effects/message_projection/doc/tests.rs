@@ -1,7 +1,11 @@
 use super::handle_doc_list;
 use super::selection::{query_doc_path_from_search, reconcile_doc_selection_for_query};
 use crate::hooks::use_core::state_init::init_signals;
-use deve_core::models::DocId;
+use crate::runtime::document::create::PendingDocumentCreate;
+use deve_core::models::{DocId, RepoId};
+use deve_core::protocol::{
+    DocumentCreateProjectionOutcome, DocumentCreateResponse, DocumentCreateResponseContext,
+};
 use leptos::prelude::*;
 
 #[test]
@@ -50,10 +54,9 @@ fn doc_list_selects_pending_created_doc_when_no_doc_is_open() {
     let runtime = leptos::reactive::owner::Owner::new();
     runtime.set();
     let signals = init_signals(signal(crate::api::ConnectionStatus::Disconnected).0);
-    let created = DocId::new();
-    signals
-        .set_pending_created_doc_path
-        .set(Some("Untitled.md".to_string()));
+    let pending = confirmed_pending_create("Untitled.md", true);
+    let created = DocId(pending.proposed_node_id().0);
+    signals.set_pending_document_create.set(Some(pending));
 
     handle_doc_list(
         None,
@@ -65,7 +68,7 @@ fn doc_list_selects_pending_created_doc_when_no_doc_is_open() {
     );
 
     assert_eq!(signals.current_doc.get_untracked(), Some(created));
-    assert_eq!(signals.pending_created_doc_path.get_untracked(), None);
+    assert_eq!(signals.pending_document_create.get_untracked(), None);
 }
 
 #[test]
@@ -93,11 +96,10 @@ fn pending_created_doc_selection_wins_over_query_doc() {
     let runtime = leptos::reactive::owner::Owner::new();
     runtime.set();
     let signals = init_signals(signal(crate::api::ConnectionStatus::Disconnected).0);
-    let created = DocId::new();
+    let pending = confirmed_pending_create("Untitled.md", true);
+    let created = DocId(pending.proposed_node_id().0);
     let requested = DocId::new();
-    signals
-        .set_pending_created_doc_path
-        .set(Some("Untitled.md".to_string()));
+    signals.set_pending_document_create.set(Some(pending));
 
     reconcile_doc_selection_for_query(
         &[
@@ -109,7 +111,22 @@ fn pending_created_doc_selection_wins_over_query_doc() {
     );
 
     assert_eq!(signals.current_doc.get_untracked(), Some(created));
-    assert_eq!(signals.pending_created_doc_path.get_untracked(), None);
+    assert_eq!(signals.pending_document_create.get_untracked(), None);
+}
+
+fn confirmed_pending_create(path: &str, select: bool) -> PendingDocumentCreate {
+    let mut pending = PendingDocumentCreate::new(RepoId::new_v4(), 7, path.into(), select);
+    let request = pending.request();
+    let doc_id = DocId(request.proposed_node_id.0);
+    let response = DocumentCreateResponse::Created {
+        context: DocumentCreateResponseContext::from(&request),
+        node_id: request.proposed_node_id,
+        doc_id: Some(doc_id),
+        path: request.path,
+        projection_outcome: DocumentCreateProjectionOutcome::Written,
+    };
+    pending.accept_response(&response);
+    pending
 }
 
 #[test]

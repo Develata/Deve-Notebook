@@ -10,6 +10,7 @@ use super::super::message_repo_scope::{
 };
 use super::super::message_scope::accepts_system_or_matching_request;
 mod selection;
+pub(crate) use selection::settle_pending_document_create;
 
 pub fn handle_doc_list(
     request_id: Option<String>,

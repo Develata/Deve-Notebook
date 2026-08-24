@@ -237,6 +237,17 @@ compile-time context 会立即验证 `frontendDist`；preflight 不得隐式依�
 旧 dist、空目录或占位文件，也不得让 clean-worktree candidate / target-host receipt 在进入
 真实 package build 前失败。
 
+Android 定向验收允许把一次 exact-HEAD 执行拆成两个互不依赖的 immutable producer：APK producer
+只构建 minified release 与 debug journey APK，并发布带相对路径 SHA-256 清单的只读 artifact；harness
+producer 只编译 Rust `deve_baseline` 与内部 RemoteBrowser fixture backend，并执行 host-only contract
+tests。二者完成后，LocalBackend 与 RemoteBrowser consumer 必须在不同 runner 上各自启动独占 emulator，
+下载并校验同一 APK 清单，且必须以 prebuilt 模式禁止 Tauri/Gradle rebuild。每个 consumer 独立生成原有
+typed producer receipt；汇总 job 只检查 producer/job 结果、execution group 完整性与 artifact digest，
+不得把两个 journey 合并成一个虚构 receipt，也不得将 targeted evidence 冒充正式 candidate receipt。
+同一物理 Android 设备不允许并发 consumer，因为 package data、Activity、IME 与 WebView/CDP target
+属于共享宿主状态。正式 candidate 只有在该定向拓扑对同一 APK 连续稳定后才可采用相同 producer /
+consumer 分层；在此之前不得为了提速改写 candidate sealing、ARM64 signer 或 artifact identity 合同。
+
 Linux-hosted Android target-host diagnostics 在执行 Mobile `native-packaging` 宿主测试前，必须显式
 安装当前 Tauri/Wry 编译链要求的 GTK3、WebKitGTK 4.1 与 Rsvg 开发依赖。该依赖物化只服务于
 compile/test gate，不得被解释为恢复 Linux Desktop artifact，也不得通过关闭 Mobile
@@ -548,7 +559,7 @@ accepted gap 与 CHANGELOG 一致，再输出该版本段；promotion 禁止使�
 |---|---|---|---|---|
 | Ledger envelope/payload | `DEVELDG3` / payload v3 | v3 | 已对齐 | non-blocking |
 | Redb authority schema | v4 local profile + Remote Import tables + `PROJECTION_FAULTS` | 已对齐；Pending rematerialization 已进入 B4 product runtime，不是 schema drift | B1 + ADR 0012 + B4 | non-blocking |
-| WebSocket | `DEVEWSF4`, lockstep v5 | 当前代码已切换未发布F4/v5并删除legacy/unversioned JSON与direct Remove；R3 Prepare/Execute admission已实现，R4 destructive settlement、R5 UI/finalization与R6 fresh evidence仍阻塞首发 | R3-R6 + ADR 0014 | partially aligned |
+| WebSocket | `DEVEWSF4`, lockstep v6 | 当前代码已切换未发布F4/v6并删除legacy/unversioned JSON与direct Remove；R3 Prepare/Execute admission、R4 destructive settlement、R5 UI/finalization与typed idempotent Document Create已实现，fresh exact-HEAD evidence仍阻塞首发 | R3-R6 + ADR 0014/0015 | partially aligned |
 | Remote ingest | immutable whole-session Remote Import | B4 backend/CLI/product wire、B5 typed Web client/sibling view与B6 provider/browser producer已对齐；最终 candidate current-HEAD receipts仍待生成 | B4/B5/B6 | blocked |
 | Projection Locator / repo alias | immutable `workspace_segment` + host-local alias JSON v1；peer payload no alias | 已对齐；当前 create 生成 bare canonical RepoId segment，合同仍允许一次性 host-local initial-alias segment；alias 后续不移动路径或进入 peer payload | C1′ + ADR 0013 | non-blocking |
 

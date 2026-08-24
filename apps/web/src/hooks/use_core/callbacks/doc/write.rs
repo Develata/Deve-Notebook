@@ -6,6 +6,7 @@
 use crate::api::WsService;
 use crate::hooks::use_core::write_gate::RepoWriteSignals;
 use crate::i18n::Locale;
+use crate::runtime::document::create::PendingDocumentCreate;
 use crate::runtime::scope_client::LocalScopeSignals;
 use leptos::prelude::*;
 
@@ -34,7 +35,8 @@ pub(super) struct DocWriteSignals {
     pub local_scope: LocalScopeSignals,
     pub write_gate: RepoWriteSignals,
     pub set_sync_banner: WriteSignal<Option<String>>,
-    pub set_pending_created_doc_path: WriteSignal<Option<String>>,
+    pub pending_document_create: ReadSignal<Option<PendingDocumentCreate>>,
+    pub set_pending_document_create: WriteSignal<Option<PendingDocumentCreate>>,
     pub set_explicit_home: WriteSignal<bool>,
 }
 

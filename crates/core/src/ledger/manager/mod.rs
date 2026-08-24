@@ -105,6 +105,8 @@ mod source_control_workdir_db;
 mod source_control_workdir_diff;
 mod source_control_workdir_helpers;
 mod source_control_write_runtime;
+mod structure_create_identity;
 mod structure_ops;
+pub use structure_create_identity::StructureCreateIdentityState;
 pub(crate) mod structure_projection;
 mod structure_projection_support;

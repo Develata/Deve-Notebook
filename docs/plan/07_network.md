@@ -4,8 +4,8 @@
 
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
-- `Version`: `0.0.1`
-- `Last Review`: `2026-08-14`
+- `Version`: `0.1.0`
+- `Last Review`: `2026-08-24`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/cli/src/server/p2p/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -220,11 +220,12 @@ enabled = true
 ### 4.2 Serialization
 
 - WebSocket 二进制帧 **MUST** 使用 `DEVEWSF4` magic header、`protocol_version` 与 project-owned postcard codec payload。
-- 首个公开 wire epoch 固定为 `protocol_version = 5`，兼容窗口为 `5..=5`。v5 同时包含
+- 首个公开 wire epoch 固定为 `protocol_version = 6`，兼容窗口为 `6..=6`。v6 同时包含
   workspace ingestion unavailable、nested Remote Import family、Repo Control alias/create family，
-  以及 ownership-aware removal Prepare/Execute preview-token flow。
+  ownership-aware removal Prepare/Execute preview-token flow，以及客户端提议 UUID 的 nested
+  Document Create typed confirmation/idempotent replay family。
   历史未发布开发 namespace `DEVEWSF2` / `DEVEWSF3` 与 F4/v0、F4/v1、F4/v2、F4/v13
-  和未发布的 F4/v3、F4/v4 全部 fail-closed，不提供 adapter。F4/v5 发布后只允许单调升级，不得再次重置或复用旧
+  和未发布的 F4/v3、F4/v4、F4/v5 全部 fail-closed，不提供 adapter。F4/v6 发布后只允许单调升级，不得再次重置或复用旧
   `(magic, version)` identity。任何后续破坏兼容的 schema 或 codec 变更 **MUST** bump F4
   内的版本并同步更新收发端兼容窗口。
 - FullPeer Mesh v1 的发布前策略是 lockstep protocol：在没有真实 version-specific message adapter 与覆盖测试前，`MIN_SUPPORTED_WS_PROTOCOL_VERSION` **MUST** 等于当前 `WS_PROTOCOL_VERSION`。仅把常量下调、仍用当前 enum 解析旧 payload 不构成兼容实现，不得进入 runtime。
@@ -233,17 +234,17 @@ enabled = true
 - 浏览器生产客户端到服务端 **MUST** 使用 versioned postcard binary frame；收到任意 text frame、损坏
   binary frame 或不支持的 wire identity 时必须退休当前 connection epoch 并重连，不得把错误帧投影成
   普通业务消息继续消费。text-frame versioned JSON 只能由 server 的显式 development/debug 入口解析。
-- development/debug JSON **MUST** 显式携带 `protocol_version = 5` 并使用与 postcard frame 相同的
-  v5 message schema；无版本 JSON、`LegacyJsonText` 与 `DEVE_ALLOW_LEGACY_WS_JSON` 不属于合同，
+- development/debug JSON **MUST** 显式携带 `protocol_version = 6` 并使用与 postcard frame 相同的
+  v6 message schema；无版本 JSON、`LegacyJsonText` 与 `DEVE_ALLOW_LEGACY_WS_JSON` 不属于合同，
   不得解析或回退。所有 sync frame **MUST** 显式携带当前 schema 要求的 vector 字段。
 - 旧式 raw codec payload / binary JSON 不属于兼容合同；运行时 **MUST** 拒绝缺失 `DEVEWSF4` magic 的二进制帧。
 - 运行时 **MUST** 拒绝 unsupported protocol version，并通过结构化 `ProtocolError` 暴露失败。
 
-当前实现已一次性切换到未发布的 F4/v5并删除旧 direct Remove形态；R3已落地
+当前实现已一次性切换到未发布的 F4/v6并删除旧 direct Remove形态；R3已落地
 Prepare/Execute admission、exact manifest、issuer-bound短期token与atomic `ExecuteAdmitted`持久化。
 R4仍负责destructive settlement与single typed finalization，R5负责完整薄前端确认面。实现期间不得
 恢复 legacy/unversioned JSON fallback、旧环境开关或旧 version window；显式 development/debug
-JSON 也必须携带 v5 envelope。
+JSON 也必须携带 v6 envelope。
 plugin-host 的 loopback
 外围消息通道属于 `19_plugins#plugin-runtime-boundary`，不进入主 `/ws` F4 编解码合同。
 
@@ -263,6 +264,7 @@ plugin-host 的 loopback
   - `Ack`
   - `EditRejected`
   - `ProjectionRecoveryRequired`
+  - `DocumentCreate(DocumentCreateRequest / DocumentCreateResponse)`
 - diff projection:
   - `GetDocDiff` / `DocDiff`
   - `GetCommitDiff` / `CommitDiffResult`
@@ -283,6 +285,7 @@ Repo Control family。workspace ingestion unavailable 复用既有 response fami
 
 - HTTP mutation：JSON `ServerError`、HTTP `503`；
 - editor WS mutation：既有 `EditRejected`；
+- Document Create：nested `DocumentCreateResponse::Rejected`；
 - 其它 WS mutation：既有 `ProtocolError`。
 
 三条路径均携带 `13_i18n#i18n-error-code-catalog` 唯一定义的
@@ -334,7 +337,7 @@ pre-candidate `Failed` record：Show/Discard 使用 `revision=None` 表示对“
 
 ### 4.3.2 Repo Control Wire Contract {#repo-control-wire-contract}
 
-F4/v5 保持删除旧 `SwitchRepo` name selector、`CreateRepo`、`RenameRepo` 与 `RemoveRepo` 顶层 variants，
+F4/v6 保持删除旧 `SwitchRepo` name selector、`CreateRepo`、`RenameRepo` 与 `RemoveRepo` 顶层 variants，
 不保留 adapter。repo scope switch 只保留 exact `SwitchRepoExact { repo_id, switch_nonce }`；display
 alias 不回传为 selector。host-local alias 与 A1 lifecycle 使用单个 nested family：
 
@@ -458,6 +461,17 @@ SourceControlCommit、Merge、PluginMutation 与 `BroadcastGap { skipped }`。pl
 `ExternalApplyAck { request_id, receipt, repo_id, branch, scope_nonce }`。该 Ack 与 recovery signal
 用途不同：Ack 关联请求，recovery 使同 repo 各 session 收敛。二者都不得携带逐 fact content
 广播替代物。
+
+Document Create 同样分离 request confirmation 与 observer convergence：
+
+- `ClientMessage::DocumentCreate(DocumentCreateRequest)` 携带客户端提议 `NodeId`、exact
+  `repo_id + branch + scope_nonce` 与不可信 path；
+- `ServerMessage::DocumentCreate(DocumentCreateResponse)` 单播 exact `Created` 或 `Rejected`；
+- `Created` 回显 authority-resolved node/doc identity 与 typed projection outcome；
+- 同一提议身份与同一规范化目标的 replay 返回同一结果，不追加重复 Structure Facts；身份或目标
+  不一致时 fail-closed；
+- `ProjectionRecoveryRequired(DocumentMutation)` 继续广播给同 repo observers，不能用 typed response
+  替代；发起 Web 只有同时观察到 fresh `Created` 与精确 DocList identity 后才能选择新文档。
 
 ### 4.4 Routing Rule
 

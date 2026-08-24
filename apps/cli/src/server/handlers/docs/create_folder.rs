@@ -2,53 +2,35 @@
 //!   - 10_rendering#document-authority-bridge
 //!   - 04_repository#tree-projection-contract
 //!   - 03_storage/watcher#watcher-contract
+//!   - 09_web_thin_client_ledger#document-create-intent
 //!
 //! 目录创建逻辑。
 
 use super::checked_existing_is_dir;
-use super::errors;
+use super::create::{
+    DocumentCreateReceipt, DocumentCreateResult, classify_execution_error, storage_conflict,
+};
 use crate::server::AppState;
-use crate::server::channel::DualChannel;
 use crate::server::repo_mutation::{MutationExecution, MutationPublication};
 use crate::server::repo_scope::ResolvedRepo;
-use crate::server::session::WsSession;
+use deve_core::ledger::StructureCreateIdentityState;
+use deve_core::models::NodeId;
+use deve_core::protocol::{DocumentCreateProjectionOutcome, DocumentRecoveryScope};
 use std::sync::Arc;
 
 pub async fn handle_folder_create(
     state: &Arc<AppState>,
-    ch: &DualChannel,
-    session: &mut WsSession,
     scope: &ResolvedRepo,
     path: &std::path::Path,
     filename: &str,
-) {
-    let scope_nonce = session.is_browser_session().then(|| session.scope_nonce());
+    proposed_node_id: NodeId,
+) -> DocumentCreateResult {
     let gate = state.repo_mutation_gate();
     let admission = match gate.admit_mounted_repo(scope.repo_id) {
         Ok(admission) => admission,
-        Err(error) => {
-            errors::server_error_scoped(ch, error.server_error(), scope_nonce);
-            return;
-        }
+        Err(error) => return Err(error.server_error()),
     };
     let folder_path = filename.trim_end_matches('/');
-    match checked_existing_is_dir(path, "folder create target") {
-        Ok(Some(false)) => {
-            tracing::error!("目标路径不是目录: {:?}", path);
-            errors::storage_conflict_scoped(ch, "Target path is not a directory", scope_nonce);
-            return;
-        }
-        Ok(Some(true)) | Ok(None) => {}
-        Err(e) => {
-            tracing::error!("检查目录创建目标失败: {:?}", e);
-            errors::classified_failure_scoped(
-                ch,
-                format!("Failed to check folder target: {}", e),
-                scope_nonce,
-            );
-            return;
-        }
-    }
     let execution = gate
         .execute_admitted_mounted_repo(admission, &state.tx, || {
             let scope =
@@ -57,55 +39,117 @@ pub async fn handle_folder_create(
                     Ok(scope) => scope,
                     Err(error) => return MutationExecution::not_committed(error),
                 };
-            match checked_existing_is_dir(path, "folder create target revalidation") {
-                Ok(Some(false)) => {
-                    return MutationExecution::not_committed(anyhow::anyhow!(
-                        "Target path is not a directory"
-                    ));
+            let publication =
+                MutationPublication::document_recovery(scope.repo_id, DocumentRecoveryScope::None);
+            match inspect_identity(state, &scope, folder_path, proposed_node_id) {
+                Ok(StructureCreateIdentityState::Exact { .. }) => {
+                    if path.is_dir() {
+                        MutationExecution::committed(
+                            DocumentCreateProjectionOutcome::Written,
+                            publication,
+                        )
+                    } else {
+                        match state
+                            .sync_manager
+                            .rebuild_projection_local_repo(&scope.repo_name)
+                        {
+                            Ok(_) => MutationExecution::committed(
+                                DocumentCreateProjectionOutcome::Written,
+                                publication,
+                            ),
+                            Err(error) => MutationExecution::projection_degraded(
+                                DocumentCreateProjectionOutcome::RecoveryRequired,
+                                error,
+                                publication,
+                            ),
+                        }
+                    }
                 }
-                Ok(Some(true)) | Ok(None) => {}
-                Err(error) => return MutationExecution::not_committed(error),
-            }
-            let (_node_id, ops) = match state.repo.apply_dir_create_structure_in_local_repo(
-                &scope.repo_name,
-                folder_path,
-                "local_create",
-            ) {
-                Ok(value) => value,
-                Err(error) => return MutationExecution::not_committed(error),
-            };
-            let publication = MutationPublication::document_recovery(
-                scope.repo_id,
-                deve_core::protocol::DocumentRecoveryScope::None,
-            );
-            match state
-                .sync_manager
-                .rebuild_projection_local_repo(&scope.repo_name)
-            {
-                Ok(_) => MutationExecution::committed(ops, publication),
-                Err(error) => MutationExecution::projection_degraded(ops, error, publication),
+                Ok(StructureCreateIdentityState::Conflict) => {
+                    MutationExecution::not_committed(storage_conflict())
+                }
+                Ok(StructureCreateIdentityState::Vacant) => {
+                    match checked_existing_is_dir(path, "folder create target revalidation") {
+                        Ok(Some(false)) => {
+                            return MutationExecution::not_committed(storage_conflict());
+                        }
+                        Ok(Some(true)) | Ok(None) => {}
+                        Err(error) => return MutationExecution::not_committed(error),
+                    }
+                    let (_node_id, _ops) =
+                        match state.repo.apply_dir_create_structure_with_id_in_local_repo(
+                            &scope.repo_name,
+                            folder_path,
+                            Some(proposed_node_id),
+                            "local_create",
+                        ) {
+                            Ok(value) => value,
+                            Err(error) => {
+                                return match inspect_identity(
+                                    state,
+                                    &scope,
+                                    folder_path,
+                                    proposed_node_id,
+                                ) {
+                                    Ok(StructureCreateIdentityState::Exact { .. }) => {
+                                        MutationExecution::committed_partial(error, publication)
+                                    }
+                                    _ => MutationExecution::not_committed(error),
+                                };
+                            }
+                        };
+                    match state
+                        .sync_manager
+                        .rebuild_projection_local_repo(&scope.repo_name)
+                    {
+                        Ok(_) => MutationExecution::committed(
+                            DocumentCreateProjectionOutcome::Written,
+                            publication,
+                        ),
+                        Err(error) => MutationExecution::projection_degraded(
+                            DocumentCreateProjectionOutcome::RecoveryRequired,
+                            error,
+                            publication,
+                        ),
+                    }
+                }
+                Err(error) => MutationExecution::not_committed(error),
             }
         })
         .await;
     match execution {
-        Ok(MutationExecution::Committed { .. }) => {}
-        Ok(MutationExecution::NotCommitted(e)) => {
-            tracing::error!("目录结构事实追加失败: {:?}", e);
-            errors::storage_persist_failed_scoped(
-                ch,
-                format!("Failed to create folder: {}", e),
-                scope_nonce,
-            );
-        }
+        Ok(MutationExecution::Committed { value, .. }) => Ok(DocumentCreateReceipt {
+            node_id: proposed_node_id,
+            doc_id: None,
+            projection_outcome: value,
+        }),
         Ok(MutationExecution::ProjectionDegraded { error, .. })
         | Ok(MutationExecution::CommittedPartial { error, .. }) => {
-            tracing::error!("目录创建后投影失败: {:?}", error);
-            errors::storage_persist_failed_scoped(
-                ch,
-                format!("Failed to rebuild created folder projection: {error}"),
-                scope_nonce,
-            );
+            tracing::error!(error = ?error, "Folder Create committed but projection recovery is required");
+            Ok(DocumentCreateReceipt {
+                node_id: proposed_node_id,
+                doc_id: None,
+                projection_outcome: DocumentCreateProjectionOutcome::RecoveryRequired,
+            })
         }
-        Err(error) => errors::server_error_scoped(ch, error.server_error(), scope_nonce),
+        Ok(MutationExecution::NotCommitted(error)) => {
+            tracing::error!(error = ?error, "Folder Create rejected before authority commit");
+            Err(classify_execution_error(error))
+        }
+        Err(error) => Err(error.server_error()),
     }
+}
+
+fn inspect_identity(
+    state: &Arc<AppState>,
+    scope: &ResolvedRepo,
+    folder_path: &str,
+    proposed_node_id: NodeId,
+) -> anyhow::Result<StructureCreateIdentityState> {
+    state.repo.inspect_structure_create_identity_in_local_repo(
+        &scope.repo_name,
+        folder_path,
+        proposed_node_id,
+        None,
+    )
 }

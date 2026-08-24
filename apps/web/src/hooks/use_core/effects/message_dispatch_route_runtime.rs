@@ -15,6 +15,7 @@ use super::message_dispatch_gate::accepts_search_results;
 use super::message_dispatch_runtime::{
     handle_chat_chunk_message, handle_plugin_response_message, handle_search_results_message,
 };
+use super::message_document_create;
 
 pub fn route_runtime_message(
     msg: ServerMessage,
@@ -25,6 +26,10 @@ pub fn route_runtime_message(
 ) -> Option<ServerMessage> {
     let msg = route_search_results_message(msg, signals)?;
     match msg {
+        ServerMessage::DocumentCreate(response) => {
+            message_document_create::handle(response, locale, signals);
+            None
+        }
         ServerMessage::RemoteImport(response) => {
             remote_import.accept(response);
             None

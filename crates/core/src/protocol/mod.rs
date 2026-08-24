@@ -26,6 +26,7 @@ pub mod client;
 mod client_scope;
 pub mod confirmed_op;
 pub mod doc_file_op_errors;
+pub mod document_create;
 pub mod error;
 pub mod frame;
 mod json_wire;
@@ -44,6 +45,10 @@ pub mod sync_push_header;
 pub use client::ClientMessage;
 pub use client_scope::ClientMessageScopeGate;
 pub use confirmed_op::{ClientOrigin, ConfirmedOp};
+pub use document_create::{
+    DocumentCreateProjectionOutcome, DocumentCreateRequest, DocumentCreateResponse,
+    DocumentCreateResponseContext,
+};
 pub use error::{ServerError, ServerErrorCode};
 pub use frame::{
     MAX_SYNC_FACT_BYTES_PER_PAYLOAD, MAX_SYNC_FACTS_PER_PAYLOAD, MAX_WS_FRAME_BYTES,

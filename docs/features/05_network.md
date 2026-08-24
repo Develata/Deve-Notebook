@@ -58,7 +58,7 @@
   adapter。这里的 “Mesh v1” 是产品能力代号，不等于 wire protocol version。
 - Remote Import 在 v5 中使用独立 nested typed request/response；用户切换 repo、branch 或重连后，
   旧 session/revision 的迟到结果不得重新出现在当前界面。
-- 当前未发布F4/v5 nested Repo Control已加入ownership-aware removal
+- 当前未发布F4/v6 nested Repo Control已加入ownership-aware removal与typed idempotent Document Create
   Prepare/Execute preview-token shape，并继续删除legacy/unversioned JSON fallback；显式debug JSON
   必须带v5 envelope。Prepare response携带backend `preparation_id`；Execute使用不同request_id并引用
   exact preparation_id，token绑定authenticated issuer/connection或offline authority identity。用户可在

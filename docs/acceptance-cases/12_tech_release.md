@@ -127,7 +127,7 @@
   goal: 发布前检查项可验证。
   preconditions:
     - CI 环境
-    - Redb v4 与 immutable Remote Import backend/product cutover 已实现；F4/v5 ownership-aware Repo Control 与 B5 已实现，B6 producer 已登记；最终 candidate current-HEAD receipts 与其余 release gates 仍阻塞 tag，STORE-016 只按 v0.1.0 typed accepted gap 处理
+    - Redb v4 与 immutable Remote Import backend/product cutover 已实现；F4/v6 ownership-aware Repo Control、typed idempotent Document Create 与 B5 已实现，B6 producer 已登记；最终 candidate current-HEAD receipts 与其余 release gates 仍阻塞 tag，STORE-016 只按 v0.1.0 typed accepted gap 处理
     - release baseline 必须同时验证 approved target 与 current implementation，不得把 current 当作首发完成态
   steps:
     - run: rustup target add wasm32-unknown-unknown
@@ -146,9 +146,9 @@
     - run: DEVE_RELEASE_AUDIT_REQUIRED=1 scripts/check-release-audit-gate.sh
     - run: rg -n "LEDGER_ENTRY_FORMAT_VERSION = 3" docs/registry/first-tag-format-matrix.md
     - run: rg -n "REDB_SCHEMA_VERSION = 4|Redb schema v4" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "WS_PROTOCOL_VERSION = 5" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "当前代码已切换F4/v5" docs/registry/first-tag-format-matrix.md
-    - run: rg -n "MIN_SUPPORTED_WS_PROTOCOL_VERSION = 5" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "WS_PROTOCOL_VERSION = 6" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "当前代码目标切换为F4/v6" docs/registry/first-tag-format-matrix.md
+    - run: rg -n "MIN_SUPPORTED_WS_PROTOCOL_VERSION = 6" docs/registry/first-tag-format-matrix.md
     - run: rg -n "magic `DEVEWSF4`" docs/registry/first-tag-format-matrix.md
   assertions:
     - exit_code_all_eq: 0
@@ -199,6 +199,7 @@
     - platform evidence 只声明 target-host package、startup、install 与 native runtime smoke
     - platform evidence 不声明 signed release、store distribution、physical-device readiness 或 native authority writes
     - process runtime evidence 只表达默认 no-Tauri closed、Desktop LocalBackend controlled child-process 与 Mobile child-process closed
+    - Android targeted smoke 拆为 immutable APK producer、Rust harness producer、独立 LocalBackend/RemoteBrowser consumer 与 fail-closed summary；两个 consumer 校验同一 APK SHA-256 清单且不得 rebuild
   steps:
     - run: scripts/check-release-baseline.sh
     - run: cargo run -p deve_baseline -- release
@@ -225,6 +226,7 @@
     - run: scripts/check-mobile-android-shell-package-build.sh
     - run: cargo run -p deve_baseline -- mobile-android-emulator-install-startup-smoke
     - run: scripts/check-mobile-android-emulator-install-startup-smoke.sh
+    - run: scripts/android-prebuilt-apk-contract.test.sh
     - run: node --test scripts/android-webview-cdp.test.mjs
     - run: scripts/android-guest-service-readiness.test.sh
     - run: scripts/android-emulator-boot-readiness.test.sh
@@ -240,6 +242,9 @@
     - run: cargo test -p deve_cli graph -- --nocapture
   assertions:
     - exit_code_eq: 0
+    - contract_assert: android_targeted_apk_and_harness_producers_run_in_parallel true
+    - contract_assert: android_targeted_journeys_use_isolated_runners_and_same_prebuilt_apk_manifest true
+    - contract_assert: android_targeted_summary_does_not_upgrade_receipt_authority true
     - stdout_contains: "release-baseline-check: ok"
     - release_assert: embedded_frontend_single_binary_boundary true
     - release_assert: trunk_dev_index_not_served_as_release_frontend true

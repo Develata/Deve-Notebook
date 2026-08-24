@@ -91,6 +91,8 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `check-mobile-platform-package-preflight.sh` | Diagnoses Android/iOS target-host prerequisites while keeping Mobile package build/project generation closed |
 | `check-mobile-android-shell-package-build.sh` | Runs the Android WebView shell package gate only when explicitly required on an Android-capable target host |
 | `check-mobile-android-emulator-install-startup-smoke.sh` | Owns an Android emulator target lifecycle, starts a minified release-variant APK, then delegates the debug APK's only install/start to one explicit LocalBackend or RemoteBrowser writable journey before bounded cleanup |
+| `lib/android-prebuilt-apk.sh`; `android-prebuilt-apk-contract.test.sh` | Verifies the exact two-APK SHA-256 handoff used by parallel targeted Android consumers so LocalBackend/RemoteBrowser jobs cannot rebuild or silently diverge |
+| `check-android-document-create-contract.sh` | Runs the bounded host-side Android Create flow and settlement regression group used by the typed Create CI producer |
 | `lib/android-emulator-targeted-preflight.sh` | Owns targeted-emulator host input validation and the read-only local SDK package reuse contract, leaving emulator lifecycle and product journeys in the orchestrator |
 | `sign-mobile-android-target-host-release-apk.sh` | Applies an ephemeral diagnostic signer to the exact minified release-variant APK for emulator startup proof without consuming or impersonating release signing identity |
 | `prepare-android-emulator-host.sh` | Installs the explicit Ubuntu emulator runtime prerequisite and configures KVM access shared by Android target-host workflows |

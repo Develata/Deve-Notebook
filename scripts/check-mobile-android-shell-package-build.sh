@@ -11,6 +11,7 @@ BUILD_AAB="${DEVE_MOBILE_ANDROID_PACKAGE_AAB:-0}"
 BUILD_DEBUG="${DEVE_MOBILE_ANDROID_PACKAGE_DEBUG:-0}"
 RUST_TOOLCHAIN="${DEVE_MOBILE_ANDROID_RUST_TOOLCHAIN:-1.97.0}"
 CARGO_BUILD_JOBS="${DEVE_MOBILE_ANDROID_CARGO_BUILD_JOBS:-1}"
+WEB_DIST_PREBUILT="${DEVE_MOBILE_ANDROID_WEB_DIST_PREBUILT:-0}"
 
 # This gate builds only the Android WebView shell; it must not open child-process runtime.
 
@@ -105,7 +106,15 @@ if [[ "$REQUIRED" != "1" ]]; then
 fi
 
 configure_gradle_proxy_from_env
-run "$ROOT_DIR/scripts/build-web-dist-ci.sh"
+case "$WEB_DIST_PREBUILT" in
+  0) run "$ROOT_DIR/scripts/build-web-dist-ci.sh" ;;
+  1)
+    [[ -f "$ROOT_DIR/apps/web/dist/index.html" && ! -L "$ROOT_DIR/apps/web/dist/index.html" ]] \
+      || fail "prebuilt Web dist is missing apps/web/dist/index.html"
+    echo "mobile-android-shell-package-build-check: reuse exact-job prebuilt Web dist"
+    ;;
+  *) fail "DEVE_MOBILE_ANDROID_WEB_DIST_PREBUILT must be 0 or 1" ;;
+esac
 
 DEVE_MOBILE_PACKAGE_TARGETS=android \
   DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED=1 \
