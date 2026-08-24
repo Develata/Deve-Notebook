@@ -21,9 +21,19 @@ const NATIVE_SAFE_AREA_READY_ATTRIBUTE: &str = "data-deve-native-safe-area";
 const NATIVE_SAFE_AREA_OWNER_PROPERTY: &str = "__DEVE_NATIVE_SAFE_AREA_OWNER__";
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq, PartialOrd, Ord)]
-struct PresentationOrder {
+pub(super) struct PresentationOrder {
     generation: u64,
     epoch: u64,
+}
+
+impl PresentationOrder {
+    pub(super) fn generation(self) -> u64 {
+        self.generation
+    }
+
+    pub(super) fn epoch(self) -> u64 {
+        self.epoch
+    }
 }
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -79,6 +89,7 @@ struct AndroidPresentation {
 pub(super) fn apply_android_presentation_insets(
     set_system_gesture_insets: WriteSignal<Option<SystemGestureInsets>>,
     set_native_ime_presentation: WriteSignal<Option<NativeImePresentation>>,
+    set_native_presentation_order: WriteSignal<Option<PresentationOrder>>,
 ) {
     let Some(window) = web_sys::window() else {
         return;
@@ -96,6 +107,7 @@ pub(super) fn apply_android_presentation_insets(
                     }
                 });
                 set_native_ime_presentation.set(None);
+                set_native_presentation_order.set(None);
                 return false;
             };
             if order < apply_order.get() {
@@ -105,6 +117,7 @@ pub(super) fn apply_android_presentation_insets(
             if js_string_field(detail, "kind").as_deref() == Some("system-gesture-insets-pending") {
                 set_system_gesture_insets.set(None);
                 set_native_ime_presentation.set(None);
+                set_native_presentation_order.set(None);
                 return true;
             }
             let presentation = window_width().and_then(|viewport_width| {
@@ -116,6 +129,7 @@ pub(super) fn apply_android_presentation_insets(
             let accepted = presentation.filter(|_| safe_area_applied);
             set_system_gesture_insets.set(accepted.map(|value| value.gesture_insets));
             set_native_ime_presentation.set(accepted.map(|value| value.ime));
+            set_native_presentation_order.set(accepted.map(|_| order));
             accepted.is_some()
         });
 

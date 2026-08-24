@@ -47,6 +47,30 @@ pub(super) struct ProbedTransport {
     pub(super) bootstrap: MobileEmbeddedBackendBootstrap,
 }
 
+#[derive(Debug)]
+pub(super) enum TransportAdmissionFailure {
+    Startup(MobileEmbeddedBackendError),
+    SessionHandoff(MobileEmbeddedBackendError),
+}
+
+impl TransportAdmissionFailure {
+    pub(super) fn into_error(self) -> MobileEmbeddedBackendError {
+        match self {
+            Self::Startup(error) | Self::SessionHandoff(error) => error,
+        }
+    }
+
+    pub(super) fn is_retryable_startup(&self) -> bool {
+        matches!(
+            self,
+            Self::Startup(
+                MobileEmbeddedBackendError::ProbeIo(_)
+                    | MobileEmbeddedBackendError::ProbeHttpStatus { status: 500..=599 }
+            )
+        )
+    }
+}
+
 pub(super) fn prepare_transport(
     app_data_dir: &Path,
 ) -> Result<PreparedTransport, MobileEmbeddedBackendError> {
@@ -105,28 +129,42 @@ fn probe_transport(
     session_install_id: String,
     mut shell: MobileShell,
     cancelled: Option<&AtomicBool>,
-) -> Result<ProbedTransport, MobileEmbeddedBackendError> {
+) -> Result<ProbedTransport, TransportAdmissionFailure> {
     let probe = MobileLoopbackHttpProbe::default();
-    let mut endpoint = probe.probe_node_role(&plan, cancelled)?;
-    let cookie = probe.bind_native_session(&plan, &endpoint, &native_session_secret)?;
+    let mut endpoint = probe
+        .probe_node_role(&plan, cancelled)
+        .map_err(TransportAdmissionFailure::Startup)?;
+    let cookie = probe
+        .bind_native_session(&plan, &endpoint, &native_session_secret)
+        .map_err(TransportAdmissionFailure::SessionHandoff)?;
     endpoint.session_bound = true;
-    shell.bind_endpoint(endpoint)?;
-    shell.bind_session(MobileSessionMaterial::bound())?;
-    let bootstrap = shell.bootstrap_for_web()?;
-    let script = mobile_embedded_backend_script(bootstrap, cookie, &session_install_id)?;
+    shell
+        .bind_endpoint(endpoint)
+        .map_err(MobileEmbeddedBackendError::from)
+        .map_err(TransportAdmissionFailure::SessionHandoff)?;
+    shell
+        .bind_session(MobileSessionMaterial::bound())
+        .map_err(MobileEmbeddedBackendError::from)
+        .map_err(TransportAdmissionFailure::SessionHandoff)?;
+    let bootstrap = shell
+        .bootstrap_for_web()
+        .map_err(MobileEmbeddedBackendError::from)
+        .map_err(TransportAdmissionFailure::SessionHandoff)?;
+    let script = mobile_embedded_backend_script(bootstrap, cookie, &session_install_id)
+        .map_err(TransportAdmissionFailure::SessionHandoff)?;
     Ok(ProbedTransport {
         shell,
         bootstrap: MobileEmbeddedBackendBootstrap { plan, script },
     })
 }
 
-pub(super) async fn probe_transport_async(
+pub(super) async fn probe_replacement_transport_async(
     plan: MobileEmbeddedBackendPlan,
     native_session_secret: String,
     session_install_id: String,
     shell: MobileShell,
     cancelled: Arc<AtomicBool>,
-) -> Result<ProbedTransport, MobileEmbeddedBackendError> {
+) -> Result<ProbedTransport, TransportAdmissionFailure> {
     tokio::task::spawn_blocking(move || {
         probe_transport(
             plan,
@@ -137,7 +175,11 @@ pub(super) async fn probe_transport_async(
         )
     })
     .await
-    .map_err(|error| MobileEmbeddedBackendError::TaskJoinFailed(error.to_string()))?
+    .map_err(|error| {
+        TransportAdmissionFailure::Startup(MobileEmbeddedBackendError::TaskJoinFailed(
+            error.to_string(),
+        ))
+    })?
 }
 
 pub(super) fn probe_transport_initial(
@@ -147,6 +189,7 @@ pub(super) fn probe_transport_initial(
     shell: MobileShell,
 ) -> Result<ProbedTransport, MobileEmbeddedBackendError> {
     probe_transport(plan, native_session_secret, session_install_id, shell, None)
+        .map_err(TransportAdmissionFailure::into_error)
 }
 
 pub(super) async fn probe_existing_transport_async(
@@ -197,12 +240,46 @@ pub(super) async fn await_transport_task(
     }
 }
 
-pub(super) async fn stop_transport(task: BackendTask, shutdown_sender: oneshot::Sender<()>) {
+pub(super) async fn stop_transport(
+    task: BackendTask,
+    shutdown_sender: oneshot::Sender<()>,
+) -> Result<(), MobileEmbeddedBackendError> {
     let _ = shutdown_sender.send(());
     let deadline = tokio::time::Instant::now() + super::MOBILE_EMBEDDED_BACKEND_SHUTDOWN_TIMEOUT;
-    let _ = await_transport_task(task, deadline).await;
+    await_transport_task(task, deadline).await
 }
 
 pub(super) fn backend_requires_restart(task: Option<&BackendTask>) -> bool {
     task.is_none_or(|task| task.inner().is_finished())
+}
+
+#[cfg(test)]
+mod admission_tests {
+    use super::*;
+
+    #[test]
+    fn replacement_retry_classification_stops_at_session_handoff() {
+        assert!(
+            TransportAdmissionFailure::Startup(MobileEmbeddedBackendError::ProbeIo(
+                std::io::Error::new(std::io::ErrorKind::ConnectionRefused, "test")
+            ))
+            .is_retryable_startup()
+        );
+        assert!(
+            TransportAdmissionFailure::Startup(MobileEmbeddedBackendError::ProbeHttpStatus {
+                status: 503
+            })
+            .is_retryable_startup()
+        );
+        assert!(
+            !TransportAdmissionFailure::Startup(MobileEmbeddedBackendError::ProbeInvalidResponse)
+                .is_retryable_startup()
+        );
+        assert!(
+            !TransportAdmissionFailure::SessionHandoff(
+                MobileEmbeddedBackendError::NativeSessionHandoffFailed
+            )
+            .is_retryable_startup()
+        );
+    }
 }

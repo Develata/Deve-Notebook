@@ -79,7 +79,12 @@ export async function readEditorMountObservation(page, expectedDocId = null) {
             : null;
         })()
       : null;
-    const nativePresentation = globalThis.__DEVE_ANDROID_PRESENTATION__;
+    const positiveIntegerAttribute = (name) => {
+      const raw = mobileLayout?.getAttribute(name) ?? "";
+      if (!/^[1-9][0-9]*$/.test(raw)) return null;
+      const parsed = Number(raw);
+      return Number.isSafeInteger(parsed) ? parsed : null;
+    };
     let selectionIdentity = null;
     try {
       const rawSelection = globalThis.__deveWebBridge?.call?.("getEditorSelectionIdentity");
@@ -120,12 +125,10 @@ export async function readEditorMountObservation(page, expectedDocId = null) {
       toolbarBottomGap: toolbarRect ? Math.max(0, window.innerHeight - toolbarRect.bottom) : null,
       repoId: mobileLayout?.getAttribute("data-deve-repo-id") ?? null,
       scopeNonce: mobileLayout?.getAttribute("data-deve-scope-nonce") ?? null,
-      presentationGeneration: Number.isSafeInteger(nativePresentation?.generation)
-        ? nativePresentation.generation
-        : null,
-      presentationEpoch: Number.isSafeInteger(nativePresentation?.epoch)
-        ? nativePresentation.epoch
-        : null,
+      presentationGeneration: positiveIntegerAttribute(
+        "data-deve-native-presentation-generation",
+      ),
+      presentationEpoch: positiveIntegerAttribute("data-deve-native-presentation-epoch"),
       selectionIdentity,
       activeEditor: document.activeElement?.classList?.contains("cm-content") ?? false,
       bridgeReady: bootstrap?.editorBridgeReady === true,
@@ -144,8 +147,21 @@ export function sameEditorLoadSession(before, after) {
     && before.repoId != null
     && before.repoId === after?.repoId
     && before.scopeNonce != null
-    && before.scopeNonce === after?.scopeNonce
-    && before.presentationGeneration != null
+    && before.scopeNonce === after?.scopeNonce;
+}
+
+export function editorLoadSessionIdentity(observation) {
+  return {
+    hostId: observation?.hostId ?? null,
+    openRequestId: observation?.openRequestId ?? null,
+    docId: observation?.docId ?? null,
+    repoId: observation?.repoId ?? null,
+    scopeNonce: observation?.scopeNonce ?? null,
+  };
+}
+
+export function sameNativePresentationGeneration(before, after) {
+  return Number.isSafeInteger(before?.presentationGeneration)
     && before.presentationGeneration === after?.presentationGeneration;
 }
 

@@ -1,14 +1,18 @@
 import { clickWebViewPoint } from "./android-webview-pointer.mjs";
 import {
+  editorLoadSessionIdentity,
   readEditorMountObservation,
   sameEditorLoadSession,
   sameEditorSelectionIdentity,
+  sameNativePresentationGeneration,
 } from "./mobile-editor-session-observation.mjs";
 
 export {
+  editorLoadSessionIdentity,
   readEditorMountObservation,
   sameEditorLoadSession,
   sameEditorSelectionIdentity,
+  sameNativePresentationGeneration,
 };
 
 export function editorFocusMatchesMode(contentEditable, writable, activeEditor = true) {
@@ -204,11 +208,8 @@ export async function focusAndroidEditorInputConnection(
     if (!sameEditorLoadSession(before, after)) {
       lastFocusError = new Error(
         `android_webview_editor_input_session_changed: ${JSON.stringify({
-          before: { hostId: before.hostId, openRequestId: before.openRequestId },
-          after: {
-            hostId: after?.hostId ?? null,
-            openRequestId: after?.openRequestId ?? null,
-          },
+          before: editorLoadSessionIdentity(before),
+          after: editorLoadSessionIdentity(after),
         })}`,
       );
       await delay(250);

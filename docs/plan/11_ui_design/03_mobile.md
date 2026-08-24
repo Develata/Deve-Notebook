@@ -358,6 +358,10 @@ caret，因此不得把该预期变化误报为 session replacement；IME Back�
 selection predicate 精确绑定 `from / to / rangeCount`。不含用户触摸的 IME Back 隐藏态只有在 load session 与 selection
 同时恢复到稳定匹配后才可准入，不得先接受第一个 hidden presentation frame 再把过渡态误报为 replacement；随后为重新建立
 input connection 发出的真实轻触只绑定 load session，允许 caret 按该触点移动。
+editor load session 身份只由当前 editor host、OpenDoc request、doc、repo 与 scope 组成；native presentation
+`(generation, epoch)` 是独立的 shell projection 证据，不得把 native publish 期间临时缺失的全局 snapshot 解释为 editor
+replacement。target-host 必须从 Web 已准入的 presentation state 投影固定、无敏感信息的 generation/epoch marker；键盘与
+IME Back 证明仍须单独要求 generation 不变且 epoch 不倒退，不能因拆分 editor 身份而放宽 current-generation 准入。
 Android 正式 target-host/emulator receipt 必须继续以默认 package session 在退出时卸载精确应用包，保证跨运行隔离；
 uninstall 也必须返回唯一规范 `Success`，不得吞掉命令失败或异常输出后生成成功 receipt。
 本地物理设备诊断可显式设置 `DEVE_MOBILE_ANDROID_PRESERVE_PACKAGE=1` 选择覆盖更新：该模式只有在精确包已安装时才准入，

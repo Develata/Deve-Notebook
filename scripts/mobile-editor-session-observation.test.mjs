@@ -2,10 +2,31 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  editorLoadSessionIdentity,
   readEditorMountObservation,
   sameEditorLoadSession,
   sameEditorSelectionIdentity,
+  sameNativePresentationGeneration,
 } from "./lib/mobile-editor-session-observation.mjs";
+
+test("editor load-session diagnostics expose only the fixed identity tuple", () => {
+  assert.deepEqual(editorLoadSessionIdentity({
+    hostId: 7,
+    openRequestId: "11",
+    docId: "doc-1",
+    repoId: "repo-1",
+    scopeNonce: "9",
+    presentationGeneration: 3,
+    selectionIdentity: { from: 5, to: 5, rangeCount: 1 },
+    content: "must-not-leak",
+  }), {
+    hostId: 7,
+    openRequestId: "11",
+    docId: "doc-1",
+    repoId: "repo-1",
+    scopeNonce: "9",
+  });
+});
 
 test("editor load-session and selection identities have separate responsibilities", () => {
   const before = {
@@ -24,7 +45,6 @@ test("editor load-session and selection identities have separate responsibilitie
     { docId: "doc-2" },
     { repoId: "repo-2" },
     { scopeNonce: "10" },
-    { presentationGeneration: 4 },
   ]) {
     assert.equal(sameEditorLoadSession(before, { ...before, ...changed }), false);
   }
@@ -33,6 +53,19 @@ test("editor load-session and selection identities have separate responsibilitie
     selectionIdentity: { from: 6, to: 6, rangeCount: 1 },
   };
   assert.equal(sameEditorLoadSession(before, movedCaret), true);
+  assert.equal(
+    sameEditorLoadSession(before, { ...before, presentationGeneration: 4 }),
+    true,
+  );
+  assert.equal(sameNativePresentationGeneration(before, { ...before }), true);
+  assert.equal(
+    sameNativePresentationGeneration(before, { ...before, presentationGeneration: 4 }),
+    false,
+  );
+  assert.equal(
+    sameNativePresentationGeneration(before, { ...before, presentationGeneration: null }),
+    false,
+  );
   assert.equal(sameEditorSelectionIdentity(before, movedCaret), false);
   assert.equal(sameEditorSelectionIdentity(before, { ...before }), true);
 });
@@ -55,6 +88,14 @@ test("editor observation clamps native tap to the offset visual viewport interse
         getAttribute: (key) => key === "data-deve-editor-doc-id" ? expectedDocId : "1",
         querySelectorAll: () => [codeHost],
       };
+      const mobileLayout = {
+        getAttribute: (key) => ({
+          "data-deve-native-presentation-generation": "7",
+          "data-deve-native-presentation-epoch": "12",
+          "data-deve-repo-id": "repo-1",
+          "data-deve-scope-nonce": "9",
+        })[key] ?? null,
+      };
       globalThis.window = {
         innerWidth: 392,
         innerHeight: 872,
@@ -64,6 +105,9 @@ test("editor observation clamps native tap to the offset visual viewport interse
       };
       globalThis.document = {
         activeElement: editor,
+        querySelector: (selector) => selector === '[data-deve-layout-mode="mobile"]'
+          ? mobileLayout
+          : null,
         querySelectorAll: () => [host],
       };
       globalThis.getComputedStyle = () => ({ display: "block", visibility: "visible" });
@@ -77,4 +121,6 @@ test("editor observation clamps native tap to the offset visual viewport interse
   };
   const observed = await readEditorMountObservation(page, "doc-1");
   assert.deepEqual(observed.point, { x: 64, y: 324, devicePixelRatio: 2.75 });
+  assert.equal(observed.presentationGeneration, 7);
+  assert.equal(observed.presentationEpoch, 12);
 });

@@ -3,6 +3,7 @@ use std::sync::Mutex;
 use std::sync::atomic::AtomicUsize;
 use std::sync::atomic::Ordering;
 use std::time::Duration;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 use tokio::sync::{Notify, oneshot};
 
@@ -51,6 +52,35 @@ fn test_supervisor(generation: BackendGeneration) -> MobileEmbeddedBackendSuperv
         webview_handoff_gate: tokio::sync::Mutex::new(()),
         initial_webview_session_admission:
             crate::embedded_backend::webview_admission::InitialWebviewSessionAdmission::new(),
+    }
+}
+
+struct RuntimeTestRoot {
+    path: std::path::PathBuf,
+    allowed_parent: std::path::PathBuf,
+}
+
+impl RuntimeTestRoot {
+    fn new() -> Self {
+        let allowed_parent = std::env::current_dir()
+            .expect("cwd")
+            .join("target/mobile-test-data/runtime-replacement");
+        let unique = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system time")
+            .as_nanos();
+        let path = allowed_parent.join(unique.to_string());
+        Self {
+            path,
+            allowed_parent,
+        }
+    }
+}
+
+impl Drop for RuntimeTestRoot {
+    fn drop(&mut self) {
+        assert!(self.path.starts_with(&self.allowed_parent));
+        let _ = std::fs::remove_dir_all(&self.path);
     }
 }
 
@@ -202,6 +232,37 @@ fn lifecycle_fault_injection_marks_transport_stopping_before_task_exit() {
 
     let snapshot = supervisor.snapshot().expect("snapshot");
     assert!(!snapshot.backend_running);
+}
+
+#[test]
+fn mobile_resume_restarts_dead_backend_on_new_random_endpoint() {
+    let root = RuntimeTestRoot::new();
+    let (supervisor, _) = MobileEmbeddedBackendSupervisor::start(root.path.clone())
+        .expect("start embedded backend supervisor");
+    let initial = supervisor.snapshot().expect("initial snapshot");
+
+    supervisor.suspend().expect("suspend");
+    supervisor
+        .stop_transport_for_lifecycle_smoke()
+        .expect("stop current transport");
+    let resumed = tauri::async_runtime::block_on(supervisor.resume_transition())
+        .expect("resume with replacement transport");
+    let replacement = supervisor.snapshot().expect("replacement snapshot");
+
+    assert!(resumed.restarted);
+    assert_eq!(
+        replacement.session_generation,
+        initial.session_generation + 1
+    );
+    assert_ne!(replacement.endpoint, initial.endpoint);
+    assert!(replacement.backend_running);
+    assert_eq!(
+        replacement.service_state,
+        MobileEmbeddedBackendServiceState::EndpointSessionReady
+    );
+
+    tauri::async_runtime::block_on(supervisor.shutdown(Duration::from_secs(10)))
+        .expect("shutdown replacement runtime");
 }
 
 #[test]

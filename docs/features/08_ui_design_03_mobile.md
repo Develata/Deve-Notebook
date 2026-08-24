@@ -46,6 +46,7 @@
 - 软键盘导致 viewport resize 时，只要宽度没有跨越 mobile breakpoint，就必须保留当前编辑器 mount、projection load session 与输入焦点，不得重新发送 OpenDoc 或用 Snapshot 打断正在进行的输入。标准 `visualViewport` 始终优先；bundled Android 以同宽度、同 WebView generation 的最近隐藏态 viewport 为基线。若 `innerHeight` 与 `visualViewport.height` 同时缩小，键盘仍属于 resize presentation，但额外 offset 为 `0`；只有 viewport 相对隐藏基线未缩小时才能采用 current native inset overlay 回退，且不得与标准路径叠加。Toolbar 可见性不得依赖伪造的非零 offset。
 - Android 在首次进入或从后台返回时会先恢复 WebView 的原生输入焦点，但不会自动弹键盘；键盘可见时执行系统返回只关闭键盘，不关闭当前文档，再次点击同一可写编辑器必须重新弹出键盘。
 - 建立或重新建立 input connection 的真实编辑器轻触可以按触点移动 caret，但必须保持同一 editor load session；不含用户触摸的 IME Back 与纯 presentation 更新必须在稳定态同时保持 load session 和 `from / to / rangeCount` selection identity，验收不得把过渡帧误报为 editor reload。
+- editor load session 由 editor host、OpenDoc request、doc、repo 与 scope 绑定；native presentation generation/epoch 由 Web 已准入的独立 marker 证明。native 发布期间临时清空 snapshot 不代表 editor reload，键盘与 IME Back 验收仍需证明 generation 不变、epoch 不倒退。
 - Android 输入法若只报告 `0/1 px` bottom 或无效 geometry，壳层不猜测键盘高度，记录 `android_webview_ime_overlay_or_unavailable` 并允许再次点击；这条降级不能改变 Markdown、selection、OpenDoc、writer/session/scope 或 lifecycle。
 
 ### 4. 搜索与 Sheet
@@ -78,10 +79,10 @@
 - LocalBackend 由一个 lifecycle supervisor 独占 process-scoped `EmbeddedServerRuntime`、transport task、shutdown sender、随机 endpoint 与 session generation；authority runtime 每个 app 进程只初始化一次，普通退出和切换 Remote Backend 必须先有界关闭 transport 与全部 runtime tasks，RemoteBrowser 不创建 supervisor。
 - 系统暂停时编辑器立即只读但不清空未确认编辑；恢复时重新验证 auth、node role、WS 与 current scope。若 transport 已退出，则在同一 authority runtime 上创建新的随机 endpoint/session，generation token 校验通过后安装新 cookie/bootstrap，再通知 Web 恢复；旧 scope 写入必须被拒绝。
 - resume probe 在 native lifecycle lock 外执行，shutdown 可取消正在进行的 reprobe；固定初始 bootstrap、旧 endpoint 与迟到的旧 generation 结果不得覆盖 current generation。
-- resume 使用 single-flight gate；probe 必须验证返回 endpoint 属于当前随机 listener。transport replacement 会关闭旧 WebSocket generation，Web 通过 typed rebind control 重新读取 session-scoped bootstrap 并连接新 endpoint，不 reload 页面或清空 pending。同一 local branch、同一 repo UUID 的内部 session restore 被服务端确认后，browser document runtime 会把保留的 pending rows 重绑到新 scope；普通 repo/branch 切换不会这样做，且 fresh writer-ready 前不会 replay。
+- resume 使用 single-flight gate；probe 必须验证返回 endpoint 属于当前随机 listener。transport replacement 在同一 transition 内最多执行两次 admission attempt：只有 listener bind、native session handoff 之前的 health probe，或已证明没有残留 upgraded session 的候选 transport 退出可以消耗第二次 attempt；第二次必须重新分配随机 listener 与 session material。native session handoff 失败仍然 fatal，无法证明 transport retirement 时仍进入 `runtime_restart_required`。transport replacement 会关闭旧 WebSocket generation，Web 通过 typed rebind control 重新读取 session-scoped bootstrap 并连接新 endpoint，不 reload 页面或清空 pending。同一 local branch、同一 repo UUID 的内部 session restore 被服务端确认后，browser document runtime 会把保留的 pending rows 重绑到新 scope；普通 repo/branch 切换不会这样做，且 fresh writer-ready 前不会 replay。
 - current-generation cookie/bootstrap 安装与 resumed 事件是一次受校验的 WebView handoff；任一步失败都会进入结构化 error。Mobile LocalBackend 关闭可选 prewarm，以保证 suspend/exit 的有界 task join；其他 runtime task 仍由唯一 authority runtime 持有并关闭。bundled Mobile bootstrap 以固定、非敏感的 `platform_lifecycle_authority = native` 标记声明由 native lifecycle handoff 承担平台真值；该模式不监听页面 visibility 或 window focus/blur。Android 输入法、搜索输入框或平台浮层因此不会触发 foreground reprobe、endpoint rebind 或 writer-ready 撤销；真实 native suspend/resume 仍会立即 fail-closed 并重新探测。普通 Web、RemoteBrowser 与 Desktop 保持各自既有页面/平台恢复语义。
 - lifecycle handoff 不持 state mutex 跨 WebView 调用，且所有 resumed/suspended/error 事件使用单调 transition guard。无法证明旧 WebSocket sessions 已 retired 时进入 `runtime_restart_required`，本进程不再自动创建 transport。
-- service restart、session handoff 或 foreground reprobe 失败时显示结构化 degraded/error 状态，不得恢复可写或伪装为普通网络断开。
+- service restart、session handoff 或 foreground reprobe 失败时显示结构化 degraded/error 状态，不得恢复可写或伪装为普通网络断开。replacement attempt 只输出固定类别、transition、generation 与 attempt checkpoint，不输出 endpoint、Cookie、session material 或 secret。
 - 文档、ledger、source-control、search 与 repo 写入仍必须经过 embedded service 内的 server/core writer gate。
 - bundled Web shell 仍需 IndexedDB 与不可导出的 WebCrypto Ed25519 repo identity；Android System WebView 缺少该能力时保持 storage-limited 只读，LocalBackend 不得以 native session 绕过 browser identity。
 - Android 正式支持/可写 evidence baseline 为 Android 10/API 29+ 与当前 WebView provider 137+；版本事实只用于 support/receipt，真实 non-extractable Ed25519 probe 仍是 writer gate 的最终判据。
@@ -223,7 +224,7 @@
 1. 默认环境启动 Mobile shell。
 2. 检查 embedded loopback service、session handoff 与 Web shell 可用性。
 3. 模拟 foreground reprobe，并检查 writer gate 状态。
-4. 在后台期间终止当前 transport generation，再恢复前台并确认唯一 authority runtime 未重建、新 endpoint/session generation 被安装、旧 scope 写入被拒绝且非零 pending 未丢失。
+4. 在后台期间终止当前 transport generation，再恢复前台并确认唯一 authority runtime 未重建、新 endpoint/session generation 被安装、旧 scope 写入被拒绝且非零 pending 未丢失；定向测试还要证明首个 pre-handoff admission failure 只会消耗一次有界重试，而 session handoff failure 与 unproven retirement 不会重试。
 5. 在 Settings 中切换到 RemoteBrowser HTTPS origin，检查壳层只加载远端 origin且旧 embedded service 已有界退出。
 6. 模拟 RemoteBrowser 失联，确认远端页面没有 backend facade/native IPC；通过平台原生 “Use Local Backend” 控件切换。
 7. 确认远端 WebView 被销毁，bundled-local WebView 使用新的 loopback endpoint/session；fresh app-private data 先进入 zero-repo BootstrapUnbound，再经普通 UI Create 建立首个本地 repo 与 non-zero ready scope，且切换前后没有孤儿 embedded runtime。
@@ -235,6 +236,6 @@
 - Settings 保存 remote 前必须完成 node-role 校验，校验失败不能写入 preference。
 - RemoteBrowser 失联时保持只读且不暴露 native IPC；native 恢复入口可在不复用远端 authority 的前提下建立全新 LocalBackend runtime。
 - 前台恢复后 UI 重新探测 service；写入仍受 repo writer gate 控制。
-- 后端退出后恢复使用新的随机 endpoint/session，不扫描端口；stale scope 被拒绝且 pending overlay 保留。
+- 后端退出后恢复使用新的随机 endpoint/session，不扫描端口；pre-handoff admission failure 最多以另一组全新 endpoint/session material 重试一次，handoff failure 仍失败闭合；stale scope 被拒绝且 pending overlay 保留。
 - app exit 后 transport、metrics、prewarm、watcher 与 P2P task 不残留；RemoteBrowser 全程不创建 embedded runtime。
 - 后台长时同步不可被 UI 暗示为已支持。

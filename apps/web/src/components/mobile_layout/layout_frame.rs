@@ -92,6 +92,7 @@ pub fn MobileLayoutFrame(
     on_close_drawers: Callback<()>,
     content_signal: Option<ReadSignal<String>>,
     native_presentation_ready: Signal<bool>,
+    native_presentation_order: ReadSignal<Option<super::native_presentation::PresentationOrder>>,
     on_touch_start: Callback<TouchEvent>,
     on_touch_end: Callback<TouchEvent>,
     on_touch_cancel: Callback<()>,
@@ -169,6 +170,18 @@ pub fn MobileLayoutFrame(
             data-deve-layout-mode="mobile"
             data-deve-native-presentation=move || {
                 if native_presentation_ready.get() { "ready" } else { "pending" }
+            }
+            data-deve-native-presentation-generation=move || {
+                native_presentation_order
+                    .get()
+                    .map(|order| order.generation().to_string())
+                    .unwrap_or_default()
+            }
+            data-deve-native-presentation-epoch=move || {
+                native_presentation_order
+                    .get()
+                    .map(|order| order.epoch().to_string())
+                    .unwrap_or_default()
             }
             data-deve-keyboard-presentation=move || {
                 keyboard_presentation_source.get().as_dom_value()

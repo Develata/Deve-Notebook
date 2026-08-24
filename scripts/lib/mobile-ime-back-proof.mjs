@@ -2,6 +2,7 @@ import {
   readEditorMountObservation,
   sameEditorLoadSession,
   sameEditorSelectionIdentity,
+  sameNativePresentationGeneration,
 } from "./mobile-webview-interaction.mjs";
 import { keyboardPresentationIsVisible } from "./mobile-keyboard-presentation.mjs";
 
@@ -17,6 +18,7 @@ function summarizeImeObservation(reference, observation) {
     selectionIdentity: observation?.selectionIdentity ?? null,
     loadSessionMatches: sameEditorLoadSession(reference, observation),
     selectionMatches: sameEditorSelectionIdentity(reference, observation),
+    presentationGenerationMatches: sameNativePresentationGeneration(reference, observation),
   };
 }
 
@@ -35,6 +37,8 @@ export async function proveAndroidImeBackPriority(
     return observation.activeEditor
       && observation.bridgeReady
       && observation.activeHostMatchesVisible
+      && Number.isSafeInteger(observation.presentationGeneration)
+      && Number.isSafeInteger(observation.presentationEpoch)
       && keyboardPresentationIsVisible(observation, minHeightDelta)
       ? observation
       : null;
@@ -53,6 +57,9 @@ export async function proveAndroidImeBackPriority(
         && (lastHiddenObservation.keyboardOffset ?? 0) < minHeightDelta
         && sameEditorLoadSession(before, lastHiddenObservation)
         && sameEditorSelectionIdentity(before, lastHiddenObservation)
+        && sameNativePresentationGeneration(before, lastHiddenObservation)
+        && Number.isSafeInteger(lastHiddenObservation.presentationEpoch)
+        && lastHiddenObservation.presentationEpoch >= before.presentationEpoch
         ? lastHiddenObservation
         : null;
     }, 10000);
@@ -76,6 +83,9 @@ export async function proveAndroidImeBackPriority(
         && lastReopenedObservation.activeHostMatchesVisible
         && keyboardPresentationIsVisible(lastReopenedObservation, minHeightDelta)
         && sameEditorLoadSession(hidden, lastReopenedObservation)
+        && sameNativePresentationGeneration(before, lastReopenedObservation)
+        && Number.isSafeInteger(lastReopenedObservation.presentationEpoch)
+        && lastReopenedObservation.presentationEpoch >= hidden.presentationEpoch
         ? lastReopenedObservation
         : null;
     }, 10000);

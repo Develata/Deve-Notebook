@@ -3,6 +3,7 @@ import {
   readEditorMountObservation,
   sameEditorLoadSession,
   sameEditorSelectionIdentity,
+  sameNativePresentationGeneration,
 } from "./mobile-webview-interaction.mjs";
 
 export function keyboardPresentationIsVisible(observation, minHeightDelta = 80) {
@@ -32,6 +33,8 @@ export async function proveSameBreakpointKeyboardPresentation(
     return observation.keyboardPresentation === "hidden"
       && observation.keyboardOffset === 0
       && observation.nativeKeyboardOverlay === 0
+      && Number.isSafeInteger(observation.presentationGeneration)
+      && Number.isSafeInteger(observation.presentationEpoch)
       && observation.innerHeight - observation.visualViewportHeight <= viewportResizeEpsilon
       ? observation
       : null;
@@ -66,6 +69,9 @@ export async function proveSameBreakpointKeyboardPresentation(
         && lastObservation.activeHostMatchesVisible
         && sameEditorLoadSession(focused, lastObservation)
         && sameEditorSelectionIdentity(focused, lastObservation)
+        && sameNativePresentationGeneration(baseline, lastObservation)
+        && Number.isSafeInteger(lastObservation.presentationEpoch)
+        && lastObservation.presentationEpoch >= baseline.presentationEpoch
         && (visualViewportAccepted || nativeInsetsAccepted)
         ? {
             ...lastObservation,
@@ -124,15 +130,16 @@ export async function proveSameBreakpointKeyboardPresentation(
     );
   }
   if (!sameEditorLoadSession(focused, presented)
-    || !sameEditorSelectionIdentity(focused, presented)) {
+    || !sameEditorSelectionIdentity(focused, presented)
+    || !sameNativePresentationGeneration(baseline, presented)) {
     throw new Error(
       "same-breakpoint keyboard presentation replaced editor/doc/repo/scope/selection/generation",
     );
   }
   if (
-    !Number.isSafeInteger(focused.presentationEpoch)
+    !Number.isSafeInteger(baseline.presentationEpoch)
     || !Number.isSafeInteger(presented.presentationEpoch)
-    || presented.presentationEpoch < focused.presentationEpoch
+    || presented.presentationEpoch < baseline.presentationEpoch
   ) {
     throw new Error("same-breakpoint keyboard presentation epoch did not remain current");
   }

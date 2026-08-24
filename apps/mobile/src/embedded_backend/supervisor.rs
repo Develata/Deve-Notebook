@@ -17,8 +17,7 @@ use tokio::sync::Notify;
 
 use super::generation::{
     await_transport_task, backend_requires_restart, prepare_transport,
-    probe_existing_transport_async, probe_transport_async, probe_transport_initial,
-    spawn_transport, started_shell, stop_transport,
+    probe_existing_transport_async, probe_transport_initial, spawn_transport, started_shell,
 };
 use super::supervisor_types::{
     BackendGeneration, MobileEmbeddedBackendResume, MobileEmbeddedBackendServiceState,
@@ -36,6 +35,8 @@ pub const MOBILE_EMBEDDED_BACKEND_SHUTDOWN_TIMEOUT: Duration = Duration::from_se
 #[path = "supervisor_webview.rs"]
 mod webview;
 
+#[path = "supervisor_replacement.rs"]
+mod replacement;
 #[path = "supervisor_shutdown.rs"]
 mod shutdown;
 #[cfg(mobile)]
@@ -305,99 +306,6 @@ impl MobileEmbeddedBackendSupervisor {
             session_generation: plan.session_generation,
             transition_token: plan.transition_token,
         })
-    }
-
-    async fn resume_with_replacement(
-        &self,
-        plan: ResumePlan,
-    ) -> Result<MobileEmbeddedBackendResume, MobileEmbeddedBackendError> {
-        if let Some(task) = plan.old_task {
-            let deadline = tokio::time::Instant::now() + MOBILE_EMBEDDED_BACKEND_SHUTDOWN_TIMEOUT;
-            match await_transport_task(task, deadline).await {
-                Ok(()) => {}
-                Err(MobileEmbeddedBackendError::BackendExitedAfterSessionRetirement(error)) => {
-                    eprintln!(
-                        "deve_mobile retired LocalBackend transport exited after clean session retirement: {error}"
-                    );
-                }
-                Err(error) => {
-                    self.record_retirement_failure(plan.transition_token, &error)?;
-                    return Err(error);
-                }
-            }
-        }
-        let mut prepared = match prepare_transport(&self.app_data_dir) {
-            Ok(prepared) => prepared,
-            Err(error) => {
-                self.record_error_if_current(plan.transition_token, &error)?;
-                return Err(error);
-            }
-        };
-        let (task, shutdown_sender) = spawn_transport(&plan.transport, &mut prepared);
-        let probed = probe_transport_async(
-            prepared.plan.clone(),
-            prepared.native_session_secret.clone(),
-            self.webview_process_install_id.clone(),
-            started_shell(),
-            plan.probe_cancel.clone(),
-        )
-        .await;
-        let probed = match probed {
-            Ok(probed) => probed,
-            Err(error) => {
-                stop_transport(task, shutdown_sender).await;
-                self.record_error_if_current(plan.transition_token, &error)?;
-                return Err(error);
-            }
-        };
-
-        let mut candidate_task = Some(task);
-        let mut candidate_shutdown = Some(shutdown_sender);
-        let commit = match self.lock_inner() {
-            Ok(mut inner) => match ensure_current_transition(&inner, plan.transition_token) {
-                Err(error) => Err(error),
-                Ok(()) => {
-                    inner.plan = prepared.plan;
-                    inner.native_session_cookie =
-                        probed.bootstrap.script.native_session_cookie.clone();
-                    inner.task = candidate_task.take();
-                    inner.shutdown_sender = candidate_shutdown.take();
-                    inner.transport_stopping = false;
-                    inner.runtime_restart_required = false;
-                    inner.probe_cancel = None;
-                    inner.shell = probed.shell;
-                    inner.session_generation = plan.session_generation;
-                    inner.service_state = MobileEmbeddedBackendServiceState::EndpointSessionReady;
-                    inner.last_error = None;
-                    inner.last_error_transition_token = None;
-                    Ok(MobileEmbeddedBackendResume {
-                        #[cfg(mobile)]
-                        native_session_cookie: probed
-                            .bootstrap
-                            .script
-                            .native_session_cookie
-                            .clone(),
-                        #[cfg(mobile)]
-                        replacement_bootstrap: Some(probed.bootstrap),
-                        restarted: true,
-                        session_generation: plan.session_generation,
-                        transition_token: plan.transition_token,
-                    })
-                }
-            },
-            Err(error) => Err(error),
-        };
-        match commit {
-            Ok(resumed) => Ok(resumed),
-            Err(error) => {
-                stop_transport(
-                    candidate_task.expect("failed commit retains candidate task"),
-                    candidate_shutdown.expect("failed commit retains candidate shutdown sender"),
-                )
-                .await;
-                Err(error)
-            }
-        }
     }
 
     fn record_error_if_current(

@@ -57,12 +57,16 @@ _android_startup_diag_runtime_logcat() {
   local native_handoff_pattern
   local native_checkpoint_category
   local native_checkpoint_pattern
+  local local_backend_replacement_category
+  local local_backend_replacement_pattern
   local recovery_completion_pattern
   escaped_app_id="$(printf '%s' "$app_id" | sed 's/[][\.*^$]/\\&/g')"
   native_handoff_category='(android_initial_webview_admission_invalid|android_initial_webview_admission_timeout|android_initial_webview_admission_cancelled|android_native_cookie_callback_rejected|android_native_cookie_not_retained|android_native_cookie_verification_failed|android_native_cookie_callback_invalid|android_native_cookie_jni_setup_failed|android_native_cookie_callback_already_pending|android_native_cookie_request_id_exhausted|android_native_cookie_callback_channel_closed|android_native_cookie_callback_timeout|android_native_cookie_callback_registry_poisoned|android_native_cookie_webview_dispatch_failed|native_session_handoff_failed)'
   native_handoff_pattern="deve_mobile (initial native session handoff|native session cookie handoff) failed closed: $native_handoff_category$"
   native_checkpoint_category='(android_native_cookie_retained|android_presentation_document_script_remove_failed|android_presentation_document_bridge_remove_failed|android_presentation_document_bridge_unavailable|android_system_gesture_insets_ready|android_system_gesture_insets_unavailable|android_webview_ime_overlay_or_unavailable|android_webview_input_focus_unavailable|android_webview_ime_show_failed|android_webview_input_probe_failed|android_ui_back_ime_visibility_unavailable|android_ui_back_ime_dismissed|android_ui_back_ime_dismiss_failed|android_ui_back_webview_unavailable|android_ui_back_request_in_flight|android_ui_back_ack_timeout|android_ui_back_ack_invalid|android_ui_back_ack_stale|android_ui_back_root_backgrounded|android_ui_back_background_failed|android_ui_back_handled|android_ui_back_listener_missing|android_ui_back_outcome_invalid)'
   native_checkpoint_pattern="deve_mobile (native session cookie|presentation|input|ui back) checkpoint: $native_checkpoint_category$"
+  local_backend_replacement_category='(android_local_backend_replacement_attempt|android_local_backend_replacement_retry_bind|android_local_backend_replacement_retry_probe|android_local_backend_replacement_retry_process_exit|android_local_backend_replacement_ready)'
+  local_backend_replacement_pattern="deve_mobile LocalBackend replacement checkpoint: $local_backend_replacement_category transition=[1-9][0-9]* generation=[1-9][0-9]* attempt=[12]$"
   recovery_completion_pattern='deve_mobile RemoteBrowser recovered to fresh LocalBackend runtime recovery_id=[1-9][0-9]*$'
   # Handoff diagnostics are fixed-category facts. Classify them before the
   # broader package filter so an app-id prefix cannot admit an unknown suffix.
@@ -72,6 +76,8 @@ _android_startup_diag_runtime_logcat() {
           printf '%s\n' "${BASH_REMATCH[0]}"
         elif [[ "$line" =~ $native_checkpoint_pattern ]]; then
           printf '%s\n' "${BASH_REMATCH[0]}"
+        elif [[ "$line" =~ $local_backend_replacement_pattern ]]; then
+          printf '%s\n' "${BASH_REMATCH[0]}"
         elif [[ "$line" =~ $recovery_completion_pattern ]]; then
           printf '%s\n' "${BASH_REMATCH[0]}"
         elif [[ "$line" == *"deve_mobile initial native session handoff failed closed: "* \
@@ -80,6 +86,7 @@ _android_startup_diag_runtime_logcat() {
             || "$line" == *"deve_mobile presentation checkpoint: "* \
             || "$line" == *"deve_mobile input checkpoint: "* \
             || "$line" == *"deve_mobile ui back checkpoint: "* \
+            || "$line" == *"deve_mobile LocalBackend replacement checkpoint: "* \
             || "$line" == *"deve_mobile RemoteBrowser recovered to fresh LocalBackend runtime"* ]]; then
           continue
         elif [[ "$line" =~ ActivityManager|AndroidRuntime|DEBUG|libc|$escaped_app_id ]]; then

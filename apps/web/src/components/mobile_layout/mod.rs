@@ -72,6 +72,7 @@ pub fn MobileLayout(
     let (swipe_session, set_swipe_session) = signal(None::<gesture::SwipeSession>);
     let (system_gesture_insets, set_system_gesture_insets) = signal(None);
     let (native_ime_presentation, set_native_ime_presentation) = signal(None);
+    let (native_presentation_order, set_native_presentation_order) = signal(None);
     let (keyboard_offset, set_keyboard_offset) = signal(0i32);
     let (keyboard_presentation_source, set_keyboard_presentation_source) =
         signal(keyboard_presentation::KeyboardPresentationSource::Hidden);
@@ -146,7 +147,11 @@ pub fn MobileLayout(
     });
 
     apply_body_scroll_lock(drawer_open);
-    apply_android_presentation_insets(set_system_gesture_insets, set_native_ime_presentation);
+    apply_android_presentation_insets(
+        set_system_gesture_insets,
+        set_native_ime_presentation,
+        set_native_presentation_order,
+    );
     apply_visual_viewport_offset(
         native_ime_presentation,
         set_keyboard_offset,
@@ -187,6 +192,7 @@ pub fn MobileLayout(
                     .get()
                     .is_some_and(gesture::SystemGestureInsets::is_native)
             })
+            native_presentation_order=native_presentation_order
             keyboard_offset=keyboard_offset
             keyboard_presentation_source=keyboard_presentation_source
             chat_expanded=chat_expanded

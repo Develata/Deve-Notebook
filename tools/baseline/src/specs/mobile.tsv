@@ -173,7 +173,8 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: usable_native
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: native_ime_fallback_does_not_double_visual_viewport_overlap true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: native_ime_fallback_rejected_when_viewport_shrinks_from_same_generation_hidden_baseline true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: adjust_resize_zero_overlap_keeps_toolbar_visible_with_zero_extra_offset true
-case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: keyboard_presentation_preserves_doc_repo_scope_selection_and_webview_generation true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: keyboard_presentation_preserves_editor_load_session_and_selection true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	ui_assert: keyboard_presentation_uses_accepted_marker_with_same_webview_generation_and_monotonic_epoch true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-004	native_assert: one_px_or_invalid_ime_geometry_logs_overlay_or_unavailable_without_fabricating_height true
 contains	docs/plan/11_ui_design/03_mobile.md	必须使用 `visualViewport` API 监听键盘高度变化
 contains	apps/web/src/components/mobile_layout/keyboard_presentation.rs	visual_viewport_keyboard_offset(
@@ -187,6 +188,8 @@ contains	apps/web/src/components/mobile_layout/native_presentation.rs	pub(super)
 contains	apps/web/src/components/mobile_layout/native_presentation/tests.rs	fn mobile_toolbar_keyboard_one_pixel_overlay_geometry_fails_closed()
 contains	apps/web/src/components/mobile_layout/native_presentation.rs	__DEVE_ANDROID_PRESENTATION_PENDING__
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	data-deve-native-presentation=move ||
+contains	apps/web/src/components/mobile_layout/layout_frame.rs	data-deve-native-presentation-generation=move ||
+contains	apps/web/src/components/mobile_layout/layout_frame.rs	data-deve-native-presentation-epoch=move ||
 contains	apps/web/src/components/mobile_layout/layout_frame.rs	data-deve-keyboard-presentation=move ||
 contains	apps/web/src/components/mobile_layout/content.rs	data-deve-native-keyboard-overlay=move ||
 contains	apps/web/src/components/mobile_layout/content.rs	fn mobile_toolbar_keyboard_native_overlay_shrinks_editor_presentation_only()
@@ -194,6 +197,7 @@ contains	scripts/lib/mobile-ime-back-proof.mjs	export async function proveAndroi
 contains	scripts/lib/mobile-editor-session-observation.mjs	const top = Math.max(viewportTop, rect.top, codeHostRect.top, hostRect.top);
 contains	scripts/lib/mobile-editor-session-observation.mjs	getEditorSelectionIdentity
 contains	scripts/lib/mobile-editor-session-observation.mjs	export function sameEditorSelectionIdentity(before, after)
+contains	scripts/lib/mobile-editor-session-observation.mjs	export function sameNativePresentationGeneration(before, after)
 contains	apps/web/js/editor_adapter.js	registerBrowserBridgeGlobal("getEditorSelectionIdentity"
 contains	scripts/smoke-mobile-android-lifecycle.sh	DEVE_MOBILE_ANDROID_TEST_IME_SERVICE
 contains	scripts/smoke-mobile-android-lifecycle.sh	android_ime_test_begin adb_cmd "$TEST_IME_SERVICE"
