@@ -34,6 +34,15 @@ export function drawerVisualStateMatches(state, side, open) {
     ));
 }
 
+export function drawerVisualStateIsSemanticallyOpen(state) {
+  return state?.open === "true"
+    && state.ariaHidden === "false"
+    && typeof state.pointerEvents === "string"
+    && state.pointerEvents !== "none"
+    && Number.isFinite(state.width)
+    && state.width > 0;
+}
+
 export function androidSafeAreaStateMatches(state) {
   const value = state?.presentation;
   if (!state?.accepted
@@ -159,15 +168,22 @@ function readDrawerVisualState(page, side) {
 
 export async function waitForDrawerVisualState(page, side, open, waitUntil, timeout = 5000) {
   let matchedSince = null;
-  await waitUntil(`${side} drawer ${open ? "open" : "closed"} visual settlement`, async () => {
-    const state = await readDrawerVisualState(page, side);
-    if (!drawerVisualStateMatches(state, side, open)) {
-      matchedSince = null;
-      return false;
-    }
-    matchedSince ??= Date.now();
-    return Date.now() - matchedSince >= DRAWER_TRANSITION_SETTLE_MS;
-  }, timeout);
+  let lastState = null;
+  const label = `${side} drawer ${open ? "open" : "closed"} visual settlement`;
+  try {
+    await waitUntil(label, async () => {
+      lastState = await readDrawerVisualState(page, side);
+      if (!drawerVisualStateMatches(lastState, side, open)) {
+        matchedSince = null;
+        return false;
+      }
+      matchedSince ??= Date.now();
+      return Date.now() - matchedSince >= DRAWER_TRANSITION_SETTLE_MS;
+    }, timeout);
+  } catch {
+    throw new Error(`${label} failed; last=${JSON.stringify(lastState)}`);
+  }
+  return lastState;
 }
 
 export async function openDrawerWithObservedNativeSwipe(page, {
@@ -186,7 +202,23 @@ export async function openDrawerWithObservedNativeSwipe(page, {
   const waitForInputFocus = testing.waitForCurrentWebViewInputFocus
     ?? waitForCurrentWebViewInputFocus;
   const waitForVisualState = testing.waitForDrawerVisualState ?? waitForDrawerVisualState;
+  const readVisualState = testing.readDrawerVisualState ?? readDrawerVisualState;
   const direction = side === "left" ? 1 : -1;
+  let initialState;
+  try {
+    initialState = await readVisualState(page, side);
+  } catch {
+    throw new Error(`${side} drawer initial observation failed`);
+  }
+  if (drawerVisualStateIsSemanticallyOpen(initialState)) {
+    // A reloaded document can legitimately retain an open presentation. One
+    // typed Back normalizes the setup; closed-but-inconsistent state still fails.
+    try {
+      adbCommand("shell", "input", "keyevent", "4");
+    } catch {
+      throw new Error(`${side} drawer initial Back normalization failed`);
+    }
+  }
   await waitForVisualState(page, side, false, waitUntil);
   let lastDelivery = "missing";
   let lastEvents = [];

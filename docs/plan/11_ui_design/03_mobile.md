@@ -442,7 +442,11 @@ Task 按钮必须发送 `10_rendering.md` 定义的 `InsertTaskItem` 语义 inte
     必须绑定既有固定 hit-test 候选线的数量并按其顺序选择；可用候选少于 attempt 数时只能复用最后一条
     已验证的 non-interactive 候选线，不得随机坐标、扩大输入区域或形成无界重试。准入超时必须
     fail-closed；不得通过重新创建业务 surface 掩盖焦点缺失，或把没有完整
-    `touchstart + touchend` 的 ADB 命令计为 Drawer 成功。
+    `touchstart + touchend` 的 ADB 命令计为 Drawer 成功。reload 后每侧首次 swipe 还必须从稳定 closed
+    presentation 开始；若固定 DOM/a11y/hit-test 字段证明 Drawer 语义上确实 open，target-host 只可发送一次
+    Android Back 将其归一到 closed，再重新要求完整 closed 几何稳定后才能接触屏幕。语义已 closed 但几何、
+    pointer-events 或 marker 不一致时不得发送 root Back、重建 surface 或冒充已归一；必须 fail-closed，并且
+    timeout 只输出最后一次固定 Drawer observation，不得带 DOM 文本、路径、凭证或其它页面数据。
 
 ## 4. Visual Adaptations
 

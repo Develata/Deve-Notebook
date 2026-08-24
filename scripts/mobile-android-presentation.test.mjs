@@ -3,6 +3,7 @@ import fs from "node:fs";
 import test from "node:test";
 import {
   androidSafeAreaStateMatches,
+  drawerVisualStateIsSemanticallyOpen,
   drawerVisualStateMatches,
   openDrawerWithObservedNativeSwipe,
   parseEditorSelectionIdentity,
@@ -31,20 +32,35 @@ const completeLeftDelivery = (identifier = 7) => [
   { type: "touchend", identifier, x: 120, y: 100, touchCount: 0 },
 ];
 
+const leftOpen = {
+  open: "true", ariaHidden: "false", pointerEvents: "auto",
+  left: 0, right: 320, width: 320, viewportWidth: 400,
+  safeTopCss: 35, closeControlTop: 39,
+};
+const leftClosed = {
+  open: "false", ariaHidden: "true", pointerEvents: "none",
+  left: -320, right: 0, width: 320, viewportWidth: 400,
+};
+
 function createSwipeHarness({
   deliveries = [], openFailures = [], adbFailure = false, focusFailure = false,
+  initialState = leftClosed,
 } = {}) {
   const calls = {
-    adb: 0, begin: 0, focus: 0, take: 0, select: 0, visual: [], order: [],
+    adb: 0, adbArgs: [], begin: 0, focus: 0, take: 0, select: 0, visual: [], order: [],
   };
   return {
     calls,
-    adbCommand() {
+    adbCommand(...args) {
       calls.order.push("adb");
       calls.adb += 1;
+      calls.adbArgs.push(args);
       if (adbFailure) throw new Error("synthetic adb failure");
     },
     testing: {
+      async readDrawerVisualState() {
+        return initialState;
+      },
       async waitForCurrentWebViewInputFocus() {
         calls.order.push("focus");
         calls.focus += 1;
@@ -181,8 +197,6 @@ test("Work Edit selection proof rejects null, malformed, and invalid identities"
 });
 
 test("drawer visual settlement requires marker, accessibility, hit testing, and geometry", () => {
-  const leftOpen = { open: "true", ariaHidden: "false", pointerEvents: "auto", left: 0, right: 320, width: 320, viewportWidth: 400, safeTopCss: 35, closeControlTop: 39 };
-  const leftClosed = { open: "false", ariaHidden: "true", pointerEvents: "none", left: -320, right: 0, width: 320, viewportWidth: 400 };
   const rightOpen = { open: "true", ariaHidden: "false", pointerEvents: "auto", left: 80, right: 400, width: 320, viewportWidth: 400, safeTopCss: 35, closeControlTop: 39 };
   const rightClosed = { open: "false", ariaHidden: "true", pointerEvents: "none", left: 400, right: 720, width: 320, viewportWidth: 400 };
   assert.equal(drawerVisualStateMatches(leftOpen, "left", true), true);
@@ -193,6 +207,22 @@ test("drawer visual settlement requires marker, accessibility, hit testing, and 
   assert.equal(drawerVisualStateMatches({ ...leftClosed, right: 40 }, "left", false), false);
   assert.equal(drawerVisualStateMatches({ ...rightOpen, pointerEvents: "none" }, "right", true), false);
   assert.equal(drawerVisualStateMatches({ ...leftOpen, closeControlTop: 20 }, "left", true), false);
+  assert.equal(drawerVisualStateIsSemanticallyOpen(leftOpen), true);
+  assert.equal(drawerVisualStateIsSemanticallyOpen(leftClosed), false);
+  assert.equal(drawerVisualStateIsSemanticallyOpen({ ...leftOpen, pointerEvents: "none" }), false);
+  assert.equal(drawerVisualStateIsSemanticallyOpen({ ...leftOpen, pointerEvents: undefined }), false);
+});
+
+test("drawer settlement failure redacts the underlying observation error", async () => {
+  const page = {
+    call: () => Promise.reject(new Error("secret=/private/runner/path")),
+  };
+  const waitUntil = async (_label, predicate) => predicate();
+  await assert.rejects(waitForDrawerVisualState(page, "left", false, waitUntil), (error) => {
+    assert.equal(error.message, "left drawer closed visual settlement failed; last=null");
+    assert.doesNotMatch(error.message, /secret|private|runner|path/);
+    return true;
+  });
 });
 
 test("drawer visual settlement rejects a transient open state", async () => {
@@ -250,10 +280,12 @@ test("drawer visual settlement rejects a transient open state", async () => {
       }
       throw new Error("synthetic visual timeout");
     };
-    await assert.rejects(
-      waitForDrawerVisualState(page, "left", true, waitUntil),
-      /synthetic visual timeout/,
-    );
+    await assert.rejects(waitForDrawerVisualState(page, "left", true, waitUntil), (error) => {
+      assert.match(error.message, /left drawer open visual settlement failed/);
+      assert.match(error.message, /"open":"false"/);
+      assert.doesNotMatch(error.message, /synthetic visual timeout/);
+      return true;
+    });
     page.calls = 0;
     now = 0;
     page.call = async (callback, side) => {
@@ -288,14 +320,30 @@ test("drawer visual settlement rejects a transient open state", async () => {
   }
 });
 
-test("drawer proof requires an initially closed drawer and a complete observed transition", async () => {
-  const initialOpen = createSwipeHarness();
-  initialOpen.testing.waitForDrawerVisualState = async (_page, _side, open) => {
-    if (!open) throw new Error("drawer already open");
+test("drawer proof normalizes only a semantically open initial drawer before contact", async () => {
+  const initialOpen = createSwipeHarness({
+    initialState: leftOpen,
+    deliveries: [completeLeftDelivery()],
+  });
+  assert.deepEqual(await runLeftSwipe(initialOpen), { attempts: 1, targetTag: "main" });
+  assert.deepEqual(initialOpen.calls.adbArgs, [
+    ["shell", "input", "keyevent", "4"],
+    ["shell", "input", "swipe", "80", "200", "240", "200", "350"],
+  ]);
+
+  const inconsistentClosed = createSwipeHarness({
+    initialState: { ...leftClosed, right: 40 },
+  });
+  inconsistentClosed.testing.waitForDrawerVisualState = async () => {
+    throw new Error("drawer closed geometry invalid");
   };
-  await assert.rejects(runLeftSwipe(initialOpen), /drawer already open/);
+  await assert.rejects(runLeftSwipe(inconsistentClosed), /drawer closed geometry invalid/);
   assert.deepEqual(
-    { adb: initialOpen.calls.adb, begin: initialOpen.calls.begin, take: initialOpen.calls.take },
+    {
+      adb: inconsistentClosed.calls.adb,
+      begin: inconsistentClosed.calls.begin,
+      take: inconsistentClosed.calls.take,
+    },
     { adb: 0, begin: 0, take: 0 },
   );
 
