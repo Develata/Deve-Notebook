@@ -45,6 +45,14 @@ const NATIVE_SERVICE_STATE_VALUES = new Set([
   "runtime_ready",
 ]);
 const NATIVE_BLOCKED_REASON_VALUES = new Set(["session_invalid"]);
+const NATIVE_SESSION_PREPARE_PHASE_VALUES = new Set([
+  "bootstrap-storage",
+  "bridge-readiness",
+  "native-prepare",
+  "reload-pending",
+  "installed",
+  "failed",
+]);
 
 function readPageSnapshot() {
   const status = document.querySelector("[data-deve-sync-status]");
@@ -56,6 +64,7 @@ function readPageSnapshot() {
     syncMarkerPresent: Boolean(status),
     syncStatus: status?.getAttribute("data-deve-sync-status") ?? null,
     loginMarkerPresent: Boolean(document.querySelector("#login-username")),
+    nativeSessionPreparePhase: globalThis.__DEVE_NATIVE_SESSION_PREPARE_PHASE__ ?? null,
     nativeBootstrap: {
       present: bootstrap != null,
       serviceState: bootstrap?.service_state ?? null,
@@ -162,6 +171,9 @@ function sanitizePageSnapshot(snapshot, expectedOrigin, generation) {
     syncMarkerPresent: snapshot?.syncMarkerPresent === true,
     syncStatus: allowlistedEnum(snapshot?.syncStatus, SYNC_STATUS_VALUES),
     loginMarkerPresent: snapshot?.loginMarkerPresent === true,
+    nativeSessionPreparePhase: allowlistedEnum(
+      snapshot?.nativeSessionPreparePhase, NATIVE_SESSION_PREPARE_PHASE_VALUES,
+    ),
     nativeBootstrap: {
       present: snapshot?.nativeBootstrap?.present === true,
       serviceState: allowlistedEnum(

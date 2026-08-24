@@ -201,11 +201,12 @@ fn mobile_embedded_backend_script(
     let payload = serde_json::to_string(&bootstrap)?;
     let session_install_id_json = serde_json::to_string(session_install_id)?;
     let init = WEBVIEW_BOOTSTRAP_INIT_SOURCE;
+    #[cfg(not(target_os = "android"))]
     let source = format!(
         "(()=>{{const init={init};init(window,{payload},{session_install_id_json},false);}})();"
     );
     #[cfg(target_os = "android")]
-    let source = android_initial_session_prepare_source(source, session_install_id)?;
+    let source = android_initial_session_prepare_source(init, &payload, session_install_id)?;
     let replacement_source = format!(
         "(()=>{{const init={init};init(window,{payload},{session_install_id_json},true);}})();"
     );
@@ -220,13 +221,14 @@ fn mobile_embedded_backend_script(
 
 #[cfg(any(target_os = "android", test))]
 fn android_initial_session_prepare_source(
-    source: String,
+    init: &str,
+    payload: &str,
     session_install_id: &str,
 ) -> Result<String, MobileEmbeddedBackendError> {
     let session_install_id = serde_json::to_string(session_install_id)?;
     let prepare = ANDROID_INITIAL_SESSION_PREPARE_SOURCE;
     Ok(format!(
-        "{source}(()=>{{const prepare={prepare};prepare(window,{session_install_id});}})();"
+        "(()=>{{const fallback={payload};const init={init};const initializeBootstrap=()=>init(window,fallback,{session_install_id},false,true);const initialBootstrapStatus=initializeBootstrap();const prepare={prepare};prepare(window,{session_install_id},initializeBootstrap,initialBootstrapStatus,fallback.capabilities);}})();"
     ))
 }
 

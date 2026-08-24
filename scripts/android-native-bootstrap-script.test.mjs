@@ -21,8 +21,10 @@ const fallback = {
 };
 
 test("Rust wrapper composition keeps both injected sources executable", () => {
-  const source = `(()=>{const init=${initializeSource};init(window,${JSON.stringify(fallback)},${JSON.stringify(installId)},false);})();`
-    + `(()=>{const prepare=${prepareSource};prepare(window,${JSON.stringify(installId)});})();`;
+  const source = `(()=>{const fallback=${JSON.stringify(fallback)};const init=${initializeSource};`
+    + `const initializeBootstrap=()=>init(window,fallback,${JSON.stringify(installId)},false,true);`
+    + "const initialBootstrapStatus=initializeBootstrap();"
+    + `const prepare=${prepareSource};prepare(window,${JSON.stringify(installId)},initializeBootstrap,initialBootstrapStatus,fallback.capabilities);})();`;
   assert.doesNotThrow(() => new Function("window", source));
 });
 
@@ -171,21 +173,36 @@ function prepareRoot(storage) {
   };
 }
 
+function deferredInitialize(harness) {
+  return () => initialize(harness.root, fallback, installId, false, true);
+}
+
 function takeScheduled(harness, delay) {
   const index = harness.scheduled.findIndex((task) => task.delay === delay);
   assert.notEqual(index, -1, `expected scheduled task with delay ${delay}`);
   return harness.scheduled.splice(index, 1)[0];
 }
 
-test("storage admission failure does not invoke or reload", () => {
-  const harness = prepareRoot(storageWith());
-  harness.root.__DEVE_NATIVE_SESSION_STORAGE_READY = false;
-  prepare(harness.root, installId);
+test("storage admission failure does not invoke or reload", async () => {
+  const behavior = { getThrows: true };
+  const harness = prepareRoot(storageWith(undefined, behavior));
+  const initializeBootstrap = deferredInitialize(harness);
+  const initialStatus = initializeBootstrap();
+  prepare(harness.root, installId, initializeBootstrap, initialStatus, fallback.capabilities);
+  const scheduledDelays = [];
+  while (harness.scheduled.some(({ delay }) => delay !== 5000)) {
+    assert.ok(scheduledDelays.length < 200, "bootstrap storage admission must stay bounded");
+    const task = takeScheduled(harness, scheduledDelays.length === 0 ? 0 : 25);
+    scheduledDelays.push(task.delay);
+    await task.callback();
+  }
+  assert.equal(scheduledDelays.length, 200);
   assert.deepEqual(harness.observation(), {
     invokes: 0,
     reloads: 0,
     events: ["deve-native-service-error"],
   });
+  assert.equal(harness.root.__DEVE_NATIVE_SESSION_PREPARE_PHASE__, "failed");
   assert.deepEqual(harness.root.__DEVE_NATIVE_BOOTSTRAP, {
     service_state: "session_invalid",
     platform_lifecycle_authority: "native",
@@ -193,9 +210,10 @@ test("storage admission failure does not invoke or reload", () => {
   });
 });
 
-test("installed-marker read failure does not invoke or reload", () => {
+test("installed-marker read failure does not invoke or reload", async () => {
   const harness = prepareRoot(storageWith(undefined, { getThrows: true }));
   prepare(harness.root, installId);
+  await takeScheduled(harness, 0).callback();
   assert.deepEqual(harness.observation(), {
     invokes: 0,
     reloads: 0,
@@ -340,4 +358,25 @@ test("marker storage failure after handoff does not reload", async () => {
     reloads: 0,
     events: ["deve-native-service-error"],
   });
+});
+
+test("transient bootstrap storage becomes ready within the single admission window", async () => {
+  const behavior = { getThrows: true };
+  const harness = prepareRoot(storageWith(undefined, behavior));
+  const initializeBootstrap = deferredInitialize(harness);
+  const initialStatus = initializeBootstrap();
+  assert.equal(initialStatus, "storage_unavailable");
+  assert.equal(harness.root.__DEVE_NATIVE_SESSION_STORAGE_READY, false);
+
+  prepare(harness.root, installId, initializeBootstrap, initialStatus, fallback.capabilities);
+  await takeScheduled(harness, 0).callback();
+  assert.equal(harness.root.__DEVE_NATIVE_SESSION_PREPARE_PHASE__, "bootstrap-storage");
+  assert.deepEqual(harness.observation(), { invokes: 0, reloads: 0, events: [] });
+
+  behavior.getThrows = false;
+  await takeScheduled(harness, 25).callback();
+  assert.equal(harness.root.__DEVE_NATIVE_SESSION_STORAGE_READY, true);
+  assert.deepEqual(harness.observation(), { invokes: 2, reloads: 1, events: [] });
+  assert.equal(harness.root.__DEVE_NATIVE_SESSION_PREPARE_PHASE__, "reload-pending");
+  assert.deepEqual(harness.scheduled, []);
 });

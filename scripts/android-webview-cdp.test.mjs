@@ -45,6 +45,7 @@ function pageSnapshot({
   loginMarker = false,
   locationHref = "http://tauri.localhost/?token=secret-value#private",
   injectShortSecrets = false,
+  sessionPreparePhase = "native-prepare",
 } = {}) {
   return {
     locationHref,
@@ -54,6 +55,7 @@ function pageSnapshot({
     syncMarkerPresent: marker,
     syncStatus: injectShortSecrets ? "short-session" : marker ? "handshaking-repo" : null,
     loginMarkerPresent: loginMarker,
+    nativeSessionPreparePhase: injectShortSecrets ? "phase-secret" : sessionPreparePhase,
     nativeBootstrap: {
       present: true,
       serviceState: injectShortSecrets ? "tiny-token" : "endpoint_session_ready",
@@ -485,11 +487,12 @@ test("stable discovery failure preserves only the latest sanitized page snapshot
       assert.match(error.message, new RegExp(`"generation":${pages.length}`));
       assert.match(error.message, /"locationClass":"bundled-local"/);
       assert.match(error.message, /"syncStatus":"unknown"/);
+      assert.match(error.message, /"nativeSessionPreparePhase":"unknown"/);
       assert.match(error.message, /"serviceState":"unknown"/);
       assert.match(error.message, /"blockedReason":"unknown"/);
       assert.doesNotMatch(
         error.message,
-        /secret-value|do-not-log|43123|private\.invalid|private note title|short-token|short-session|tiny-token|short-secret/,
+        /secret-value|do-not-log|43123|private\.invalid|private note title|short-token|short-session|tiny-token|short-secret|phase-secret/,
       );
       return true;
     },
@@ -497,4 +500,25 @@ test("stable discovery failure preserves only the latest sanitized page snapshot
 
   assert.ok(pages.length >= 2);
   assert.equal(pages.every(({ closed }) => closed === 1), true);
+});
+
+test("stable discovery diagnostics allowlist native session prepare phase", async () => {
+  const clock = fakeClock();
+  const page = mockPage([pageSnapshot({ sessionPreparePhase: "bootstrap-storage" })]);
+
+  await assert.rejects(
+    findStableAppPage(discoveryArgs({
+      ...clock,
+      listTargets: async () => target("phase-generation"),
+      connectPage: async () => page,
+      pollIntervalMs: 10,
+      generationTimeoutMs: 500,
+      stableTimeoutMs: 100,
+    })),
+    (error) => {
+      assert.match(error.message, /"nativeSessionPreparePhase":"bootstrap-storage"/);
+      assert.doesNotMatch(error.message, /installId|43123|cookie-value|token=|secret=/i);
+      return true;
+    },
+  );
 });

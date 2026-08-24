@@ -1,5 +1,5 @@
 // plan_ref: 11_ui_design/03_mobile#mobile-native-shell-modes
-((root, fallback, installId, replace) => {
+((root, fallback, installId, replace, deferStorageFailure = false) => {
   const key = "__DEVE_NATIVE_BOOTSTRAP_CURRENT__";
   const identityValid = typeof installId === "string" && /^[0-9a-f]{32}$/.test(installId);
   const parse = (raw) => {
@@ -60,6 +60,11 @@
   let current = fallback;
   let ready = false;
   root.__DEVE_NATIVE_SESSION_INSTALL_ID = installId;
+  if (!identityValid) {
+    root.__DEVE_NATIVE_SESSION_STORAGE_READY = false;
+    fail();
+    return "invalid_identity";
+  }
   try {
     const saved = parse(root.sessionStorage.getItem(key));
     if (replace || !validEnvelope(saved) || saved.session_install_id !== installId) {
@@ -73,8 +78,16 @@
       current = confirmed.bootstrap;
       ready = true;
     }
-  } catch (_error) {}
+  } catch (_error) {
+    root.__DEVE_NATIVE_SESSION_STORAGE_READY = false;
+    if (!deferStorageFailure) fail();
+    return "storage_unavailable";
+  }
   root.__DEVE_NATIVE_SESSION_STORAGE_READY = ready;
-  if (ready) root.__DEVE_NATIVE_BOOTSTRAP = current;
-  else fail();
+  if (ready) {
+    root.__DEVE_NATIVE_BOOTSTRAP = current;
+    return "ready";
+  }
+  fail();
+  return "invalid_storage_identity";
 })

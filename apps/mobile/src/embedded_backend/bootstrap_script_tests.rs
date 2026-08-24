@@ -21,6 +21,8 @@ fn mobile_embedded_backend_android_initial_session_source_binds_markers_to_proce
     )
     .expect("cookie");
 
+    let first_payload = serde_json::to_string(&bootstrap).expect("first bootstrap payload");
+    let replacement_payload = first_payload.clone();
     let first =
         mobile_embedded_backend_script(bootstrap.clone(), cookie.clone(), "process-session-a")
             .expect("first process script");
@@ -36,17 +38,27 @@ fn mobile_embedded_backend_android_initial_session_source_binds_markers_to_proce
         assert!(!script.source().contains("===current.http_base"));
         assert!(!script.source().contains("cookie-value"));
     }
-    let first_android =
-        android_initial_session_prepare_source(first.source().to_string(), "process-session-a")
-            .expect("first Android prepare source");
+    let first_android = android_initial_session_prepare_source(
+        WEBVIEW_BOOTSTRAP_INIT_SOURCE,
+        &first_payload,
+        "process-session-a",
+    )
+    .expect("first Android prepare source");
     let replacement_android = android_initial_session_prepare_source(
-        replacement.source().to_string(),
+        WEBVIEW_BOOTSTRAP_INIT_SOURCE,
+        &replacement_payload,
         "process-session-b",
     )
     .expect("replacement Android prepare source");
     assert!(first_android.contains("root.sessionStorage.getItem(key) === installId"));
     assert!(replacement_android.contains("root.sessionStorage.getItem(key) === installId"));
-    assert!(first_android.contains("root.__DEVE_NATIVE_SESSION_STORAGE_READY !== true"));
+    assert!(first_android.contains("root.__DEVE_NATIVE_SESSION_STORAGE_READY === true"));
+    assert!(first_android.contains("initializeBootstrap"));
+    assert!(first_android.contains("initialBootstrapStatus"));
+    assert!(first_android.contains("fallback.capabilities"));
+    assert!(first_android.contains(",false,true)"));
+    validate_mobile_embedded_script_source(&first_android)
+        .expect("Android initial session source hygiene");
     assert!(first_android.contains("root.sessionStorage.getItem(key) !== installId"));
     assert!(
         first
