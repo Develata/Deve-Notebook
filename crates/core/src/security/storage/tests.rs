@@ -125,8 +125,10 @@ fn key_initialization_rejects_symlink_targets() -> anyhow::Result<()> {
     std::fs::write(&outside, [7_u8; 32])?;
     std::os::unix::fs::symlink(&outside, dir.path().join("identity.key"))?;
 
-    let error = load_or_generate_identity_key_at(dir.path())
-        .expect_err("identity symlink must fail closed");
+    let error = match load_or_generate_identity_key_at(dir.path()) {
+        Ok(_) => panic!("identity symlink must fail closed"),
+        Err(error) => error,
+    };
 
     assert_eq!(std::fs::read(outside)?, vec![7_u8; 32]);
     assert!(!error.to_string().is_empty());
