@@ -242,10 +242,11 @@
   goal: 认证 surface 卸载会收口 browser runtime owner，且 LocalBackend 不投影不可恢复的通用登出。
   preconditions:
     - Web/RemoteBrowser 与 bundled LocalBackend 模式均可构造
-    - MainLayout/use_core 已注册 lifecycle listener 与临时 timer
+    - 根 App 与 MainLayout/use_core 已注册 lifecycle listener、session probe 与临时 timer
     - 可控 deferred future 可在 owner cleanup 后完成
   steps:
     - run: cargo test -p deve_web browser_runtime_lifetime -- --nocapture
+    - run: cargo test -p deve_web app_auth_monitor_is_owner_scoped -- --nocapture
     - run: cargo test -p deve_web logout_projection -- --nocapture
     - ui_expire_session: true
     - ui_wait: 1000
@@ -254,6 +255,7 @@
     - ui_assert: component_listeners_removed_on_cleanup true
     - ui_assert: component_timers_cancelled_on_cleanup true
     - ui_assert: late_async_generation_rejected true
+    - ui_assert: root_auth_probe_completion_rejected_after_owner_cleanup true
     - ui_assert: web_and_remote_browser_logout_visible true
     - ui_assert: bundled_local_backend_logout_hidden true
     - ui_assert: session_invalid_still_clears_writer_ready true

@@ -13,15 +13,11 @@
 //!
 //! - `App`: 根组件，提供语言环境上下文和认证状态管理。
 
-use self::auth_monitor::{
-    current_page_active, mount_visibility_listener, should_run_session_probe,
-};
-use crate::api::{AuthProbe, probe_auth_status};
+use self::auth_monitor::{current_page_active, mount_auth_monitor, mount_visibility_listener};
 use crate::components::login::{AuthState, AuthUnavailablePage, LoginPage, logout};
 use crate::components::main_layout::MainLayout;
 use crate::i18n::login as login_i18n;
 use crate::i18n::{Locale, initial_locale, publish_browser_i18n};
-use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 
@@ -34,8 +30,6 @@ mod auth_monitor;
 /// - 已认证时显示主布局
 #[component]
 pub fn App() -> impl IntoView {
-    const AUTH_MONITOR_MS: u32 = 5_000;
-
     // 全局语言环境状态
     let locale = RwSignal::new(initial_locale());
     provide_context(locale);
@@ -62,57 +56,17 @@ pub fn App() -> impl IntoView {
         blur_listener.remove();
     });
     mount_visibility_listener(page_active);
-
-    let last_page_active = StoredValue::new_local(page_active.get_untracked());
-    Effect::new(move |_| {
-        let active = page_active.get();
-        let was_active = last_page_active.get_value();
-        last_page_active.set_value(active);
-        if was_active || !should_run_session_probe(&auth_state.get(), active) {
-            return;
-        }
+    let auth_monitor_lifetime = mount_auth_monitor(auth_state, set_auth_state, page_active);
+    let logout_lifetime = auth_monitor_lifetime.clone();
+    let logout_callback = Callback::new(move |_| {
+        let logout_lifetime = logout_lifetime.clone();
+        let locale_value = locale.get_untracked();
         spawn_local(async move {
-            match probe_auth_status().await {
-                AuthProbe::Invalid => set_auth_state.set(AuthState::Unauthenticated),
-                AuthProbe::Valid | AuthProbe::Unknown => {}
+            let result = logout().await;
+            if logout_lifetime.is_active() {
+                set_auth_state.set(auth_state_after_logout(locale_value, result));
             }
         });
-    });
-
-    // 启动时检查认证状态
-    spawn_local(async move {
-        loop {
-            match probe_auth_status().await {
-                AuthProbe::Valid => {
-                    set_auth_state.set(AuthState::Authenticated);
-                    break;
-                }
-                AuthProbe::Invalid => {
-                    set_auth_state.set(AuthState::Unauthenticated);
-                    break;
-                }
-                AuthProbe::Unknown => {
-                    set_auth_state.set(AuthState::Unavailable);
-                    TimeoutFuture::new(AUTH_MONITOR_MS).await;
-                }
-            }
-        }
-    });
-
-    // 已登录状态下定期探测认证是否仍然有效。
-    // 网络错误保持当前 UI，不把断线误判成 session 失效。
-    spawn_local(async move {
-        loop {
-            TimeoutFuture::new(AUTH_MONITOR_MS).await;
-            if !should_run_session_probe(&auth_state.get_untracked(), page_active.get_untracked()) {
-                continue;
-            }
-            match probe_auth_status().await {
-                AuthProbe::Valid => {}
-                AuthProbe::Invalid => set_auth_state.set(AuthState::Unauthenticated),
-                AuthProbe::Unknown => {}
-            }
-        }
     });
 
     view! {
@@ -120,12 +74,7 @@ pub fn App() -> impl IntoView {
             AuthState::Authenticated => view! {
                 <MainLayout
                     on_session_expired=Callback::new(move |_| set_auth_state.set(AuthState::Unauthenticated))
-                    on_logout=Callback::new(move |_| {
-                        spawn_local(async move {
-                            let locale_value = locale.get_untracked();
-                            set_auth_state.set(auth_state_after_logout(locale_value, logout().await));
-                        });
-                    })
+                    on_logout=logout_callback.clone()
                 />
             }.into_any(),
             AuthState::Checking | AuthState::Unavailable => view! {
