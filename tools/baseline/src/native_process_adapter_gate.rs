@@ -24,6 +24,10 @@ const PROCESS_RUNTIME_ALLOWED: &[&str] = &[
 ];
 
 const ANDROID_SELF_RETIRE_ADAPTER: &str = "apps/mobile/src/tauri_entry/backend_recovery/android.rs";
+const PREFERENCE_PROCESS_ID_OBSERVATION_ALLOWED: &[&str] = &[
+    "apps/desktop/src/native_backend.rs",
+    "apps/mobile/src/native_backend.rs",
+];
 
 const REQUIRED_CARGO_TESTS: &[CargoTest] = &[
     CargoTest {
@@ -148,6 +152,11 @@ fn check_no_process_runtime_leak(root: &Path) -> Result<()> {
             continue;
         }
         if PROCESS_RUNTIME_ALLOWED.contains(&line.rel.as_str()) {
+            continue;
+        }
+        if PREFERENCE_PROCESS_ID_OBSERVATION_ALLOWED.contains(&line.rel.as_str())
+            && line.text.trim() == "std::process::id()"
+        {
             continue;
         }
         fail(format!(
