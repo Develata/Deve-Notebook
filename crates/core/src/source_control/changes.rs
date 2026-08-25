@@ -88,35 +88,6 @@ pub fn detect_doc_change(committed: Option<&str>, current: Option<&str>) -> Opti
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::detect_doc_change;
-    use crate::source_control::ChangeStatus;
-
-    #[test]
-    fn detects_empty_new_document_as_added() {
-        assert_eq!(detect_doc_change(None, Some("")), Some(ChangeStatus::Added));
-    }
-
-    #[test]
-    fn preserves_adjacent_change_statuses() {
-        assert_eq!(
-            detect_doc_change(None, Some("content")),
-            Some(ChangeStatus::Added)
-        );
-        assert_eq!(
-            detect_doc_change(Some("content"), None),
-            Some(ChangeStatus::Deleted)
-        );
-        assert_eq!(
-            detect_doc_change(Some("old"), Some("new")),
-            Some(ChangeStatus::Modified)
-        );
-        assert_eq!(detect_doc_change(Some("same"), Some("same")), None);
-        assert_eq!(detect_doc_change(None, None), None);
-    }
-}
-
 /// 清空所有快照 (重置用)
 pub fn clear_snapshots(db: &Database) -> Result<()> {
     let write_txn = db.begin_write()?;
@@ -146,4 +117,33 @@ pub(crate) fn remove_snapshot_in_txn(write_txn: &WriteTransaction, doc_id: DocId
         .open_table(SNAPSHOTS_TABLE)?
         .remove(doc_id.as_str())?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::detect_doc_change;
+    use crate::source_control::ChangeStatus;
+
+    #[test]
+    fn detects_empty_new_document_as_added() {
+        assert_eq!(detect_doc_change(None, Some("")), Some(ChangeStatus::Added));
+    }
+
+    #[test]
+    fn preserves_adjacent_change_statuses() {
+        assert_eq!(
+            detect_doc_change(None, Some("content")),
+            Some(ChangeStatus::Added)
+        );
+        assert_eq!(
+            detect_doc_change(Some("content"), None),
+            Some(ChangeStatus::Deleted)
+        );
+        assert_eq!(
+            detect_doc_change(Some("old"), Some("new")),
+            Some(ChangeStatus::Modified)
+        );
+        assert_eq!(detect_doc_change(Some("same"), Some("same")), None);
+        assert_eq!(detect_doc_change(None, None), None);
+    }
 }

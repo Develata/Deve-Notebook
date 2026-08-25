@@ -17,7 +17,6 @@
 //!
 //! **类型**: Core MUST (核心必选)
 
-use crate::ledger::schema::*;
 use crate::ledger::{ops, range};
 use crate::models::{DocId, LedgerEntry, NodeId, PeerId, RepoId};
 use anyhow::Result;
@@ -50,28 +49,15 @@ impl<'a> ShadowRepo<'a> {
 
     /// 获取指定文档的操作数量
     pub fn count_ops(&self, doc_id: DocId) -> Result<u64> {
-        let read_txn = self.db.begin_read()?;
-        let table = read_txn.open_multimap_table(DOC_OPS)?;
-
-        let mut count = 0u64;
-        for _ in table.get(doc_id.as_u128())? {
-            count += 1;
-        }
-        Ok(count)
+        ops::count_ops_from_db(self.db, doc_id)
     }
 
     /// 获取指定文档的最大序列号
     pub fn get_max_seq(&self, doc_id: DocId) -> Result<Option<u64>> {
-        let read_txn = self.db.begin_read()?;
-        let table = read_txn.open_multimap_table(DOC_OPS)?;
-
-        // Redb Multimap values are sorted; read the back instead of scanning every value.
-        let max_seq = table
-            .get(doc_id.as_u128())?
-            .next_back()
-            .transpose()?
-            .map(|v| v.value());
-        Ok(max_seq)
+        Ok(match ops::max_seq_from_db(self.db, doc_id)? {
+            0 => None,
+            max_seq => Some(max_seq),
+        })
     }
 
     /// 获取全局最大序列号 (用于 Version Vector)
@@ -273,6 +259,36 @@ mod tests {
             db,
         };
         assert_eq!(shadow_repo.get_structure_ops(node_id)?.len(), 1);
+        Ok(())
+    }
+
+    #[test]
+    fn shadow_count_and_max_reject_dangling_doc_index() -> Result<()> {
+        let tmp_dir = TempDir::new()?;
+        let remotes_dir = tmp_dir.path().join("remotes");
+        std::fs::create_dir_all(&remotes_dir)?;
+        let shadow_dbs: RwLock<HashMap<PeerId, HashMap<RepoId, Arc<Database>>>> =
+            RwLock::new(HashMap::new());
+        let peer_id = PeerId::new("dangling_peer");
+        let repo_id = Uuid::new_v4();
+        ensure_shadow_db(&remotes_dir, &shadow_dbs, &peer_id, &repo_id)?;
+        let doc_id = DocId::new();
+
+        let dbs = shadow_dbs.read().unwrap();
+        let db = dbs.get(&peer_id).unwrap().get(&repo_id).unwrap();
+        let write_txn = db.begin_write()?;
+        write_txn
+            .open_multimap_table(DOC_OPS)?
+            .insert(doc_id.as_u128(), 7u64)?;
+        write_txn.commit()?;
+
+        let shadow_repo = ShadowRepo {
+            peer_id,
+            repo_id,
+            db,
+        };
+        assert!(shadow_repo.count_ops(doc_id).is_err());
+        assert!(shadow_repo.get_max_seq(doc_id).is_err());
         Ok(())
     }
 }

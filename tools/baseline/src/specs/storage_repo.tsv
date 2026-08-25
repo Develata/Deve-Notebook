@@ -6,6 +6,8 @@ case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-002	cargo test -p d
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-002	cargo test -p deve_cli --lib select_target_repo_fails_closed_on_ambiguous_local_alias -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-002	ambiguous_host_alias_selector_fails_closed true
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-003	cargo test -p deve_core required_redb_tables_exist_after_init -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-003	cargo test -p deve_core redb_schema_version -- --nocapture
+case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-003	cargo test -p deve_core shadow_count_and_max_reject_dangling_doc_index -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-004	cargo test -p deve_core snapshot_respects_depth_limit -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-004	cargo test -p deve_core snapshot_rejects_middle_content_mismatch -- --nocapture
 case_contains	docs/acceptance-cases/07_storage_repo.md	STORE-004	cli_assert: snapshot_candidate_matches_full_ledger_rebuild true
@@ -329,6 +331,7 @@ cargo_test_lib	deve_cli	edit_acknowledges_ledger_commit_when_workspace_writeback
 cargo_test_lib	deve_core	remote_import
 cargo_test_lib	deve_core	watcher_capture_first_startup
 cargo_test_lib	deve_core	watcher_final_state_shutdown
+cargo_test_lib	deve_core	shadow_count_and_max_reject_dangling_doc_index
 cargo_test_integration	deve_core	watcher_platform_fs	watcher_capture_first_startup_reaches_running_with_preexisting_and_post_start_changes
 cargo_test_integration	deve_core	watcher_platform_fs	watcher_final_state_shutdown_captures_unflushed_change_and_stops_callbacks
 contains	apps/cli/src/server/handlers/document/edit_apply.rs	MutationExecution::projection_degraded(

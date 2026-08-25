@@ -29,17 +29,19 @@
     - cli_assert: ambiguous_host_alias_selector_fails_closed true
 
 - case_id: STORE-003
-  goal: Redb 索引表存在。
+  goal: Redb 索引表存在，且 shadow 索引悬空时读取 fail-closed。
   preconditions:
     - 至少一个 .redb 文件
   steps:
     - run: cargo test -p deve_core required_redb_tables_exist_after_init -- --nocapture
     - run: cargo test -p deve_core redb_schema_version -- --nocapture
+    - run: cargo test -p deve_core shadow_count_and_max_reject_dangling_doc_index -- --nocapture
     - run: scripts/check-storage-repo-baseline.sh
   assertions:
     - cli_assert: required_storage_tables_reachable true
     - cli_assert: redb_schema_version_gate_present true
     - cli_assert: unversioned_redb_schema_fails_closed true
+    - cli_assert: shadow_doc_index_requires_matching_ledger_row true
 
 - case_id: STORE-004
   goal: Snapshot 双表与修剪。

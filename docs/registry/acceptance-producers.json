@@ -515,6 +515,7 @@
       "evidence_ids": [
         "script.storage-repo-baseline",
         "test.case.store-002",
+        "test.case.store-003",
         "test.case.store-006",
         "test.case.store-008",
         "test.case.store-009",
