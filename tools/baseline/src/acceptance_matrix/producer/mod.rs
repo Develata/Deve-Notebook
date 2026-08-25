@@ -35,6 +35,8 @@ pub(super) struct ProducerCatalog {
     pub(super) registry_fingerprint: String,
     pub(super) producer_ids: BTreeSet<String>,
     pub(super) evidence_by_producer: BTreeMap<String, Vec<String>>,
+    pub(super) ci_job_by_producer: BTreeMap<String, String>,
+    pub(super) executable_evidence_ids: BTreeSet<String>,
 }
 
 pub(crate) fn run(args: &[String]) -> Result<()> {
@@ -151,7 +153,11 @@ pub(super) fn validate_registry(root: &Path, rows: &[MatrixRow]) -> Result<Produ
             model::PRODUCER_REGISTRY_PATH
         )
     })?;
-    registry::read_and_validate(root, rows).map(|registry| ProducerCatalog {
+    let registry = registry::read_and_validate(root, rows)?;
+    let ci_job_by_producer = registry::validated_ci_job_map(root, &registry)?;
+    let matrix_evidence = registry::matrix_executable_evidence(rows)?;
+    let executable_evidence_ids = registry::executable_evidence_ids(&registry, &matrix_evidence)?;
+    Ok(ProducerCatalog {
         registry_fingerprint: format!("sha256:{:x}", Sha256::digest(&content)),
         producer_ids: registry
             .producers
@@ -163,6 +169,8 @@ pub(super) fn validate_registry(root: &Path, rows: &[MatrixRow]) -> Result<Produ
             .into_iter()
             .map(|producer| (producer.producer_id, producer.evidence_ids))
             .collect(),
+        ci_job_by_producer,
+        executable_evidence_ids,
     })
 }
 

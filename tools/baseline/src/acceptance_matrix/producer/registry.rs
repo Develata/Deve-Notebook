@@ -6,13 +6,13 @@ mod ci_workflow;
 mod producer_validation;
 mod release_workflow;
 
-pub(super) use self::producer_validation::contract_fingerprint;
 use self::producer_validation::validate_producer;
 #[cfg(test)]
 use self::producer_validation::{
     artifact_location_allowed, sensitive_env_name, valid_env_name, valid_identifier,
     validate_shell_invocation, validate_step,
 };
+pub(super) use self::producer_validation::{contract_fingerprint, executable_evidence_ids};
 use super::model::{PRODUCER_REGISTRY_PATH, Producer, ProducerRegistry};
 use crate::acceptance_matrix::model::MatrixRow;
 use anyhow::{Context, Result, bail};
@@ -28,6 +28,13 @@ pub(super) fn read_and_validate(root: &Path, rows: &[MatrixRow]) -> Result<Produ
         .with_context(|| format!("invalid producer registry {}", path.display()))?;
     validate(root, rows, &registry)?;
     Ok(registry)
+}
+
+pub(super) fn validated_ci_job_map(
+    root: &Path,
+    registry: &ProducerRegistry,
+) -> Result<BTreeMap<String, String>> {
+    ci_workflow::validate(root, registry)
 }
 
 fn validate(root: &Path, rows: &[MatrixRow], registry: &ProducerRegistry) -> Result<()> {
@@ -98,7 +105,7 @@ fn validate(root: &Path, rows: &[MatrixRow], registry: &ProducerRegistry) -> Res
     Ok(())
 }
 
-fn matrix_executable_evidence(rows: &[MatrixRow]) -> Result<BTreeMap<&str, &MatrixRow>> {
+pub(super) fn matrix_executable_evidence(rows: &[MatrixRow]) -> Result<BTreeMap<&str, &MatrixRow>> {
     let mut result = BTreeMap::new();
     for row in rows
         .iter()

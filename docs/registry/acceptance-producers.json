@@ -834,24 +834,17 @@
       "timeout_seconds": 7200,
       "required_env": [],
       "environment": {
-        "DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED": "1",
         "DEVE_DESKTOP_PACKAGE_BUNDLES": "app,dmg",
-        "DEVE_DESKTOP_PACKAGE_NO_SIGN": "1",
         "DEVE_DESKTOP_STARTUP_SMOKE_REQUIRED": "1",
         "DEVE_DESKTOP_NATIVE_SESSION_SMOKE_REQUIRED": "1"
       },
       "claims_env": {},
       "artifacts": [
-        "scripts/check-desktop-platform-package-build.sh",
         "scripts/check-desktop-package-startup-smoke.sh",
         "scripts/check-desktop-native-session-package-smoke.sh",
         "scripts/baseline-wrapper.sh"
       ],
       "steps": [
-        {
-          "program": "bash",
-          "args": [{ "literal": "scripts/check-desktop-platform-package-build.sh" }]
-        },
         {
           "program": "bash",
           "args": [{ "literal": "scripts/check-desktop-package-startup-smoke.sh" }]
@@ -861,7 +854,7 @@
           "args": [{ "literal": "scripts/check-desktop-native-session-package-smoke.sh" }]
         }
       ],
-      "note": "Build and exercise the unsigned macOS Desktop target-host package"
+      "note": "Consume and exercise one prebuilt unsigned macOS Desktop target-host package; package construction is a separate immutable producer job"
     },
     {
       "producer_id": "ios.simulator-lifecycle",
@@ -1209,16 +1202,13 @@
       "timeout_seconds": 7200,
       "required_env": [],
       "environment": {
-        "DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED": "1",
         "DEVE_DESKTOP_PACKAGE_BUNDLES": "msi,nsis",
-        "DEVE_DESKTOP_PACKAGE_NO_SIGN": "1",
         "DEVE_DESKTOP_INSTALLER_SMOKE_REQUIRED": "1"
       },
       "claims_env": {
         "smoke.desktop.local-backend": "DEVE_DESKTOP_LOCAL_AUTHORITY_EVIDENCE_PATH"
       },
       "artifacts": [
-        "scripts/check-desktop-platform-package-build.sh",
         "scripts/check-desktop-installer-smoke.sh",
         "scripts/lib/desktop-installer-windows.sh",
         "scripts/check-desktop-packaged-ui-smoke.ps1",
@@ -1233,20 +1223,12 @@
           "program": "bash",
           "args": [
             {
-              "literal": "scripts/check-desktop-platform-package-build.sh"
-            }
-          ]
-        },
-        {
-          "program": "bash",
-          "args": [
-            {
               "literal": "scripts/check-desktop-installer-smoke.sh"
             }
           ]
         }
       ],
-      "note": "Build the Windows MSI and NSIS candidates from an existing Web dist and exercise installed LocalBackend zero-repo BootstrapUnbound(0), first Create with a non-zero switch nonce, backend-owned last-repo removal into non-zero NoScope, native session, NoteGit, Git bridge, and orphan cleanup"
+      "note": "Consume the prebuilt Windows MSI and NSIS candidate inputs and exercise installed LocalBackend zero-repo BootstrapUnbound(0), first Create with a non-zero switch nonce, backend-owned last-repo removal into non-zero NoScope, native session, NoteGit, Git bridge, and orphan cleanup"
     },
     {
       "producer_id": "desktop.remote-browser",

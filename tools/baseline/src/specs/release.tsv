@@ -92,7 +92,7 @@ contains	docs/features/15_release.md	Windows fixture 必须在 180 秒传播窗�
 contains	docs/acceptance-cases/12_tech_release.md	first_tag_native_artifacts_windows_macos_android_only true
 contains	.github/workflows/release-candidate.yml	workflow_dispatch:
 contains	.github/workflows/release-candidate.yml	GITHUB_RUN_ATTEMPT
-contains	.github/workflows/release-candidate.yml	Install Linux native preflight dependencies
+contains	.github/workflows/release-candidate.yml	Install Linux native compile dependencies
 contains	.github/workflows/release-candidate.yml	Build exact Web projection
 contains	.github/workflows/release-candidate.yml	scripts/build-web-dist-ci.sh
 contains	.github/workflows/release-candidate.yml	cargo run --locked --quiet -p deve_baseline -- full
@@ -119,7 +119,9 @@ absent	.github/workflows/check.yml	packages: write
 absent	.github/workflows/check.yml	docker/login-action
 absent	.github/workflows/check.yml	docker/metadata-action
 absent	.github/workflows/check.yml	docker/build-push-action
-absent	.github/workflows/check.yml	actions/upload-artifact
+contains	.github/workflows/check.yml	name: deve-impact-shadow-${{ github.sha }}
+contains	.github/workflows/check.yml	acceptance-impact-shadow
+absent	.github/workflows/check.yml	deve-release-candidate-${{ github.sha }}
 absent	.github/workflows/check.yml	push: true
 absent	.github/workflows/check.yml	ghcr.io
 absent	.github/workflows/check.yml	tags: ['v*']

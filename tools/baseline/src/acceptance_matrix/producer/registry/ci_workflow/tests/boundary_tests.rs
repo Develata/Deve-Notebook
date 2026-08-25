@@ -61,14 +61,14 @@ fn rejects_noop_or_cross_wired_base_jobs_and_watcher_drift() {
         "      - name: cargo clippy --locked --all-targets -- -D warnings\n        run: cargo --version",
         1,
     );
-    assert!(error(&name_only).contains("must execute exact required command"));
+    assert!(error(&name_only).contains("command sequence must exactly match"));
 
     let cross_wired = VALID.replacen(
         "      - run: cargo test --locked",
         "      - run: cargo clippy --locked --all-targets -- -D warnings",
         1,
     );
-    assert!(error(&cross_wired).contains("must execute exact required command"));
+    assert!(error(&cross_wired).contains("command sequence must exactly match"));
 
     let watcher_host = VALID.replace("runs-on: ${{ matrix.os }}", "runs-on: ubuntu-latest");
     assert!(error(&watcher_host).contains("exact watcher OS matrix"));
@@ -90,7 +90,7 @@ fn rejects_noop_or_cross_wired_base_jobs_and_watcher_drift() {
         "      - run: node --test scripts/android-lifecycle-harness.test.mjs scripts/mobile-android-emulator-journey.test.mjs",
         "",
     );
-    assert!(error(&missing_plans).contains("must execute exact required command"));
+    assert!(error(&missing_plans).contains("command sequence must exactly match"));
 
     let missing_coverage = replace_section(
         VALID,
@@ -98,5 +98,5 @@ fn rejects_noop_or_cross_wired_base_jobs_and_watcher_drift() {
         "  rust-quality:",
         "",
     );
-    assert!(error(&missing_coverage).contains("must execute exact required command"));
+    assert!(error(&missing_coverage).contains("command sequence must exactly match"));
 }

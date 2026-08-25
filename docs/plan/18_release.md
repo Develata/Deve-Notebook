@@ -486,6 +486,10 @@ test 仍保持独立 authority，CI evidence producer 不得用一个笼统的�
 绕开 canonical command。每个 shard 的 workflow deadline 必须覆盖串行 producer deadlines 之和；若未来
 runner 改为有证据绑定的并行 DAG，则必须覆盖最长依赖路径，并继续包含 finally cleanup 与固定构建余量，
 不能由 Actions 先行强杀合法 producer。
+`check.yml` 的 job 集合必须精确等于受控 base jobs、实际 producer jobs、watcher、impact shadow 与最终
+fan-in；不得增加一个不被 fan-in 观察的旁路检查。唯一允许上传的 artifact 是固定名称、路径和保留期的
+impact shadow diagnostic，`deve-acceptance-receipts-*` 与 `deve-release-candidate-*` 正式前缀在整个
+check workflow 中禁止出现。
 每次 producer 结束还必须输出固定、无 secret 的 `producer_id/status/duration_ms` 诊断行；该时长来自
 单调时钟，只用于识别 CI 长尾，不是 receipt、pass 证明或跨宿主可比较的性能基准。失败 producer 同样
 必须输出状态与时长，且计时日志不得吞掉原始错误或把 skipped/not-run 伪装为执行成功。
@@ -516,6 +520,12 @@ candidate 必须精确枚举全部 shard。任何尚未覆盖全部 runtime shar
 `full_trigger` 时提升到
 full-system，不得只输出 profile 内 eligible shard 却声称 full；machine-readable plan 必须另带
 `scope=source|system` 消除“profile 内全量”和“系统全量”的歧义。
+两个 selective profile 的 always shards 至少固定包含 `contract-static` 与 `workspace-build`；
+`contract-checks`、`rust-quality|workspace-tests`、`watcher-native-fs` 也分别固定绑定到
+`contract-static`、`workspace-build`、`core-ci`，不得在仍保持全局 union 的同时移动到可选 shard。
+source shard 中的 producer 必须真实存在于普通 full CI job 映射，runtime shard 则不得混入普通 CI
+producer。只在 tag-ready、target-host 或 candidate 执行的 producer 归入 runtime layer，不能在 PR
+计划中仅列出 producer/evidence 却没有任何 selected CI job 执行它。
 公共 plan/contract/registry、workspace dependency/toolchain、CI/验收规则、release/deployment/restore
 边界由 `full_trigger` module 承载，命中即强制 full。`nightly-full-system` 当前只是保留的 profile，
 不重新引入 `nightly.yml`；正式 candidate 也绝不因 impact selection 跳过任何 required gate。
@@ -586,6 +596,58 @@ Dependabot/CodeQL/container scan、operator runbook 属 P1；`.editorconfig`、
 fuzz/performance/privacy policy 属 P2 advisory。Rust toolchain pin 由
 `17_tech_stack#canonical-rust-toolchain` 与 release baseline 关闭；本批只建立诚实 gate，不顺带声称其它缺口
 已经关闭。
+
+#### Candidate DAG、shadow 选择与自动化债务闭合
+
+正式 candidate 的 required 集合保持全量，但编排必须是依赖 DAG，而不是用一个长 `validate`
+job 阻塞所有平台。identity/version、静态合同、Rust quality、workspace tests、完整 baseline 与
+Web projection 是相互独立的 producer；只有真实输入依赖才可形成 `needs`。Web projection 必须由
+一个 exact-HEAD producer 构建一次，拒绝 symlink、非规范路径、空树以及超出文件/字节预算的输入，
+并用包含 HEAD、排序文件路径、大小、逐文件 SHA-256 与 tree SHA-256 的 canonical manifest 封存。
+Docker、Windows、macOS 与 Android package producer 下载并复核该 manifest 后才可构建；不得各自
+运行 Trunk 产生第二套 embedded frontend。Docker formal candidate 使用只消费该 dist 的专用
+Dockerfile，普通开发/Compose Dockerfile 仍可保持 source build 路径，两者的 runtime image 合同必须一致。
+
+平台 package build 与 target-host smoke 是不同职责。Windows MSI/NSIS、macOS app/DMG、Android
+x86 journey APK 与 Android ARM64 signed APK 各自由 package job 一次生成；LocalBackend、
+RemoteBrowser、startup/native-session 和 emulator journey 在隔离 consumer job 中只下载并运行
+这些不可变字节。Android acceptance runner / fixture backend 是独立 harness artifact，不能被 APK
+build 隐式编译；LocalBackend 与 RemoteBrowser 使用不同 emulator runner，但复核同一 APK manifest。
+最终 ARM64 signer job 与 x86 journey 并行，且 signer receipt、emulator receipt 继续保持不同证据语义。
+Windows package job 必须逐字节比较 smoke 与 candidate 副本并分别生成 SHA-256 输入清单，两个 smoke
+consumer 与最终 assembler 都要复核清单。macOS `.app` smoke 输入必须使用保留 executable bit 与 symlink
+语义的 tar 封存并先验 digest，不能把 `.app` 目录直接交给 artifact 上传后假设权限仍在；最终 DMG 也要
+由 candidate 输入清单绑定。
+任一 quality、contract、package、smoke、receipt 或 artifact identity 失败都会使 final fan-in 失败；
+已经生成但未进入成功 fan-in 的 artifact 没有 candidate authority。
+
+普通 PR 的 dependency-aware selection 先保持 shadow-only。final shadow job 必须在完整 required CI
+仍然实际执行后，生成 canonical JSON，绑定 base/head、impact/producer/matrix fingerprint、选择的
+module/shard/case/evidence、所有 full-baseline job 的真实 `success|failure|cancelled|skipped` 结果，
+以及未被选择 shard 中出现失败的 `observed_miss`。缺 job、未知 result、registry/job 映射不完整或
+报告写入失败均 fail-closed。该 JSON 可以作为短期 diagnostic artifact 留存，但不是 receipt、不能
+满足矩阵 evidence，也不能让 selected/planned/skipped/not-run 变成 pass。只有经过维护者批准的观察
+窗口内，所有 eligible PR 都生成有效报告且 `observed_miss` 始终为空，才允许另行修改合同启用 PR
+选择性跳过；`main`、nightly、candidate、release、部署、restore/read-back 永久保持 full profile。
+
+功能自动化债务以“distinct case 当前只有 document evidence”计数，不以矩阵行数计数。checker 必须
+输出按 case family 分组的机器可读 backlog，并把每次迁移限定为以下真实证据之一：可解析且会执行的
+Rust/JS test selector、确定性 script、真实 browser smoke receipt 或 target-host receipt。仅新增 registry
+映射、解析 acceptance 文本、检查源码字符串或把 `document` 改名为 `test` 都不能关闭功能行为债务。
+backlog 的 automated 判定还必须绑定到经验证 producer 的真实 executable locator；Cargo test selector
+必须是唯一 positional filter 且不得被 `--skip` 等 libtest 参数重解释，script 只能由受控 direct、
+shell `-File`/首参数或 Node test 形态按完整 argv 调用。现有 wrapper 若尚无 typed wrapper->selector
+证明，应保守计入 unautomated，而不是仅凭 owner 声明关闭债务。
+UI/Android/network/auth/diff 五批必须记录每个 case 的断言所在 producer 和运行 surface；一个 producer
+可原子覆盖多个 case，但必须在其 assertions/claims 中逐项可追踪，并继续遵守 64 evidence execution-group
+上限。所有 189 个 case 完成真实自动化前，backlog 必须如实非零；不得为了宣称 P4 完成而弱化
+document-only 定义。
+
+正式 attempt-1 candidate 是时间与远端状态门，而不是本地代码里可以预先标记的阶段。只有 current
+exact HEAD 的 targeted Android 同一 APK 连续至少两次通过、Windows/macOS package+smoke shard 至少
+一次通过、普通 full CI 通过，且所有 run 均为 attempt 1 时，maintainer 才可 dispatch 一次正式
+candidate。任何 rerun、旧 SHA、不同 APK digest、skipped shard 或失败样本都不满足该 admission；失败后
+必须形成新修复 commit 并重新积累 exact-HEAD evidence，不能用 candidate 自身充当调试器。
 
 ### 2.1.5 Artifact Identity and Integrity {#artifact-identity-and-integrity}
 

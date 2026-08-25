@@ -42,10 +42,16 @@ fn validate_native_call(jobs: &yaml_rust2::yaml::Hash) -> Result<()> {
         }
         calls += 1;
         reject_execution_modifiers(job, &path)?;
-        require_needs(job, &["validate"], &path)?;
+        require_needs(job, &["identity", "web-dist"], &path)?;
         let with = mapping(required(job, "with", &path)?, &format!("{path}.with"))?;
         require_string(with, "candidate_head", "${{ github.sha }}", &path)?;
         require_string(with, "version", "${{ inputs.version }}", &path)?;
+        require_string(
+            with,
+            "web_dist_artifact",
+            "deve-candidate-web-dist-${{ github.sha }}",
+            &path,
+        )?;
         validate_native_secrets(job, &path)?;
     }
     if calls != 1 {
@@ -90,7 +96,7 @@ fn validate_contract_delivery(jobs: &yaml_rust2::yaml::Hash) -> Result<()> {
     reject_execution_modifiers(contract, "release-candidate.yml.jobs.contract-receipts")?;
     require_needs(
         contract,
-        &["validate"],
+        &["identity"],
         "release-candidate.yml.jobs.contract-receipts",
     )?;
     let steps = sequence(
@@ -141,7 +147,21 @@ fn validate_contract_delivery(jobs: &yaml_rust2::yaml::Hash) -> Result<()> {
     reject_execution_modifiers(assemble, "release-candidate.yml.jobs.assemble")?;
     require_needs(
         assemble,
-        &["contract-receipts", "native"],
+        &[
+            "identity",
+            "contract-static",
+            "rust-quality",
+            "workspace-tests",
+            "full-baseline",
+            "web-dist",
+            "docker-linux-amd64-build",
+            "docker-linux-amd64-smoke",
+            "contract-receipts",
+            "repo-process-linux",
+            "security-receipts",
+            "github-receipts",
+            "native",
+        ],
         "release-candidate.yml.jobs.assemble",
     )?;
     validate_receipt_download(assemble)
@@ -247,18 +267,19 @@ mod tests {
     const VALID: &str = r#"
 jobs:
   native:
-    needs: validate
+    needs: [identity, web-dist]
     uses: ./.github/workflows/release-native.yml
     with:
       candidate_head: ${{ github.sha }}
       version: ${{ inputs.version }}
+      web_dist_artifact: deve-candidate-web-dist-${{ github.sha }}
     secrets:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
       ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
   contract-receipts:
-    needs: validate
+    needs: identity
     steps:
       - if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
@@ -267,7 +288,7 @@ jobs:
           path: ${{ runner.temp }}/deve-acceptance-contracts
           if-no-files-found: error
   assemble:
-    needs: [validate, contract-receipts, native]
+    needs: [identity, contract-static, rust-quality, workspace-tests, full-baseline, web-dist, docker-linux-amd64-build, docker-linux-amd64-smoke, contract-receipts, repo-process-linux, security-receipts, github-receipts, native]
     steps:
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c
         with:
@@ -292,8 +313,8 @@ jobs:
         );
         assert!(
             validate_candidate(&VALID.replace(
-                "needs: [validate, contract-receipts, native]",
-                "needs: [validate, native]"
+                "needs: [identity, contract-static, rust-quality, workspace-tests, full-baseline, web-dist, docker-linux-amd64-build, docker-linux-amd64-smoke, contract-receipts, repo-process-linux, security-receipts, github-receipts, native]",
+                "needs: [identity, contract-static, rust-quality, workspace-tests, full-baseline, web-dist, docker-linux-amd64-build, docker-linux-amd64-smoke, repo-process-linux, security-receipts, github-receipts, native]"
             ))
             .is_err()
         );

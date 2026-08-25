@@ -84,7 +84,7 @@ pub(super) fn validate_changed_path(value: &str) -> Result<String> {
     Ok(value.to_owned())
 }
 
-pub(super) fn validate_revision(value: &str) -> Result<String> {
+pub(in crate::acceptance_matrix::impact) fn validate_revision(value: &str) -> Result<String> {
     if value.is_empty()
         || value.starts_with('-')
         || !value

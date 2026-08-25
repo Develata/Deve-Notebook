@@ -116,6 +116,22 @@ fn candidate_command_parser_rejects_inert_or_duplicate_producers() {
         )
         .is_err()
     );
+    assert!(
+        parse_candidate_command(
+            "\"$GITHUB_WORKSPACE/target/android-candidate-harness/debug/deve_baseline\" acceptance-run --tier target-host --producer android.local-backend --receipt-dir \"$RUNNER_TEMP/deve-acceptance-android-local\"",
+            None,
+            "fixture"
+        )
+        .is_ok()
+    );
+    assert!(
+        parse_candidate_command(
+            "/tmp/deve_baseline acceptance-run --tier target-host --producer android.local-backend --receipt-dir /tmp/receipts",
+            None,
+            "fixture"
+        )
+        .is_err()
+    );
 }
 
 #[test]

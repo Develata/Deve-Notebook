@@ -20,9 +20,9 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  validate:
+  identity:
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 10
     steps:
       - name: Checkout exact dispatch commit
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -41,56 +41,41 @@ jobs:
             exit 1
           }
           [[ "$VERSION" != v* && "$VERSION" != *$'\n'* && "$VERSION" != *$'\r'* ]]
+          test -z "$(git status --porcelain --untracked-files=all)"
           scripts/check-release-version-match.sh "v$VERSION"
 
+  contract-static:
+    needs: identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
       - name: Install Rust 1.97.0
         uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
         with:
           toolchain: "1.97.0"
-          targets: wasm32-unknown-unknown
-          components: clippy,rustfmt
-
-      - name: Install Node.js 24
-        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+      - name: Cache Cargo source inputs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
-          node-version: 24
-
-      - name: Install Linux native preflight dependencies
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-candidate-contracts-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+      - name: Fetch locked Cargo inputs
+        run: cargo fetch --locked
+      - name: Verify candidate and static contracts
         run: |
           set -euo pipefail
-          sudo apt-get update
-          sudo apt-get install -y --no-install-recommends \
-            libwebkit2gtk-4.1-dev \
-            libgtk-3-dev \
-            librsvg2-dev \
-            libayatana-appindicator3-dev \
-            libssl-dev \
-            patchelf \
-            file \
-            build-essential
-
-      - name: Verify candidate scripts and formatting
-        run: |
-          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test "$GITHUB_RUN_ATTEMPT" = 1
           bash -n scripts/check-release-candidate-bundle.sh
           bash scripts/check-release-version-match.test.sh
           cargo run --locked --quiet -p deve_baseline -- release-freeze verify-candidate
-          cargo fmt --all -- --check
-
-      - name: Install Web projection build tool
-        env:
-          DEVE_NATIVE_INSTALL_TRUNK: "1"
-          DEVE_NATIVE_INSTALL_TAURI_CLI: "0"
-        run: scripts/install-native-target-host-tools.sh
-
-      - name: Build exact Web projection
-        run: scripts/build-web-dist-ci.sh
-
-      - name: Verify baseline and plan contracts
-        run: |
-          set -euo pipefail
           cargo run --locked --quiet -p deve_baseline -- all
-          cargo run --locked --quiet -p deve_baseline -- full
           scripts/plan-coverage.sh --check-reverse-coverage
           scripts/plan-coverage.sh --check-metadata-completeness
           scripts/plan-coverage.sh --check-perf-budget
@@ -99,17 +84,178 @@ jobs:
           scripts/plan-coverage.sh --check-no-adr-plan-ref
           scripts/plan-coverage.sh --check-md-links docs/plan docs/features docs/acceptance-cases
 
-      - name: Verify Rust and Web projection
+  web-dist:
+    needs: identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+          targets: wasm32-unknown-unknown
+      - name: Install Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+      - name: Install Web projection build tool
+        env:
+          DEVE_NATIVE_INSTALL_TRUNK: "1"
+          DEVE_NATIVE_INSTALL_TAURI_CLI: "0"
+        run: scripts/install-native-target-host-tools.sh
+      - name: Build exact Web projection once
+        run: scripts/build-web-dist-ci.sh
+      - name: Seal exact Web projection manifest
+        run: >-
+          node scripts/web-dist-artifact.mjs seal
+          --root apps/web/dist
+          --manifest target/release-input/web-dist.json
+          --head "$GITHUB_SHA"
+      - name: Upload immutable exact Web projection
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deve-candidate-web-dist-${{ github.sha }}
+          path: |
+            apps/web/dist
+            target/release-input/web-dist.json
+          if-no-files-found: error
+          retention-days: 14
+
+  rust-quality:
+    needs: identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+          targets: wasm32-unknown-unknown
+          components: clippy,rustfmt
+      - name: Install Linux native compile dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev libssl-dev patchelf file build-essential
+      - name: Cache Cargo source inputs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-candidate-quality-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+      - name: Fetch locked Cargo inputs
+        run: cargo fetch --locked
+      - name: Verify formatting, lint, and WASM compile
         run: |
           set -euo pipefail
+          cargo fmt --all -- --check
           cargo clippy --locked --all-targets -- -D warnings
           cargo check --locked -p deve_web --target wasm32-unknown-unknown
-          cargo test --locked
 
-  docker-linux-amd64:
-    needs: validate
+  workspace-tests:
+    needs: [identity, web-dist]
     runs-on: ubuntu-latest
-    timeout-minutes: 360
+    timeout-minutes: 90
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+      - name: Install Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+      - name: Install Linux native test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev libssl-dev patchelf file build-essential
+      - name: Cache Cargo source inputs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-candidate-tests-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+      - name: Fetch locked Cargo inputs
+        run: cargo fetch --locked
+      - name: Download immutable exact Web projection
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: deve-candidate-web-dist-${{ github.sha }}
+          path: .
+      - name: Verify exact Web projection input
+        run: >-
+          node scripts/web-dist-artifact.mjs verify
+          --root apps/web/dist
+          --manifest target/release-input/web-dist.json
+          --expected-head "$GITHUB_SHA"
+      - name: Run full workspace tests
+        run: cargo test --locked
+
+  full-baseline:
+    needs: [identity, web-dist]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+      - name: Install Node.js 24
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: 24
+      - name: Install Linux native baseline dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libwebkit2gtk-4.1-dev libgtk-3-dev librsvg2-dev libayatana-appindicator3-dev libssl-dev patchelf file build-essential
+      - name: Cache Cargo source inputs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-candidate-full-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+      - name: Fetch locked Cargo inputs
+        run: cargo fetch --locked
+      - name: Download immutable exact Web projection
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: deve-candidate-web-dist-${{ github.sha }}
+          path: .
+      - name: Verify exact Web projection input
+        run: >-
+          node scripts/web-dist-artifact.mjs verify
+          --root apps/web/dist
+          --manifest target/release-input/web-dist.json
+          --expected-head "$GITHUB_SHA"
+      - name: Run full executable baseline
+        run: cargo run --locked --quiet -p deve_baseline -- full
+
+  docker-linux-amd64-build:
+    needs: [identity, web-dist]
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - name: Checkout exact candidate
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -126,24 +272,23 @@ jobs:
           }
           test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
 
-      - name: Install Rust 1.97.0
-        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
-        with:
-          toolchain: "1.97.0"
-
       - name: Install Node.js 24
         uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
         with:
           node-version: 24
 
-      - name: Install cargo-audit 0.22.2
-        uses: taiki-e/install-action@a6b2e2dcd845ddd7f509ce4f3ed3d922b80cc5d9 # v2.84.0
+      - name: Download immutable exact Web projection
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
-          tool: cargo-audit@0.22.2
-          fallback: none
+          name: deve-candidate-web-dist-${{ github.sha }}
+          path: .
 
-      - name: Verify cargo-audit version
-        run: test "$(cargo-audit --version)" = "cargo-audit 0.22.2"
+      - name: Verify exact Web projection input
+        run: >-
+          node scripts/web-dist-artifact.mjs verify
+          --root apps/web/dist
+          --manifest target/release-input/web-dist.json
+          --expected-head "$GITHUB_SHA"
 
       - name: Build linux/amd64 image once
         env:
@@ -151,7 +296,7 @@ jobs:
         run: |
           set -euo pipefail
           image="deve-notebook:candidate-${GITHUB_SHA}"
-          docker buildx build \
+          docker buildx build -f Dockerfile.candidate \
             --load \
             --platform linux/amd64 \
             --label "org.opencontainers.image.revision=$GITHUB_SHA" \
@@ -164,51 +309,7 @@ jobs:
           printf 'DEVE_RELEASE_CANDIDATE_IMAGE=%s\n' "$image" >>"$GITHUB_ENV"
           printf 'DEVE_RELEASE_CANDIDATE_IMAGE_ID=%s\n' "$image_id" >>"$GITHUB_ENV"
 
-      - name: Run Linux cross-process repo lifecycle producer
-        run: >-
-          cargo run --locked --quiet -p deve_baseline -- acceptance-run
-          --tier tag-ready
-          --producer repo-lifecycle.process-linux
-          --receipt-dir "$RUNNER_TEMP/deve-acceptance-repo-lifecycle-linux"
-
-      - name: Run multiclient, offline, Source Control and External Changes
-        run: >-
-          cargo run --locked --quiet -p deve_baseline -- acceptance-run
-          --tier full
-          --producer docker.multiclient-product
-          --receipt-dir "$RUNNER_TEMP/deve-acceptance-docker-product"
-
-      - name: Run Remote Import provider and browser producer
-        run: >-
-          cargo run --locked --quiet -p deve_baseline -- acceptance-run
-          --tier tag-ready
-          --producer docker.remote-import-browser
-          --receipt-dir "$RUNNER_TEMP/deve-acceptance-remote-import"
-
-      - name: Run P2P gap and recovery against the same image
-        run: >-
-          cargo run --locked --quiet -p deve_baseline -- acceptance-run
-          --tier full
-          --producer docker.p2p-gap-recovery
-          --receipt-dir "$RUNNER_TEMP/deve-acceptance-docker-p2p"
-
-      - name: Run current-HEAD security audit producer
-        run: >-
-          cargo run --locked --quiet -p deve_baseline -- acceptance-run
-          --tier tag-ready
-          --producer security.tag-ready-audit
-          --receipt-dir "$RUNNER_TEMP/deve-acceptance-security"
-
-      - name: Prove Private Vulnerability Reporting is enabled
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: >-
-          cargo run --locked --quiet -p deve_baseline -- acceptance-run
-          --tier tag-ready
-          --producer github.pvr-enabled
-          --receipt-dir "$RUNNER_TEMP/deve-acceptance-github-pvr"
-
-      - name: Save the already-smoked image bytes
+      - name: Save immutable image bytes
         env:
           VERSION: ${{ inputs.version }}
         run: |
@@ -217,10 +318,6 @@ jobs:
           archive="dist-docker/deve-notebook-${VERSION}-linux-amd64.tar"
           docker save --output "$archive" "$DEVE_RELEASE_CANDIDATE_IMAGE"
           printf '%s\n' "$DEVE_RELEASE_CANDIDATE_IMAGE_ID" >dist-docker/docker-image-id.txt
-          docker image rm "$DEVE_RELEASE_CANDIDATE_IMAGE"
-          docker load --input "$archive"
-          loaded_id="$(docker image inspect --format '{{.Id}}' "$DEVE_RELEASE_CANDIDATE_IMAGE")"
-          [[ "$loaded_id" == "$DEVE_RELEASE_CANDIDATE_IMAGE_ID" ]]
 
       - name: Generate exact Docker image SPDX 2.3 SBOM
         uses: anchore/sbom-action@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
@@ -230,7 +327,7 @@ jobs:
           output-file: dist-docker/docker-image.spdx.json
           upload-artifact: false
 
-      - name: Upload exact Docker candidate bytes
+      - name: Upload immutable Docker candidate input
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: deve-docker-candidate-${{ github.sha }}
@@ -238,17 +335,66 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      - name: Upload Linux receipts
+  docker-linux-amd64-smoke:
+    needs: [identity, docker-linux-amd64-build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 240
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+      - name: Cache Cargo source inputs
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+          key: ${{ runner.os }}-candidate-docker-smoke-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+      - name: Fetch locked Cargo inputs
+        run: cargo fetch --locked
+      - name: Download immutable Docker candidate input
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          name: deve-docker-candidate-${{ github.sha }}
+          path: dist-docker
+      - name: Load and verify exact Docker image
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          image="deve-notebook:candidate-${GITHUB_SHA}"
+          archive="dist-docker/deve-notebook-${VERSION}-linux-amd64.tar"
+          expected="$(cat dist-docker/docker-image-id.txt)"
+          docker load --input "$archive"
+          observed="$(docker image inspect --format '{{.Id}}' "$image")"
+          [[ "$observed" == "$expected" ]]
+          printf 'DEVE_RELEASE_CANDIDATE_IMAGE=%s\n' "$image" >>"$GITHUB_ENV"
+          printf 'DEVE_RELEASE_CANDIDATE_IMAGE_ID=%s\n' "$observed" >>"$GITHUB_ENV"
+      - name: Run Docker runtime producers against the same image
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run
+          --tier tag-ready
+          --producer docker.multiclient-product
+          --producer docker.remote-import-browser
+          --producer docker.p2p-gap-recovery
+          --receipt-dir "$RUNNER_TEMP/deve-acceptance-docker"
+      - name: Upload Docker runtime receipts
         if: ${{ always() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: deve-acceptance-receipts-linux-${{ github.sha }}
-          path: ${{ runner.temp }}/deve-acceptance-*
+          name: deve-acceptance-receipts-docker-${{ github.sha }}
+          path: ${{ runner.temp }}/deve-acceptance-docker
           if-no-files-found: error
           retention-days: 14
 
   contract-receipts:
-    needs: validate
+    needs: identity
     runs-on: ubuntu-latest
     timeout-minutes: 75
     steps:
@@ -291,12 +437,109 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  repo-process-linux:
+    needs: identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+      - name: Run Linux cross-process repo lifecycle producer
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run
+          --tier tag-ready
+          --producer repo-lifecycle.process-linux
+          --receipt-dir "$RUNNER_TEMP/deve-acceptance-repo-lifecycle-linux"
+      - name: Upload Linux repo-process receipts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deve-acceptance-receipts-repo-linux-${{ github.sha }}
+          path: ${{ runner.temp }}/deve-acceptance-repo-lifecycle-linux
+          if-no-files-found: error
+          retention-days: 14
+
+  security-receipts:
+    needs: identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+      - name: Install cargo-audit 0.22.2 from a release binary
+        uses: taiki-e/install-action@a6b2e2dcd845ddd7f509ce4f3ed3d922b80cc5d9 # v2.84.0
+        with:
+          tool: cargo-audit@0.22.2
+          fallback: none
+      - name: Verify cargo-audit version
+        run: test "$(cargo-audit --version)" = "cargo-audit 0.22.2"
+      - name: Run current-HEAD security audit producer
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run
+          --tier tag-ready
+          --producer security.tag-ready-audit
+          --receipt-dir "$RUNNER_TEMP/deve-acceptance-security"
+      - name: Upload security receipts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deve-acceptance-receipts-security-${{ github.sha }}
+          path: ${{ runner.temp }}/deve-acceptance-security
+          if-no-files-found: error
+          retention-days: 14
+
+  github-receipts:
+    needs: identity
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+      - name: Prove Private Vulnerability Reporting is enabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run
+          --tier tag-ready
+          --producer github.pvr-enabled
+          --receipt-dir "$RUNNER_TEMP/deve-acceptance-github-pvr"
+      - name: Upload GitHub policy receipts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deve-acceptance-receipts-github-${{ github.sha }}
+          path: ${{ runner.temp }}/deve-acceptance-github-pvr
+          if-no-files-found: error
+          retention-days: 14
+
   native:
-    needs: validate
+    needs: [identity, web-dist]
     uses: ./.github/workflows/release-native.yml
     with:
       version: ${{ inputs.version }}
       candidate_head: ${{ github.sha }}
+      web_dist_artifact: deve-candidate-web-dist-${{ github.sha }}
     secrets:
       ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
       ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
@@ -304,7 +547,20 @@ jobs:
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
   assemble:
-    needs: [validate, contract-receipts, docker-linux-amd64, native]
+    needs:
+      - identity
+      - contract-static
+      - rust-quality
+      - workspace-tests
+      - full-baseline
+      - web-dist
+      - docker-linux-amd64-build
+      - docker-linux-amd64-smoke
+      - contract-receipts
+      - repo-process-linux
+      - security-receipts
+      - github-receipts
+      - native
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
@@ -403,10 +659,12 @@ jobs:
             cp -- "${matches[0]}" "$destination"
           }
           windows="$INCOMING_DIR/windows"; macos="$INCOMING_DIR/macos"; android="$INCOMING_DIR/android"; docker="$INCOMING_DIR/docker"
-          require_count windows "$windows" 2
-          require_count macos "$macos" 1
+          require_count windows "$windows" 3
+          require_count macos "$macos" 2
           require_count android "$android" 2
           require_count docker "$docker" 3
+          (cd "$windows" && sha256sum -c windows-candidate-input.sha256)
+          (cd "$macos" && sha256sum -c macos-candidate-input.sha256)
           require_one windows-msi "$windows" '*.msi' "$CANDIDATE_DIR/artifacts/windows/deve-notebook-${VERSION}-windows-x64.msi"
           require_one windows-nsis "$windows" '*.exe' "$CANDIDATE_DIR/artifacts/windows/deve-notebook-${VERSION}-windows-x64-setup.exe"
           mapfile -d '' macos_matches < <(find "$macos" -type f -name "deve-notebook-${VERSION}-macos-*.dmg" -print0)

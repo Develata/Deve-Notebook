@@ -28,6 +28,11 @@ apps/web/dist/
 apps/web/node_modules/
 apps/web/.sisyphus/
 
+# The formal candidate Dockerfile consumes the immutable exact-HEAD Web dist
+# produced by the workflow instead of compiling a second projection.
+!apps/web/dist/
+!apps/web/dist/**
+
 # 移动端生成物和本地崩溃日志
 apps/mobile/gen/
 apps/mobile/hs_err_*.log

@@ -8,10 +8,10 @@ use std::collections::BTreeMap;
 use yaml_rust2::YamlLoader;
 
 const UPLOAD_ACTION: &str = "actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a";
-const EXPECTED: [(&str, &str); 6] = [
+const EXPECTED: [(&str, &str); 11] = [
     (
-        "deve-acceptance-receipts-linux-${{ github.sha }}",
-        "${{ runner.temp }}/deve-acceptance-*",
+        "deve-acceptance-receipts-docker-${{ github.sha }}",
+        "${{ runner.temp }}/deve-acceptance-docker",
     ),
     (
         "deve-acceptance-receipts-contracts-${{ github.sha }}",
@@ -22,16 +22,36 @@ const EXPECTED: [(&str, &str); 6] = [
         "${{ runner.temp }}/deve-acceptance-release-candidate",
     ),
     (
-        "deve-acceptance-receipts-desktop-${{ inputs.candidate_head }}",
-        "${{ runner.temp }}/deve-acceptance-desktop-*",
+        "deve-acceptance-receipts-repo-linux-${{ github.sha }}",
+        "${{ runner.temp }}/deve-acceptance-repo-lifecycle-linux",
+    ),
+    (
+        "deve-acceptance-receipts-security-${{ github.sha }}",
+        "${{ runner.temp }}/deve-acceptance-security",
+    ),
+    (
+        "deve-acceptance-receipts-github-${{ github.sha }}",
+        "${{ runner.temp }}/deve-acceptance-github-pvr",
+    ),
+    (
+        "deve-acceptance-receipts-desktop-local-${{ inputs.candidate_head }}",
+        "${{ runner.temp }}/deve-acceptance-desktop-local",
+    ),
+    (
+        "deve-acceptance-receipts-desktop-remote-${{ inputs.candidate_head }}",
+        "${{ runner.temp }}/deve-acceptance-desktop-remote",
     ),
     (
         "deve-acceptance-receipts-desktop-macos-${{ inputs.candidate_head }}",
         "${{ runner.temp }}/deve-acceptance-desktop-macos",
     ),
     (
-        "deve-acceptance-receipts-android-${{ inputs.candidate_head }}",
-        "${{ runner.temp }}/deve-acceptance-android-*",
+        "deve-acceptance-receipts-android-local-${{ inputs.candidate_head }}",
+        "${{ runner.temp }}/deve-acceptance-android-local",
+    ),
+    (
+        "deve-acceptance-receipts-android-remote-${{ inputs.candidate_head }}",
+        "${{ runner.temp }}/deve-acceptance-android-remote",
     ),
 ];
 
@@ -160,19 +180,24 @@ mod tests {
     #[test]
     fn receipt_upload_set_is_exact_and_non_tolerated() {
         let candidate = workflow(&[
-            "deve-acceptance-receipts-linux-${{ github.sha }}",
+            "deve-acceptance-receipts-docker-${{ github.sha }}",
             "deve-acceptance-receipts-contracts-${{ github.sha }}",
             "deve-acceptance-receipts-release-${{ github.sha }}",
+            "deve-acceptance-receipts-repo-linux-${{ github.sha }}",
+            "deve-acceptance-receipts-security-${{ github.sha }}",
+            "deve-acceptance-receipts-github-${{ github.sha }}",
         ]);
         let native = workflow(&[
-            "deve-acceptance-receipts-desktop-${{ inputs.candidate_head }}",
+            "deve-acceptance-receipts-desktop-local-${{ inputs.candidate_head }}",
+            "deve-acceptance-receipts-desktop-remote-${{ inputs.candidate_head }}",
             "deve-acceptance-receipts-desktop-macos-${{ inputs.candidate_head }}",
-            "deve-acceptance-receipts-android-${{ inputs.candidate_head }}",
+            "deve-acceptance-receipts-android-local-${{ inputs.candidate_head }}",
+            "deve-acceptance-receipts-android-remote-${{ inputs.candidate_head }}",
         ]);
         validate(&candidate, &native).unwrap();
         assert!(
             validate(
-                &candidate.replace("receipts-linux", "receipts-linux-renamed"),
+                &candidate.replace("receipts-docker", "receipts-docker-renamed"),
                 &native
             )
             .is_err()

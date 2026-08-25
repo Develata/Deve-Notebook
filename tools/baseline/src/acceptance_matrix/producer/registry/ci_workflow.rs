@@ -25,14 +25,17 @@ mod yaml;
 
 const BUILD_MARGIN_MINUTES: u64 = 15;
 
-pub(super) fn validate(root: &Path, registry: &ProducerRegistry) -> Result<()> {
+pub(super) fn validate(
+    root: &Path,
+    registry: &ProducerRegistry,
+) -> Result<BTreeMap<String, String>> {
     let path = root.join(".github/workflows/check.yml");
     let workflow = fs::read_to_string(&path)
         .with_context(|| format!("acceptance producers: failed to read {}", path.display()))?;
     validate_text(&workflow, registry)
 }
 
-fn validate_text(workflow: &str, registry: &ProducerRegistry) -> Result<()> {
+fn validate_text(workflow: &str, registry: &ProducerRegistry) -> Result<BTreeMap<String, String>> {
     let documents = YamlLoader::load_from_str(workflow)
         .context("acceptance producers: check.yml is not valid YAML")?;
     if documents.len() != 1 {
@@ -47,6 +50,7 @@ fn validate_text(workflow: &str, registry: &ProducerRegistry) -> Result<()> {
         }
     }
     let jobs = as_mapping(required(root, "jobs", "check.yml")?, "check.yml.jobs")?;
+    validate_check_artifact_boundary(jobs)?;
     let ci_producers = registry
         .producers
         .iter()
@@ -58,6 +62,7 @@ fn validate_text(workflow: &str, registry: &ProducerRegistry) -> Result<()> {
         .map(|id| (*id, 0usize))
         .collect::<BTreeMap<_, _>>();
     let mut execution_jobs = BTreeSet::new();
+    let mut job_by_producer = BTreeMap::new();
 
     for (job_key, value) in jobs {
         let job_id = as_string(job_key, "check.yml.jobs key")?;
@@ -90,6 +95,22 @@ fn validate_text(workflow: &str, registry: &ProducerRegistry) -> Result<()> {
             required(job, "steps", &job_path)?,
             &format!("{job_path}.steps"),
         )?;
+        let run_steps = steps
+            .iter()
+            .enumerate()
+            .filter_map(|(index, value)| {
+                value.as_hash().and_then(|step| {
+                    optional(step, "run").map(|run| {
+                        as_string(run, &format!("{job_path}.steps[{index}].run")).map(str::trim)
+                    })
+                })
+            })
+            .collect::<Result<Vec<_>>>()?;
+        if run_steps.len() != 3 || run_steps.first().copied() != Some("cargo fetch --locked") {
+            bail!(
+                "acceptance producers: {job_path} must contain only fetch, one exact plan, and one exact execution command"
+            );
+        }
         let first_command_step = commands
             .first_command_step
             .expect("execution job contains a CI command");
@@ -119,6 +140,14 @@ fn validate_text(workflow: &str, registry: &ProducerRegistry) -> Result<()> {
             *counts
                 .get_mut(producer.producer_id.as_str())
                 .expect("CI producer count initialized") += 1;
+            if job_by_producer
+                .insert(producer_id.clone(), job_id.to_owned())
+                .is_some()
+            {
+                bail!(
+                    "acceptance producers: CI producer {producer_id} is assigned to multiple jobs"
+                );
+            }
         }
         let required_minutes = required_timeout_seconds
             .div_ceil(60)
@@ -136,6 +165,61 @@ fn validate_text(workflow: &str, registry: &ProducerRegistry) -> Result<()> {
 
     validate_exactly_once(&counts)?;
     validate_fan_in(jobs, &execution_jobs)?;
+    Ok(job_by_producer)
+}
+
+fn validate_check_artifact_boundary(jobs: &yaml_rust2::yaml::Hash) -> Result<()> {
+    for (job_key, value) in jobs {
+        let job_id = as_string(job_key, "check.yml.jobs key")?;
+        let job_path = format!("check.yml.jobs.{job_id}");
+        reject_formal_artifact_prefixes(value, &job_path)?;
+        let job = as_mapping(value, &job_path)?;
+        let Some(raw_steps) = optional(job, "steps") else {
+            continue;
+        };
+        let steps = as_sequence(raw_steps, &format!("{job_path}.steps"))?;
+        for (index, value) in steps.iter().enumerate() {
+            let step_path = format!("{job_path}.steps[{index}]");
+            let step = as_mapping(value, &step_path)?;
+            let Some(action) = optional(step, "uses").and_then(yaml_rust2::Yaml::as_str) else {
+                continue;
+            };
+            if action.starts_with("actions/upload-artifact@")
+                && !(job_id == "impact-shadow" && index == 6)
+            {
+                bail!(
+                    "acceptance producers: {step_path} may not upload artifacts; check.yml permits only the typed impact-shadow diagnostic"
+                );
+            }
+        }
+    }
+    Ok(())
+}
+
+fn reject_formal_artifact_prefixes(value: &yaml_rust2::Yaml, path: &str) -> Result<()> {
+    match value {
+        yaml_rust2::Yaml::String(text) => {
+            for prefix in ["deve-acceptance-receipts-", "deve-release-candidate-"] {
+                if text.contains(prefix) {
+                    bail!(
+                        "acceptance producers: {path} contains formal artifact prefix {prefix}; check.yml is diagnostic-only"
+                    );
+                }
+            }
+        }
+        yaml_rust2::Yaml::Array(values) => {
+            for (index, value) in values.iter().enumerate() {
+                reject_formal_artifact_prefixes(value, &format!("{path}[{index}]"))?;
+            }
+        }
+        yaml_rust2::Yaml::Hash(mapping) => {
+            for (key, value) in mapping {
+                let key = key.as_str().unwrap_or("<non-string>");
+                reject_formal_artifact_prefixes(value, &format!("{path}.{key}"))?;
+            }
+        }
+        _ => {}
+    }
     Ok(())
 }
 

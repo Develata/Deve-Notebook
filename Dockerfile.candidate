@@ -1,0 +1,31 @@
+# Formal release-candidate image. The workflow supplies an exact-HEAD Web dist
+# whose manifest is verified before this build starts; this file never rebuilds
+# the frontend or installs Node/Trunk.
+
+FROM rust:1.97.0-bookworm AS backend
+WORKDIR /app
+COPY . .
+RUN test -f apps/web/dist/index.html && \
+    cargo build --release --locked --package deve_cli --bin deve_cli && \
+    strip target/release/deve_cli
+
+FROM debian:bookworm-slim AS runtime
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends ca-certificates curl && \
+    rm -rf /var/lib/apt/lists/*
+RUN useradd -m -u 1000 -s /bin/bash appuser && \
+    mkdir -p /data /notes && \
+    chown -R appuser:appuser /data /notes
+COPY --from=backend /app/target/release/deve_cli /usr/local/bin/deve_cli
+RUN chmod +x /usr/local/bin/deve_cli && \
+    ln -s /usr/local/bin/deve_cli /usr/local/bin/deve
+ENV DEVE_LEDGER_DIR=/data/ledger
+ENV DEVE_BIND_ADDR=0.0.0.0:3001
+EXPOSE 3001
+VOLUME /data
+VOLUME /notes
+WORKDIR /data
+USER appuser
+HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
+    CMD curl -sf http://localhost:3001/api/node/role || exit 1
+CMD ["sh", "-c", "if [ ! -f /data/ledger/.host/projection-locators.toml ]; then deve_cli init --repo default --projection-base /notes --path /data; fi; deve_cli serve --port 3001"]

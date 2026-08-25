@@ -17,14 +17,18 @@ pub(super) struct LoadedRegistry {
     pub(super) impact_fingerprint: String,
 }
 
-pub(super) fn load(root: &Path, producer_ids: &BTreeSet<String>) -> Result<LoadedRegistry> {
+pub(super) fn load(
+    root: &Path,
+    producer_ids: &BTreeSet<String>,
+    ci_job_by_producer: &BTreeMap<String, String>,
+) -> Result<LoadedRegistry> {
     let path = root.join(IMPACT_REGISTRY_PATH);
     let content = fs::read(&path)
         .with_context(|| format!("acceptance-impact: failed to read {}", path.display()))?;
     let registry: ImpactRegistry = serde_json::from_slice(&content)
         .with_context(|| format!("acceptance-impact: invalid registry {}", path.display()))?;
     let tracked = path_rules::tracked_paths(root)?;
-    validate(&registry, producer_ids, &tracked)?;
+    validate(&registry, producer_ids, ci_job_by_producer, &tracked)?;
     Ok(LoadedRegistry {
         registry,
         impact_fingerprint: format!("sha256:{:x}", Sha256::digest(&content)),
@@ -34,6 +38,7 @@ pub(super) fn load(root: &Path, producer_ids: &BTreeSet<String>) -> Result<Loade
 fn validate(
     registry: &ImpactRegistry,
     producer_ids: &BTreeSet<String>,
+    ci_job_by_producer: &BTreeMap<String, String>,
     tracked: &[String],
 ) -> Result<()> {
     if registry.schema != 1 || registry.mode != "shadow-only" {
@@ -78,7 +83,7 @@ fn validate(
     )?;
     validate_profiles(registry, &shards)?;
     path_rules::validate_modules(registry, &modules, &shards, tracked)?;
-    shards::validate(registry, &artifacts, producer_ids)?;
+    shards::validate(registry, &artifacts, producer_ids, ci_job_by_producer)?;
     validate_module_cycles(&registry.modules, &modules)
 }
 
@@ -151,6 +156,13 @@ fn validate_profiles(registry: &ImpactRegistry, shard_ids: &BTreeSet<&str>) -> R
                 profile.profile_id
             );
         }
+        if profile.selection == "selective" && selected != source_shards {
+            bail!(
+                "acceptance-impact: selective profile {} must retain every source shard as eligible",
+                profile.profile_id
+            );
+        }
+        validate_selective_always(&profile.profile_id, &profile.selection, &always)?;
         if profile.profile_id == "main-full-source" && selected != source_shards {
             bail!("acceptance-impact: main-full-source must enumerate every source shard");
         }
@@ -164,6 +176,21 @@ fn validate_profiles(registry: &ImpactRegistry, shard_ids: &BTreeSet<&str>) -> R
                 profile.profile_id
             );
         }
+    }
+    Ok(())
+}
+
+fn validate_selective_always(
+    profile_id: &str,
+    selection: &str,
+    always: &BTreeSet<&str>,
+) -> Result<()> {
+    if selection == "selective"
+        && !BTreeSet::from(["contract-static", "workspace-build"]).is_subset(always)
+    {
+        bail!(
+            "acceptance-impact: selective profile {profile_id} must always retain contract-static and workspace-build"
+        );
     }
     Ok(())
 }
@@ -218,4 +245,18 @@ fn valid_id(value: &str) -> bool {
         && value
             .chars()
             .all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || matches!(ch, '.' | '-'))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::validate_selective_always;
+    use std::collections::BTreeSet;
+
+    #[test]
+    fn selective_profiles_cannot_drop_the_fixed_always_shards() {
+        let complete = BTreeSet::from(["contract-static", "workspace-build"]);
+        validate_selective_always("pr-selective", "selective", &complete).unwrap();
+        let incomplete = BTreeSet::from(["contract-static"]);
+        assert!(validate_selective_always("pr-selective", "selective", &incomplete).is_err());
+    }
 }

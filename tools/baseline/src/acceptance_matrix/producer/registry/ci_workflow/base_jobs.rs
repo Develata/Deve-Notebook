@@ -14,14 +14,15 @@ const CHECK_ONLY_GUARD: &str = r#"forbidden=(
   "docker/""login-action"
   "docker/""metadata-action"
   "docker/""build-push-action"
-  "actions/""upload-artifact"
   "push: ""true"
   "ghcr"".io"
   "tags: ""['v*']"
+  "deve-acceptance-""receipts-"
+  "deve-release-""candidate-"
 )
 for pattern in "${forbidden[@]}"; do
   if grep -nF "$pattern" .github/workflows/check.yml; then
-    echo "check.yml must stay check-only: no package publish, Docker publish, artifacts, registry publish, or tag release trigger."
+    echo "check.yml must stay check-only: no package publish, Docker publish, release artifacts, registry publish, or tag release trigger."
     exit 1
   fi
 done"#;
@@ -112,10 +113,10 @@ fn validate_job_commands(
         })
         .map(|(index, run)| as_string(run, &format!("{path}.steps[{index}].run")).map(str::trim))
         .collect::<Result<Vec<_>>>()?;
-    for expected in expected_commands {
-        if !commands.iter().any(|command| command == expected) {
-            bail!("acceptance producers: {path} must execute exact required command `{expected}`");
-        }
+    if commands != expected_commands {
+        bail!(
+            "acceptance producers: {path} command sequence must exactly match its required check-only contract"
+        );
     }
     Ok(())
 }

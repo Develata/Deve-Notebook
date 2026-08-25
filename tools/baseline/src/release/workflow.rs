@@ -37,25 +37,29 @@ pub(super) fn read_workflow(root: &Path, name: &str) -> Result<String> {
 #[cfg(test)]
 use native_candidate::{
     validate_programmatic_webview2_cdp, validate_webview2_cdp_arguments,
-    validated_mobile_android_job,
+    validated_mobile_android_jobs,
 };
 
 #[cfg(test)]
 mod tests {
     use super::{
         validate_programmatic_webview2_cdp, validate_webview2_cdp_arguments,
-        validated_mobile_android_job,
+        validated_mobile_android_jobs,
     };
 
     #[test]
     fn android_candidate_disables_unrelated_linux_host_packaging_check() {
         let valid = r#"jobs:
-  mobile-android:
+  mobile-android-apk-build:
+    env:
+      DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: "0"
+    steps: []
+  mobile-android-arm64-build:
     env:
       DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: "0"
     steps: []
 "#;
-        validated_mobile_android_job(valid).expect("valid Android job");
+        validated_mobile_android_jobs(valid).expect("valid Android jobs");
 
         for invalid in [
             "jobs:\n  mobile-android:\n    steps: []\n",
@@ -67,7 +71,7 @@ mod tests {
             "jobs:\n  mobile-android:\n    env:\n      COMMENT: |\n        DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: \"0\"\n    steps: []\n",
         ] {
             assert!(
-                validated_mobile_android_job(invalid).is_err(),
+                validated_mobile_android_jobs(invalid).is_err(),
                 "invalid fixture unexpectedly passed: {invalid}"
             );
         }

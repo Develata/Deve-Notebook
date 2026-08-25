@@ -30,9 +30,6 @@ pub(super) fn parse_candidate_command(
             "acceptance producers: {path} producer must occupy one dedicated canonical run command"
         );
     };
-    if !command.starts_with("cargo run ") {
-        bail!("acceptance producers: {path} producer must start with canonical cargo run argv");
-    }
     parse_argv(command, path)
 }
 
@@ -42,14 +39,24 @@ fn parse_argv(command: &str, path: &str) -> Result<Option<Vec<String>>> {
         .filter(|token| !matches!(token.as_str(), "\\" | "`"))
         .collect::<Vec<_>>();
     let mut index = 0usize;
-    for expected in ["cargo", "run", "--locked"] {
-        expect_token(&tokens, &mut index, expected, path)?;
-    }
-    if tokens.get(index).map(String::as_str) == Some("--quiet") {
-        index += 1;
-    }
-    for expected in ["-p", "deve_baseline", "--", "acceptance-run", "--tier"] {
-        expect_token(&tokens, &mut index, expected, path)?;
+    if tokens.first().map(String::as_str) == Some("cargo") {
+        for expected in ["cargo", "run", "--locked"] {
+            expect_token(&tokens, &mut index, expected, path)?;
+        }
+        if tokens.get(index).map(String::as_str) == Some("--quiet") {
+            index += 1;
+        }
+        for expected in ["-p", "deve_baseline", "--", "acceptance-run", "--tier"] {
+            expect_token(&tokens, &mut index, expected, path)?;
+        }
+    } else {
+        for expected in [
+            "$GITHUB_WORKSPACE/target/android-candidate-harness/debug/deve_baseline",
+            "acceptance-run",
+            "--tier",
+        ] {
+            expect_token(&tokens, &mut index, expected, path)?;
+        }
     }
     let tier = tokens
         .get(index)

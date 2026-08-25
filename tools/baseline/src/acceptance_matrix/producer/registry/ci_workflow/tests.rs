@@ -37,14 +37,15 @@ jobs:
             "docker/""login-action"
             "docker/""metadata-action"
             "docker/""build-push-action"
-            "actions/""upload-artifact"
             "push: ""true"
             "ghcr"".io"
             "tags: ""['v*']"
+            "deve-acceptance-""receipts-"
+            "deve-release-""candidate-"
           )
           for pattern in "${forbidden[@]}"; do
             if grep -nF "$pattern" .github/workflows/check.yml; then
-              echo "check.yml must stay check-only: no package publish, Docker publish, artifacts, registry publish, or tag release trigger."
+              echo "check.yml must stay check-only: no package publish, Docker publish, release artifacts, registry publish, or tag release trigger."
               exit 1
             fi
           done
@@ -162,7 +163,7 @@ jobs:
       - run: cargo test --locked -p deve_core --test watcher_platform_fs -- --nocapture --test-threads=1
       - run: cargo test --locked -p deve_core --test watcher_writeback_loop -- --nocapture --test-threads=1
       - run: cargo test --locked -p deve_core --test watcher_rename_pairing -- --nocapture --test-threads=1
-  check:
+  impact-shadow:
     if: ${{ always() }}
     needs:
       - contract-checks
@@ -172,8 +173,75 @@ jobs:
       - ci-acceptance-windows
       - watcher-native-fs
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
-      - if: ${{ needs.contract-checks.result != 'success' || needs.rust-quality.result != 'success' || needs.workspace-tests.result != 'success' || needs.ci-acceptance-linux.result != 'success' || needs.ci-acceptance-windows.result != 'success' || needs.watcher-native-fs.result != 'success' }}
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-source-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-source-rust-1.97.0-
+      - run: cargo fetch --locked
+      - if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+          RESULT_LINUX: ci-acceptance-linux=${{ needs.ci-acceptance-linux.result }}
+          RESULT_WINDOWS: ci-acceptance-windows=${{ needs.ci-acceptance-windows.result }}
+          RESULT_CONTRACTS: contract-checks=${{ needs.contract-checks.result }}
+          RESULT_QUALITY: rust-quality=${{ needs.rust-quality.result }}
+          RESULT_WATCHER: watcher-native-fs=${{ needs.watcher-native-fs.result }}
+          RESULT_WORKSPACE: workspace-tests=${{ needs.workspace-tests.result }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/acceptance-impact
+          cargo run --locked --quiet -p deve_baseline -- acceptance-impact-shadow \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA" \
+            --result "$RESULT_LINUX" \
+            --result "$RESULT_WINDOWS" \
+            --result "$RESULT_CONTRACTS" \
+            --result "$RESULT_QUALITY" \
+            --result "$RESULT_WATCHER" \
+            --result "$RESULT_WORKSPACE" \
+            >target/acceptance-impact/shadow-report.json
+          jq '{status, selector_outcome, selected_ci_jobs, full_failures, observed_misses}' \
+            target/acceptance-impact/shadow-report.json >>"$GITHUB_STEP_SUMMARY"
+      - if: ${{ github.event_name != 'pull_request' }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/acceptance-impact
+          cargo run --locked --quiet -p deve_baseline -- acceptance-impact \
+            --profile main-full-source >target/acceptance-impact/full-source-plan.json
+      - if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: deve-impact-shadow-${{ github.sha }}
+          path: target/acceptance-impact/*.json
+          if-no-files-found: error
+          retention-days: 14
+  check:
+    if: ${{ always() }}
+    needs:
+      - contract-checks
+      - rust-quality
+      - workspace-tests
+      - ci-acceptance-linux
+      - ci-acceptance-windows
+      - watcher-native-fs
+      - impact-shadow
+    runs-on: ubuntu-latest
+    steps:
+      - if: ${{ needs.contract-checks.result != 'success' || needs.rust-quality.result != 'success' || needs.workspace-tests.result != 'success' || needs.ci-acceptance-linux.result != 'success' || needs.ci-acceptance-windows.result != 'success' || needs.watcher-native-fs.result != 'success' || needs.impact-shadow.result != 'success' }}
         run: exit 1
 "#;
 
@@ -246,7 +314,10 @@ fn rejects_missing_duplicate_host_and_dependency_drift() {
         "      - run: cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --producer ci.windows --producer ci.shared",
     ).replacen("    timeout-minutes: 30", "    timeout-minutes: 40", 1);
     let duplicate_error = error(&duplicate);
-    assert!(duplicate_error.contains("duplicate"), "{duplicate_error}");
+    assert!(
+        duplicate_error.contains("assigned to multiple jobs"),
+        "{duplicate_error}"
+    );
 
     let wrong_host = VALID.replace("runs-on: windows-latest", "runs-on: ubuntu-latest");
     assert!(error(&wrong_host).contains("incompatible host"));
@@ -413,6 +484,48 @@ fn rejects_job_expansion_and_execution_modifiers() {
         .expect_err("cleanup deadline must be included")
         .to_string();
     assert!(cleanup_error.contains("producer deadline plus build margin"));
+}
+
+#[test]
+fn rejects_path_poisoning_or_any_extra_run_step() {
+    let poisoned = VALID.replace(
+        "      - run: cargo fetch --locked\n      - run: cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan --producer ci.shared --producer ci.linux",
+        "      - run: cargo fetch --locked\n      - run: echo /tmp/fake-cargo >>\"$GITHUB_PATH\"\n      - run: cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan --producer ci.shared --producer ci.linux",
+    );
+    assert_ne!(poisoned, VALID);
+    assert!(error(&poisoned).contains("only fetch"));
+
+    let base_poisoned = VALID.replacen(
+        "      - run: cargo fetch --locked",
+        "      - run: cargo fetch --locked\n      - run: echo poisoned >>\"$GITHUB_ENV\"",
+        1,
+    );
+    assert_ne!(base_poisoned, VALID);
+    assert!(error(&base_poisoned).contains("command sequence"));
+}
+
+#[test]
+fn rejects_non_shadow_uploads_and_formal_artifact_names() {
+    let extra_upload = VALID.replace(
+        "  check:\n    if: ${{ always() }}",
+        "  stray-upload:\n    runs-on: ubuntu-latest\n    steps:\n      - uses: actions/upload-artifact@v7\n        with:\n          name: diagnostic\n          path: target/example\n  check:\n    if: ${{ always() }}",
+    );
+    assert!(error(&extra_upload).contains("may not upload artifacts"));
+
+    let formal_name = VALID.replace(
+        "name: deve-impact-shadow-${{ github.sha }}",
+        "name: deve-acceptance-receipts-${{ github.sha }}",
+    );
+    assert!(error(&formal_name).contains("formal artifact prefix"));
+}
+
+#[test]
+fn rejects_an_unobserved_extra_job_even_without_artifacts() {
+    let extra_job = VALID.replace(
+        "  check:\n    if: ${{ always() }}",
+        "  unobserved-failure:\n    runs-on: ubuntu-latest\n    steps:\n      - run: exit 1\n  check:\n    if: ${{ always() }}",
+    );
+    assert!(error(&extra_job).contains("job set mismatch"));
 }
 
 #[test]

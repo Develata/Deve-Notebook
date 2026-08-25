@@ -34,9 +34,9 @@ pub(super) fn check(root: &Path) -> Result<()> {
         }
     }
 
-    let validate = yaml_mapping_block(&candidate, 2, "validate")?;
+    let identity = yaml_mapping_block(&candidate, 2, "identity")?;
     require_ordered_text(
-        &validate,
+        &identity,
         &[
             "Checkout exact dispatch commit",
             "ref: ${{ github.sha }}",
@@ -44,41 +44,81 @@ pub(super) fn check(root: &Path) -> Result<()> {
             "GITHUB_RUN_ATTEMPT",
             "dispatch a fresh run instead of rerunning",
             "scripts/check-release-version-match.sh \"v$VERSION\"",
-            "Install Linux native preflight dependencies",
-            "libwebkit2gtk-4.1-dev",
-            "libgtk-3-dev",
-            "librsvg2-dev",
-            "libayatana-appindicator3-dev",
-            "cargo fmt --all -- --check",
+        ],
+        "release-candidate.yml identity job",
+    )?;
+    let contracts = yaml_mapping_block(&candidate, 2, "contract-static")?;
+    require_ordered_text(
+        &contracts,
+        &[
+            "Cache Cargo source inputs",
+            "Fetch locked Cargo inputs",
+            "release-freeze verify-candidate",
+            "deve_baseline -- all",
+            "plan-coverage.sh --check-reverse-coverage",
+        ],
+        "release-candidate.yml static contract job",
+    )?;
+    let web_dist = yaml_mapping_block(&candidate, 2, "web-dist")?;
+    require_ordered_text(
+        &web_dist,
+        &[
             "Install Web projection build tool",
             "DEVE_NATIVE_INSTALL_TAURI_CLI: \"0\"",
             "scripts/install-native-target-host-tools.sh",
-            "Build exact Web projection",
+            "Build exact Web projection once",
             "scripts/build-web-dist-ci.sh",
-            "cargo run --locked --quiet -p deve_baseline -- all",
-            "cargo run --locked --quiet -p deve_baseline -- full",
+            "web-dist-artifact.mjs seal",
+            "deve-candidate-web-dist-${{ github.sha }}",
+        ],
+        "release-candidate.yml Web dist job",
+    )?;
+    let quality = yaml_mapping_block(&candidate, 2, "rust-quality")?;
+    require_ordered_text(
+        &quality,
+        &[
+            "Install Linux native compile dependencies",
+            "cargo fmt --all -- --check",
             "cargo clippy --locked --all-targets -- -D warnings",
+            "cargo check --locked -p deve_web --target wasm32-unknown-unknown",
+        ],
+        "release-candidate.yml Rust quality job",
+    )?;
+    let workspace_tests = yaml_mapping_block(&candidate, 2, "workspace-tests")?;
+    require_ordered_text(
+        &workspace_tests,
+        &[
+            "Download immutable exact Web projection",
+            "web-dist-artifact.mjs verify",
             "cargo test --locked",
         ],
-        "release-candidate.yml validate job",
+        "release-candidate.yml workspace test job",
+    )?;
+    let full_baseline = yaml_mapping_block(&candidate, 2, "full-baseline")?;
+    require_ordered_text(
+        &full_baseline,
+        &[
+            "Download immutable exact Web projection",
+            "web-dist-artifact.mjs verify",
+            "deve_baseline -- full",
+        ],
+        "release-candidate.yml full baseline job",
     )?;
 
-    let docker = yaml_mapping_block(&candidate, 2, "docker-linux-amd64")?;
+    let docker = yaml_mapping_block(&candidate, 2, "docker-linux-amd64-build")?;
     require_ordered_text(
         &docker,
         &[
             "Verify exact checkout",
             "GITHUB_RUN_ATTEMPT",
             "dispatch a fresh run instead of rerunning",
+            "Download immutable exact Web projection",
+            "web-dist-artifact.mjs verify",
             "Build linux/amd64 image once",
+            "Dockerfile.candidate",
             "--platform linux/amd64",
             "docker image inspect --format '{{.Os}}/{{.Architecture}}'",
-            "--producer docker.multiclient-product",
-            "--producer docker.p2p-gap-recovery",
-            "--producer security.tag-ready-audit",
             "docker save --output",
-            "docker image rm",
-            "docker load --input",
             "Generate exact Docker image SPDX 2.3 SBOM",
             "deve-docker-candidate-${{ github.sha }}",
         ],
@@ -87,6 +127,19 @@ pub(super) fn check(root: &Path) -> Result<()> {
     if docker.matches("docker buildx build").count() != 1 {
         bail!("release-baseline-check: candidate Docker image must be built exactly once");
     }
+    let docker_smoke = yaml_mapping_block(&candidate, 2, "docker-linux-amd64-smoke")?;
+    require_ordered_text(
+        &docker_smoke,
+        &[
+            "Download immutable Docker candidate input",
+            "docker load --input",
+            "docker image inspect --format '{{.Id}}'",
+            "--producer docker.multiclient-product",
+            "--producer docker.remote-import-browser",
+            "--producer docker.p2p-gap-recovery",
+        ],
+        "release-candidate.yml Docker smoke job",
+    )?;
 
     let native_call = yaml_mapping_block(&candidate, 2, "native")?;
     require_text(
@@ -98,6 +151,11 @@ pub(super) fn check(root: &Path) -> Result<()> {
         &native_call,
         "candidate_head: ${{ github.sha }}",
         "release-candidate.yml native call",
+    )?;
+    require_text(
+        &native_call,
+        "web_dist_artifact: deve-candidate-web-dist-${{ github.sha }}",
+        "release-candidate.yml native Web dist input",
     )?;
     if native_call.contains("secrets: inherit") {
         bail!("release-baseline-check: candidate must not inherit all native secrets");
@@ -124,10 +182,12 @@ pub(super) fn check(root: &Path) -> Result<()> {
             "Download exact Android candidate",
             "Download exact Docker candidate",
             "Materialize a strict candidate tree",
-            "require_count windows",
-            "require_count macos",
-            "require_count android",
-            "require_count docker",
+            "require_count windows \"$windows\" 3",
+            "require_count macos \"$macos\" 2",
+            "require_count android \"$android\" 2",
+            "require_count docker \"$docker\" 3",
+            "sha256sum -c windows-candidate-input.sha256",
+            "sha256sum -c macos-candidate-input.sha256",
             "actions/attest@a1948c3f048ba23858d222213b7c278aabede763",
             "sbom-path:",
             "create-storage-record: false",

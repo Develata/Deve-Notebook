@@ -51,6 +51,7 @@ pub(super) struct ImpactShard {
     pub(super) shard_id: String,
     pub(super) layer: String,
     pub(super) execution_kind: String,
+    pub(super) ci_jobs: Vec<String>,
     pub(super) producer_ids: Vec<String>,
     pub(super) checks: Vec<String>,
     pub(super) artifact_inputs: Vec<String>,

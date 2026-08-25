@@ -31,14 +31,69 @@ pub(super) fn validate_workflows(root: &Path, registry: &ReleaseFreeze) -> Resul
 
 pub(super) fn validate_outer_job_budgets(candidate: &str, native: &str) -> Result<()> {
     for (workflow, job, timeout, offset) in [
-        (candidate, "docker-linux-amd64:", "timeout-minutes: 360", 3),
-        (native, "desktop-windows:", "timeout-minutes: 300", 2),
+        (
+            candidate,
+            "docker-linux-amd64-build:",
+            "timeout-minutes: 120",
+            3,
+        ),
+        (
+            candidate,
+            "docker-linux-amd64-smoke:",
+            "timeout-minutes: 240",
+            3,
+        ),
+        (native, "desktop-windows-build:", "timeout-minutes: 180", 2),
+        (
+            native,
+            "desktop-windows-local-smoke:",
+            "timeout-minutes: 180",
+            3,
+        ),
+        (
+            native,
+            "desktop-windows-remote-smoke:",
+            "timeout-minutes: 120",
+            3,
+        ),
+        (native, "desktop-macos-build:", "timeout-minutes: 120", 2),
+        (native, "desktop-macos-smoke:", "timeout-minutes: 135", 3),
+        (
+            native,
+            "mobile-android-apk-build:",
+            "timeout-minutes: 120",
+            2,
+        ),
+        (
+            native,
+            "mobile-android-harness-build:",
+            "timeout-minutes: 90",
+            2,
+        ),
+        (
+            native,
+            "mobile-android-local-journey:",
+            "timeout-minutes: 120",
+            3,
+        ),
+        (
+            native,
+            "mobile-android-remote-journey:",
+            "timeout-minutes: 120",
+            3,
+        ),
+        (
+            native,
+            "mobile-android-arm64-build:",
+            "timeout-minutes: 120",
+            2,
+        ),
     ] {
         let lines = active_lines(workflow);
         let job_index = line_index(&lines, job)?;
         ensure!(
             lines.get(job_index + offset) == Some(&timeout),
-            "{job} outer timeout must contain the complete serial producer budget"
+            "{job} outer timeout must preserve its reviewed build or producer budget"
         );
     }
     Ok(())
@@ -55,7 +110,7 @@ pub(super) fn validate_workflow_texts(
         CARGO_AUDIT_VERSION_CHECK,
         "candidate direct cargo-audit version verification",
     )?;
-    let candidate_verify = step_block(candidate, "Verify candidate scripts and formatting")?;
+    let candidate_verify = step_block(candidate, "Verify candidate and static contracts")?;
     require_exact_line(
         candidate_verify,
         FREEZE_VERIFY_CARGO,
@@ -63,9 +118,9 @@ pub(super) fn validate_workflow_texts(
     )?;
     validate_candidate_receipt_producer(
         candidate,
-        "Run Remote Import provider and browser producer",
+        "Run Docker runtime producers against the same image",
         "docker.remote-import-browser",
-        r#"--receipt-dir "$RUNNER_TEMP/deve-acceptance-remote-import""#,
+        r#"--receipt-dir "$RUNNER_TEMP/deve-acceptance-docker""#,
         None,
     )?;
     validate_candidate_receipt_producer(

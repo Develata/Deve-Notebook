@@ -114,7 +114,14 @@
 - 普通 CI 必须实际执行 producer registry 中全部适用的 required test/script evidence，不能只打印 plan；候选聚合 workflow 必须验证显式 source run 与当前 HEAD 相同，Rust collector/tag-ready 通过后，tag workflow 才能进入任何公开发布步骤。
 - 普通 CI 的 required producer 必须按兼容宿主显式分片并由稳定 `check` 状态统一汇合；未知、漏跑、重复、宿主不匹配、依赖不完整、skipped、not-run、容错吞错或超时前强杀都不能被报告为通过。该分片只改变调度与反馈时延，不改变 producer registry、workspace test 或 release receipt 的权威。
 - Rust `deve_baseline acceptance-impact` 可以按变更路径生成模块、反向依赖消费者、verification shard、制品输入与隔离要求的机器可读影子计划。影子计划只用于审计未来的选择性 CI，不会跳过当前检查、不会生成 receipt，也不会把 planned/skipped/not-run 显示为通过。普通选择结果限定在 source scope；未知路径或 `full_trigger` 会退化为 full-system，不能以 PR profile 的窄集合冒充全量。
+- PR shadow job 会在全部 required CI 真实执行后，把选择计划与每个 full-baseline job 的真实结果写入短期 diagnostic JSON；未选 shard 发生失败会记录为 `observed_miss`。该报告只积累选择器可信度，不改变本次 CI 结论，也不能作为功能或发布 receipt。
+- `check.yml` 只允许受控 required jobs、impact shadow 与最终 fan-in；额外且未被 fan-in 观察的 job 会被拒绝。唯一 artifact upload 是非权威 shadow JSON，正式 receipt/candidate artifact 前缀在普通 Check 中禁用。
 - 普通 PR 后续可以在影子计划经过 full baseline 对照后采用选择性验收；`main-full-source` 必须覆盖全部 source shard，nightly、candidate、release、部署与恢复场景保留 full-system。正式 candidate 只允许把全量集合并行分片，不允许选择性删减 required gate。
+- 正式 candidate 的 Web projection 由一个 exact-HEAD job 构建并用逐文件/tree SHA-256 manifest 封存；Docker、Windows、macOS、Android 只消费这一个 dist。各平台 package build 与 smoke 分 job，Android x86 APK、acceptance runner、Local/Remote emulator 与 ARM64 signing 也各自独立，因此并行不会改变 artifact 或 receipt authority。
+- Windows smoke/candidate 包分别由 SHA-256 清单绑定；macOS `.app` smoke 使用保留权限与 symlink 的 tar 输入并验 digest，最终 DMG 另由 candidate 清单绑定，避免 artifact 传输改变可执行语义。
+- 验收矩阵会单独报告 distinct document-only case backlog。只有真实 Rust/JS test、确定性脚本、browser smoke 或 target-host receipt 能关闭对应 case；文档解析、源码字符串和 registry 重命名都不算功能自动化。UI、Android、network、auth、diff 分批迁移期间，未完成数量继续公开为非零。
+- backlog 对 producer owner 采用保守 executable binding：selector 被跳过、script 仅作为无关参数出现、或 wrapper 尚无 typed selector 证明时仍计为未自动化。
+- 正式 candidate 仅在同一 current HEAD / 同一 APK digest 的 targeted Android 至少连续两次 attempt-1 通过、Windows/macOS package+smoke 与普通 full CI 通过后 dispatch；旧 run、rerun 或不同 artifact 样本不计入稳定门。
 - 普通 CI 的合同/文档检查、Rust lint/WASM 编译、workspace tests 也必须作为独立 required job 并行运行；当前 Linux producer 再按 storage/repository、Web/投影、runtime/plugin 三条职责边界拆分，任何一条都不能被稳定 `check` fan-in 漏接。
 - check-only Cargo cache 只允许缓存按 OS、Rust toolchain 与根 lockfile 分区的 registry source 和 git db；每条 required job 首先执行完整 locked fetch，独立 restore/save、第三方 build cache、`target/`、跨 profile/toolchain 的宽 fallback 与缓存命中不得被当作构建或验收证据。producer 必须输出固定的无 secret duration 诊断，供后续识别长尾，但该诊断不冒充 receipt。
 - Android target-host 的 Linux runner 在执行 Mobile `native-packaging` 宿主测试前，必须准备 GTK3、WebKitGTK 4.1 与 Rsvg 开发依赖；这些包只证明测试可编译，不代表 Linux Desktop artifact 已恢复，也不能用跳过该宿主测试替代依赖安装。

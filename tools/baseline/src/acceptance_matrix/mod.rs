@@ -23,7 +23,11 @@ pub(crate) fn run(args: &[String]) -> Result<()> {
     let rows = parse::read_matrix(ctx.root())?;
     validate::validate(ctx.root(), &rows)?;
     let producer_catalog = producer::validate_registry(ctx.root(), &rows)?;
-    impact::validate(ctx.root(), &producer_catalog.producer_ids)?;
+    impact::validate(
+        ctx.root(),
+        &producer_catalog.producer_ids,
+        &producer_catalog.ci_job_by_producer,
+    )?;
     match args {
         [] => render::check_drift(ctx.root(), &rows)?,
         [action] if action == "--render" => render::write(ctx.root(), &rows)?,
@@ -58,6 +62,27 @@ pub(crate) fn run_impact(args: &[String]) -> Result<()> {
     validate::validate(ctx.root(), &rows)?;
     let producer_catalog = producer::validate_registry(ctx.root(), &rows)?;
     impact::run(ctx.root(), args, &producer_catalog, &rows)
+}
+
+pub(crate) fn run_impact_backlog() -> Result<()> {
+    let ctx = BaselineContext::new("acceptance-impact-backlog")?;
+    let rows = parse::read_matrix(ctx.root())?;
+    validate::validate(ctx.root(), &rows)?;
+    let producer_catalog = producer::validate_registry(ctx.root(), &rows)?;
+    impact::validate(
+        ctx.root(),
+        &producer_catalog.producer_ids,
+        &producer_catalog.ci_job_by_producer,
+    )?;
+    impact::run_backlog(&rows, &producer_catalog.executable_evidence_ids)
+}
+
+pub(crate) fn run_impact_shadow(args: &[String]) -> Result<()> {
+    let ctx = BaselineContext::new("acceptance-impact-shadow")?;
+    let rows = parse::read_matrix(ctx.root())?;
+    validate::validate(ctx.root(), &rows)?;
+    let producer_catalog = producer::validate_registry(ctx.root(), &rows)?;
+    impact::run_shadow(ctx.root(), args, &producer_catalog, &rows)
 }
 
 pub(crate) fn collect_receipts(args: &[String]) -> Result<()> {

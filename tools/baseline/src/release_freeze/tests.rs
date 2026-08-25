@@ -294,9 +294,17 @@ fn workflow_outer_timeouts_cover_serial_producer_budgets() {
     let native = include_str!("../../../../.github/workflows/release-native.yml");
     validate_outer_job_budgets(candidate, native).expect("current outer budgets");
 
-    let candidate_too_short = candidate.replace("timeout-minutes: 360", "timeout-minutes: 180");
+    let candidate_too_short = candidate.replace(
+        "  docker-linux-amd64-smoke:\n    needs: [identity, docker-linux-amd64-build]\n    runs-on: ubuntu-latest\n    timeout-minutes: 240",
+        "  docker-linux-amd64-smoke:\n    needs: [identity, docker-linux-amd64-build]\n    runs-on: ubuntu-latest\n    timeout-minutes: 180",
+    );
+    assert_ne!(candidate_too_short, candidate);
     assert!(validate_outer_job_budgets(&candidate_too_short, native).is_err());
-    let native_too_short = native.replacen("timeout-minutes: 300", "timeout-minutes: 150", 1);
+    let native_too_short = native.replace(
+        "  desktop-macos-smoke:\n    needs: desktop-macos-build\n    runs-on: macos-latest\n    timeout-minutes: 135",
+        "  desktop-macos-smoke:\n    needs: desktop-macos-build\n    runs-on: macos-latest\n    timeout-minutes: 90",
+    );
+    assert_ne!(native_too_short, native);
     assert!(validate_outer_job_budgets(candidate, &native_too_short).is_err());
 }
 

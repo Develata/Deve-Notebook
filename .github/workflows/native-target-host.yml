@@ -88,6 +88,7 @@ jobs:
   desktop-macos:
     if: ${{ inputs.target == 'all' || inputs.target == 'desktop-macos' }}
     runs-on: macos-latest
+    timeout-minutes: 180
     env:
       DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED: ${{ inputs.required_preflight && '1' || '0' }}
       DEVE_DESKTOP_TARGET_HOSTS: macos
@@ -143,7 +144,7 @@ jobs:
 
       - name: Desktop macOS package build
         id: desktop_macos_package_build
-        if: ${{ inputs.run_desktop_package_build && ! inputs.run_desktop_startup_smoke }}
+        if: ${{ inputs.run_desktop_package_build }}
         env:
           DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED: "1"
           DEVE_DESKTOP_PACKAGE_BUNDLES: app,dmg
@@ -223,6 +224,7 @@ jobs:
   desktop-windows:
     if: ${{ inputs.target == 'all' || inputs.target == 'desktop-windows' }}
     runs-on: windows-latest
+    timeout-minutes: 180
     env:
       DEVE_DESKTOP_TARGET_HOST_PREFLIGHT_REQUIRED: ${{ inputs.required_preflight && '1' || '0' }}
       DEVE_DESKTOP_TARGET_HOSTS: windows
@@ -310,7 +312,7 @@ jobs:
 
       - name: Desktop Windows package build
         id: desktop_windows_package_build
-        if: ${{ inputs.run_desktop_package_build && ! inputs.run_desktop_installer_smoke }}
+        if: ${{ inputs.run_desktop_package_build }}
         env:
           DEVE_DESKTOP_PACKAGE_BUILD_REQUIRED: "1"
           DEVE_DESKTOP_PACKAGE_BUNDLES: msi,nsis
@@ -555,6 +557,7 @@ jobs:
   mobile-android-web-dist-producer:
     if: ${{ (inputs.target == 'all' || inputs.target == 'mobile-android') && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
 
@@ -589,6 +592,7 @@ jobs:
     if: ${{ (inputs.target == 'all' || inputs.target == 'mobile-android') && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
     needs: mobile-android-web-dist-producer
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     env:
       DEVE_MOBILE_PACKAGE_HOST_NATIVE_PACKAGING_CHECK: "0"
     steps:
@@ -666,6 +670,7 @@ jobs:
     if: ${{ (inputs.target == 'all' || inputs.target == 'mobile-android') && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
     needs: mobile-android-web-dist-producer
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v6
 
@@ -729,6 +734,7 @@ jobs:
       matrix:
         journey: ${{ fromJSON(inputs.run_mobile_android_remote_browser_smoke && '["local","remote"]' || '["local"]') }}
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v6
 
@@ -881,6 +887,7 @@ jobs:
       - mobile-android-harness-producer
       - mobile-android-journey
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
 
@@ -951,6 +958,7 @@ jobs:
   mobile-android:
     if: ${{ (inputs.target == 'all' || inputs.target == 'mobile-android') && (! inputs.run_mobile_android_package_build || ! inputs.run_mobile_android_install_startup_smoke) }}
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     env:
       DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED: ${{ (inputs.required_preflight || inputs.run_mobile_android_package_build) && '1' || '0' }}
       DEVE_MOBILE_PACKAGE_TARGETS: android
@@ -1221,6 +1229,7 @@ jobs:
   mobile-ios:
     if: ${{ inputs.target == 'all' || inputs.target == 'mobile-ios' }}
     runs-on: macos-latest
+    timeout-minutes: 180
     env:
       DEVE_MOBILE_PACKAGE_PREFLIGHT_REQUIRED: ${{ (inputs.required_preflight || inputs.run_mobile_ios_package_build) && '1' || '0' }}
       DEVE_MOBILE_PACKAGE_TARGETS: ios

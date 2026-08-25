@@ -454,12 +454,14 @@
     - release_assert: physical_device_readiness_not_claimed true
 
 - case_id: REL-012
-  goal: branch push / pull request CI 只做检查，不执行 package、publish 或 production 动作。
+  goal: branch push / pull request CI 只做检查，可上传非权威 impact diagnostic，但不执行 package、publish、receipt 或 production 动作。
   preconditions:
     - `.github/workflows/check.yml` 可读
   steps:
     - run: rg -n "branches: \\[main\\]|pull_request:|cargo fmt --check|cargo clippy --locked --all-targets|cargo test --locked|deve_baseline -- all" .github/workflows/check.yml
-    - run: "! rg -n \"packages: write|docker/(login|metadata|build-push)-action|actions/upload-artifact|push: true|ghcr\\.io|tags: \\['v\\*'\\]\" .github/workflows/check.yml"
+    - run: "! rg -n \"packages: write|docker/(login|metadata|build-push)-action|push: true|ghcr\\.io|tags: \\['v\\*'\\]|deve-release-candidate|deve-acceptance-receipts\" .github/workflows/check.yml"
+    - run: test "$(rg -c "actions/upload-artifact" .github/workflows/check.yml)" -eq 1
+    - run: rg -n "name: deve-impact-shadow-\\$\\{\\{ github\\.sha \\}\\}|status.*shadow-only-not-pass-evidence|acceptance-impact-shadow" .github/workflows/check.yml docs/plan/18_release.md
   assertions:
     - stdout_contains: "branches: [main]"
     - stdout_contains: "pull_request:"
@@ -472,6 +474,9 @@
     - contract_assert: check_contract_quality_and_workspace_test_jobs_are_independent_required_jobs true
     - contract_assert: check_only_cargo_cache_is_source_only_and_toolchain_lockfile_scoped true
     - contract_assert: check_only_target_cache_and_broad_restore_fallback_forbidden true
+    - contract_assert: check_only_upload_is_non_authoritative_impact_diagnostic true
+    - contract_assert: check_only_release_artifact_and_receipt_upload_forbidden true
+    - contract_assert: check_job_set_has_no_unobserved_side_jobs true
 
 - case_id: REL-013
   goal: Reliability / Observability 治理合同可由发布前基线验证。
@@ -509,6 +514,8 @@
     - run: cargo run --locked -p deve_baseline -- acceptance-run --tier tag-ready --plan
     - run: cargo run --locked -p deve_baseline -- acceptance-impact --profile pr-selective --changed-file apps/web/src/lib.rs
     - run: cargo run --locked -p deve_baseline -- acceptance-impact --profile candidate-full-release
+    - run: cargo run --locked -p deve_baseline -- acceptance-impact-backlog
+    - run: node --test scripts/web-dist-artifact.test.mjs
     - run: cargo test --locked -p deve_baseline acceptance_matrix -- --nocapture
     - run: receipt_root="$(mktemp -d)" && ! cargo run --locked -p deve_baseline -- acceptance-matrix --tag-ready "$receipt_root"
   assertions:
@@ -533,10 +540,24 @@
     - contract_assert: impact_registry_rejects_unknown_dependency_shard_producer_or_artifact true
     - contract_assert: impact_required_topology_rejects_deleted_consumer_edge_or_shard true
     - contract_assert: impact_selection_expands_reverse_consumers_and_profile_always_shards true
+    - contract_assert: selective_profiles_always_retain_contract_and_workspace_build_shards true
+    - contract_assert: base_ci_jobs_remain_on_fixed_source_shards true
+    - contract_assert: source_shards_cannot_claim_runtime_only_producers true
     - contract_assert: unknown_or_full_trigger_impact_falls_back_to_full_system true
     - contract_assert: main_profile_equals_all_source_shards_and_nightly_candidate_equal_all_shards true
     - contract_assert: impact_output_is_shadow_only_and_never_pass_evidence true
     - contract_assert: impact_output_declares_source_or_system_scope true
+    - contract_assert: shadow_report_binds_real_full_job_results_and_observed_misses true
+    - contract_assert: shadow_report_is_diagnostic_only_and_cannot_skip_required_ci true
+    - contract_assert: web_dist_is_built_once_and_manifest_binds_head_paths_sizes_and_sha256 true
+    - contract_assert: candidate_platform_build_jobs_are_separate_from_isolated_smoke_consumers true
+    - contract_assert: android_candidate_local_and_remote_consume_one_apk_manifest_on_separate_runners true
+    - contract_assert: windows_smoke_and_candidate_bytes_are_digest_bound true
+    - contract_assert: macos_app_smoke_preserves_permissions_and_candidate_dmg_is_digest_bound true
+    - contract_assert: document_only_backlog_counts_distinct_cases_by_family true
+    - contract_assert: document_only_case_requires_executable_test_script_browser_or_target_host_evidence true
+    - contract_assert: source_string_or_registry_only_binding_does_not_close_functional_automation_debt true
+    - contract_assert: test_skip_or_incidental_script_argument_does_not_close_automation_debt true
     - contract_assert: application_shards_require_state_port_database_identity_fixture_and_log_isolation true
     - contract_assert: isolation_policy_values_are_typed_per_resource_dimension true
     - contract_assert: impact_plan_binds_impact_producer_and_matrix_fingerprints true

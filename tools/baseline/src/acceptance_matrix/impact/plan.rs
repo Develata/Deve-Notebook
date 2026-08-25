@@ -8,7 +8,7 @@ use anyhow::{Context, Result, bail};
 use std::collections::{BTreeMap, BTreeSet, VecDeque};
 use std::path::Path;
 
-mod input;
+pub(in crate::acceptance_matrix::impact) mod input;
 pub(super) use input::PlanArgs;
 
 pub(super) fn build(

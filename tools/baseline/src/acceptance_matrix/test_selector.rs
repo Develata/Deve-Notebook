@@ -96,14 +96,14 @@ fn git_visible_rust_sources_define(root: &Path, search_root: &Path, filter: &str
 }
 
 #[derive(Debug)]
-struct TestSelector {
-    package: String,
-    test_target: Option<String>,
-    filter: Option<String>,
+pub(super) struct TestSelector {
+    pub(super) package: String,
+    pub(super) test_target: Option<String>,
+    pub(super) filter: Option<String>,
 }
 
 impl TestSelector {
-    fn parse(reference: &str) -> Result<Self> {
+    pub(super) fn parse(reference: &str) -> Result<Self> {
         let words: Vec<_> = reference.split_whitespace().collect();
         if words.first() != Some(&"cargo") || words.get(1) != Some(&"test") {
             bail!("test evidence must start with `cargo test`");

@@ -49,14 +49,15 @@ jobs:
             "docker/""login-action"
             "docker/""metadata-action"
             "docker/""build-push-action"
-            "actions/""upload-artifact"
             "push: ""true"
             "ghcr"".io"
             "tags: ""['v*']"
+            "deve-acceptance-""receipts-"
+            "deve-release-""candidate-"
           )
           for pattern in "${forbidden[@]}"; do
             if grep -nF "$pattern" .github/workflows/check.yml; then
-              echo "check.yml must stay check-only: no package publish, Docker publish, artifacts, registry publish, or tag release trigger."
+              echo "check.yml must stay check-only: no package publish, Docker publish, release artifacts, registry publish, or tag release trigger."
               exit 1
             fi
           done
@@ -312,7 +313,8 @@ jobs:
       - name: Run watcher rename-pairing evidence
         run: cargo test --locked -p deve_core --test watcher_rename_pairing -- --nocapture --test-threads=1
 
-  check:
+  impact-shadow:
+    name: Dependency impact shadow audit
     if: ${{ always() }}
     needs:
       - contract-checks
@@ -324,7 +326,87 @@ jobs:
       - ci-acceptance-windows
       - watcher-native-fs
     runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+      - name: Cache Cargo sources
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-source-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-source-rust-1.97.0-
+      - name: Fetch complete locked Cargo sources
+        run: cargo fetch --locked
+      - name: Write PR selective-versus-full observation
+        if: ${{ github.event_name == 'pull_request' }}
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.sha }}
+          RESULT_CONTRACTS: contract-checks=${{ needs.contract-checks.result }}
+          RESULT_QUALITY: rust-quality=${{ needs.rust-quality.result }}
+          RESULT_WORKSPACE: workspace-tests=${{ needs.workspace-tests.result }}
+          RESULT_RUNTIME: ci-acceptance-runtime=${{ needs.ci-acceptance-runtime.result }}
+          RESULT_STORAGE: ci-acceptance-storage=${{ needs.ci-acceptance-storage.result }}
+          RESULT_WEB: ci-acceptance-web=${{ needs.ci-acceptance-web.result }}
+          RESULT_WINDOWS: ci-acceptance-windows=${{ needs.ci-acceptance-windows.result }}
+          RESULT_WATCHER: watcher-native-fs=${{ needs.watcher-native-fs.result }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/acceptance-impact
+          cargo run --locked --quiet -p deve_baseline -- acceptance-impact-shadow \
+            --base "$BASE_SHA" \
+            --head "$HEAD_SHA" \
+            --result "$RESULT_RUNTIME" \
+            --result "$RESULT_STORAGE" \
+            --result "$RESULT_WEB" \
+            --result "$RESULT_WINDOWS" \
+            --result "$RESULT_CONTRACTS" \
+            --result "$RESULT_QUALITY" \
+            --result "$RESULT_WATCHER" \
+            --result "$RESULT_WORKSPACE" \
+            >target/acceptance-impact/shadow-report.json
+          jq '{status, selector_outcome, selected_ci_jobs, full_failures, observed_misses}' \
+            target/acceptance-impact/shadow-report.json >>"$GITHUB_STEP_SUMMARY"
+      - name: Write full-source plan outside pull requests
+        if: ${{ github.event_name != 'pull_request' }}
+        run: |
+          set -euo pipefail
+          mkdir -p target/acceptance-impact
+          cargo run --locked --quiet -p deve_baseline -- acceptance-impact \
+            --profile main-full-source >target/acceptance-impact/full-source-plan.json
+      - name: Upload non-authoritative impact diagnostic
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: deve-impact-shadow-${{ github.sha }}
+          path: target/acceptance-impact/*.json
+          if-no-files-found: error
+          retention-days: 14
+
+  check:
+    if: ${{ always() }}
+    needs:
+      - contract-checks
+      - rust-quality
+      - workspace-tests
+      - ci-acceptance-runtime
+      - ci-acceptance-storage
+      - ci-acceptance-web
+      - ci-acceptance-windows
+      - watcher-native-fs
+      - impact-shadow
+    runs-on: ubuntu-latest
     steps:
       - name: Fail closed unless every required CI job succeeded
-        if: ${{ needs.contract-checks.result != 'success' || needs.rust-quality.result != 'success' || needs.workspace-tests.result != 'success' || needs.ci-acceptance-runtime.result != 'success' || needs.ci-acceptance-storage.result != 'success' || needs.ci-acceptance-web.result != 'success' || needs.ci-acceptance-windows.result != 'success' || needs.watcher-native-fs.result != 'success' }}
+        if: ${{ needs.contract-checks.result != 'success' || needs.rust-quality.result != 'success' || needs.workspace-tests.result != 'success' || needs.ci-acceptance-runtime.result != 'success' || needs.ci-acceptance-storage.result != 'success' || needs.ci-acceptance-web.result != 'success' || needs.ci-acceptance-windows.result != 'success' || needs.watcher-native-fs.result != 'success' || needs.impact-shadow.result != 'success' }}
         run: exit 1
