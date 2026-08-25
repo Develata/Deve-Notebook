@@ -18,13 +18,11 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use std::time::Duration;
 
-mod shutdown_signal;
+pub(crate) mod shutdown_signal;
 mod transport_shutdown;
 
 pub(crate) use transport_shutdown::RuntimeShutdownDeadline;
-use transport_shutdown::{
-    deadline_after, remaining_shutdown_budget, serve_router_until_shutdown_with_deadline,
-};
+use transport_shutdown::{remaining_shutdown_budget, serve_router_until_shutdown_with_deadline};
 
 pub(crate) const SERVER_RUNTIME_SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
 
@@ -146,16 +144,20 @@ impl EmbeddedServerRuntime {
             #[cfg(not(test))]
             ai_provider_settings,
         })?;
+        runtime::install_plugin_host_contexts(
+            &app_state.plugins,
+            Arc::new(deve_core::plugin::runtime::host::PluginHostContext::new(
+                Arc::new(crate::server::repo_mutation::CliManagedNoteMutationHost::new(&app_state)),
+                Arc::new(
+                    crate::server::repo_mutation::CliManagedSourceControlMutationHost::new(
+                        &app_state,
+                    ),
+                ),
+            )),
+        )?;
+        runtime::activate_plugin_runtimes(&app_state.plugins)?;
         let native_ai_registration =
             super::ai_chat::NativeAiRuntimeRegistration::from_plugins(&app_state.plugins);
-        #[cfg(not(test))]
-        deve_core::plugin::runtime::host::set_managed_note_mutation_host(Arc::new(
-            crate::server::repo_mutation::CliManagedNoteMutationHost::new(&app_state),
-        ))?;
-        #[cfg(not(test))]
-        deve_core::plugin::runtime::host::set_managed_source_control_mutation_host(Arc::new(
-            crate::server::repo_mutation::CliManagedSourceControlMutationHost::new(&app_state),
-        ))?;
         let p2p_inbound_token_env = p2p.inbound_token_env.clone();
         let background_tasks =
             runtime::spawn_background_runtime_tasks(p2p, app_state.clone(), repo, prewarm_enabled);
@@ -178,10 +180,6 @@ impl EmbeddedServerRuntime {
 
     pub(crate) fn transport(&self) -> ServerTransportRuntime {
         self.transport.clone()
-    }
-
-    pub(crate) async fn shutdown(self, timeout: Duration) -> anyhow::Result<()> {
-        self.shutdown_until(deadline_after(timeout)).await
     }
 
     pub(crate) async fn shutdown_until(

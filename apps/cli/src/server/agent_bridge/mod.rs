@@ -4,6 +4,7 @@
 //! Agent bridge: 将聊天请求桥接到外部 CLI。
 
 mod policy;
+mod process_tree;
 mod prompt;
 mod stream;
 

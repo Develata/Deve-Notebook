@@ -7,7 +7,7 @@
 #[cfg(any(unix, test))]
 use std::future::Future;
 
-pub(super) async fn production_shutdown_signal() {
+pub(crate) async fn production_shutdown_signal() {
     wait_for_platform_shutdown().await;
 }
 

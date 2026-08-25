@@ -17,7 +17,7 @@ compatibility runtime with the server-owned multi-provider SSE implementation.
 
 2. **Server Runtime** (`apps/cli/src/server/ai_chat/`)
    - Owns the redacted provider settings snapshot and three protocol adapters.
-   - Implements `ChatStreamHandler` using `reqwest-eventsource`.
+   - Implements `ChatStreamHandler` using a server-owned bounded incremental SSE decoder over `reqwest` bytes.
    - Streams SSE deltas into `ServerMessage::ChatChunk` via the sink.
 
 3. **Plugin Call Path** (`apps/cli/src/server/handlers/plugin.rs`)
@@ -40,6 +40,8 @@ compatibility runtime with the server-owned multi-provider SSE implementation.
 - Missing handler or sink yields a clear runtime error to the plugin.
 - SSE decode errors bubble up as plugin runtime errors.
 - Client streaming ends when `finish_reason` is received.
+- Connect/header wait is bounded to 30 seconds, chunk idle to 30 seconds, and the entire request to 5 minutes.
+- A frame is bounded to 256 KiB, total wire input to 8 MiB, and accepted answer text to 2 MiB. Admission happens before a delta is appended or forwarded.
 
 ## Security
 - Provider URL and authentication are validated and owned by the server settings runtime.
@@ -50,3 +52,4 @@ compatibility runtime with the server-owned multi-provider SSE implementation.
 ## Low-Resource Notes
 - The bridge avoids new runtime dependencies in `deve_core`.
 - Streaming is handled in the CLI where tokio is already required.
+- The decoder retains only the current bounded line/event plus the bounded accepted answer; it never buffers the entire wire stream.

@@ -117,9 +117,9 @@ mod tests {
     #[test]
     fn rejects_non_managed_targets() {
         let err = write_managed_note(Path::new("tmp/out.txt"), "x").expect_err("must fail");
-        assert!(err.to_string().contains("ledger-managed markdown"));
+        assert!(err.to_string().contains("host context is unavailable"));
         let err = read_managed_note(Path::new("tmp/out.txt")).expect_err("must fail");
-        assert!(err.to_string().contains("ledger-managed markdown"));
+        assert!(err.to_string().contains("host context is unavailable"));
     }
 
     #[test]

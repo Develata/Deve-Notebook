@@ -23,8 +23,10 @@ pub(crate) use app_runtime::{
     AppStateParts, build_app_state, build_tree_registry, new_server_broadcast_channel,
 };
 pub(crate) use auth_runtime::init_auth_runtime;
+pub(crate) use host_runtime::install_plugin_host_contexts;
 pub(crate) use host_runtime::{
-    install_repo_host_apis, install_sync_host_api, prepare_host_layout, refresh_host_port_hint,
+    activate_plugin_runtimes, install_repo_host_apis, install_sync_host_api, prepare_host_layout,
+    refresh_host_port_hint,
 };
 pub(crate) use node_role_runtime::{
     current_repo_health, current_watcher_health, init_node_role, update_repo_health,

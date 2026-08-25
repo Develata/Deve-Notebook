@@ -22,9 +22,17 @@ use rhai::EvalAltResult;
 use rhai::{AST, Dynamic, Engine, Scope};
 use std::path::PathBuf;
 use std::sync::Mutex;
+#[cfg(not(target_arch = "wasm32"))]
+use std::sync::{Arc, RwLock};
 
 /// Rhai 脚本最大操作数限制，防止无限循环 (768 MB 内存安全阈值)
 const MAX_RHAI_OPERATIONS: u64 = 100_000;
+const MAX_RHAI_CALL_LEVELS: usize = 64;
+const MAX_RHAI_VARIABLES: usize = 256;
+const MAX_RHAI_MODULES: usize = 32;
+const MAX_RHAI_STRING_BYTES: usize = 1024 * 1024;
+const MAX_RHAI_ARRAY_ITEMS: usize = 16 * 1024;
+const MAX_RHAI_MAP_ITEMS: usize = 4 * 1024;
 
 /// Rhai 引擎运行时
 ///
@@ -35,6 +43,17 @@ pub struct RhaiRuntime {
     ast: Option<AST>,
     scope: Mutex<Scope<'static>>,
     manifest: PluginManifest,
+    phase: Mutex<RuntimePhase>,
+    #[cfg(not(target_arch = "wasm32"))]
+    host_context: RwLock<Option<Arc<host::PluginHostContext>>>,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum RuntimePhase {
+    Empty,
+    Prepared,
+    Active,
+    Failed,
 }
 
 impl RhaiRuntime {
@@ -71,6 +90,12 @@ impl RhaiRuntime {
         let mut engine = Engine::new();
         engine.set_max_expr_depths(128, 128);
         engine.set_max_operations(MAX_RHAI_OPERATIONS);
+        engine.set_max_call_levels(MAX_RHAI_CALL_LEVELS);
+        engine.set_max_variables(MAX_RHAI_VARIABLES);
+        engine.set_max_modules(MAX_RHAI_MODULES);
+        engine.set_max_string_size(MAX_RHAI_STRING_BYTES);
+        engine.set_max_array_size(MAX_RHAI_ARRAY_ITEMS);
+        engine.set_max_map_size(MAX_RHAI_MAP_ITEMS);
         engine.disable_symbol("eval");
 
         // 配置模块解析器 (仅非 WASM 环境支持文件系统)
@@ -88,17 +113,52 @@ impl RhaiRuntime {
             ast: None,
             scope: Mutex::new(Scope::new()),
             manifest,
+            phase: Mutex::new(RuntimePhase::Empty),
+            #[cfg(not(target_arch = "wasm32"))]
+            host_context: RwLock::new(None),
         }
     }
 }
 
 impl PluginRuntime for RhaiRuntime {
-    fn load(&mut self, _manifest: PluginManifest, script: &str) -> Result<()> {
+    fn prepare(&mut self, _manifest: PluginManifest, script: &str) -> Result<()> {
+        let phase = self
+            .phase
+            .get_mut()
+            .map_err(|_| anyhow!("Failed to lock plugin phase"))?;
+        if *phase != RuntimePhase::Empty {
+            return Err(anyhow!("Plugin runtime preparation is not repeatable"));
+        }
         // 编译脚本为 AST
-        let ast = self
+        let ast = match self
             .engine
             .compile(script)
-            .map_err(|e| anyhow!("Failed to compile plugin script: {}", e))?;
+            .map_err(|e| anyhow!("Failed to compile plugin script: {}", e))
+        {
+            Ok(ast) => ast,
+            Err(error) => {
+                *phase = RuntimePhase::Failed;
+                return Err(error);
+            }
+        };
+        self.ast = Some(ast);
+        *phase = RuntimePhase::Prepared;
+        Ok(())
+    }
+
+    fn activate(&self) -> Result<()> {
+        let mut phase = self
+            .phase
+            .lock()
+            .map_err(|_| anyhow!("Failed to lock plugin phase"))?;
+        if *phase != RuntimePhase::Prepared {
+            return Err(anyhow!("Plugin runtime is not in the prepared phase"));
+        }
+        *phase = RuntimePhase::Failed;
+        let ast = self
+            .ast
+            .as_ref()
+            .ok_or_else(|| anyhow!("Prepared plugin runtime is missing its AST"))?;
 
         // 初始化全局状态
         let mut scope = self
@@ -106,15 +166,32 @@ impl PluginRuntime for RhaiRuntime {
             .lock()
             .map_err(|_| anyhow!("Failed to lock plugin scope"))?;
 
-        self.engine
-            .run_ast_with_scope(&mut scope, &ast)
-            .map_err(|e| anyhow!("Failed to initialize plugin: {}", e))?;
-
-        self.ast = Some(ast);
-        Ok(())
+        #[cfg(not(target_arch = "wasm32"))]
+        let _host_scope = self
+            .host_context
+            .read()
+            .map_err(|_| anyhow!("Failed to lock plugin host context"))?
+            .clone()
+            .map(host::PluginHostContextScope::enter);
+        let result = self
+            .engine
+            .run_ast_with_scope(&mut scope, ast)
+            .map_err(|e| anyhow!("Failed to initialize plugin: {}", e));
+        if result.is_ok() {
+            *phase = RuntimePhase::Active;
+        }
+        result
     }
 
     fn call(&self, fn_name: &str, args: Vec<Dynamic>) -> Result<Dynamic> {
+        if *self
+            .phase
+            .lock()
+            .map_err(|_| anyhow!("Failed to lock plugin phase"))?
+            != RuntimePhase::Active
+        {
+            return Err(anyhow!("Plugin runtime is not active"));
+        }
         let ast = self
             .ast
             .as_ref()
@@ -125,6 +202,14 @@ impl PluginRuntime for RhaiRuntime {
             .scope
             .lock()
             .map_err(|_| anyhow!("Failed to lock plugin scope"))?;
+
+        #[cfg(not(target_arch = "wasm32"))]
+        let _host_scope = self
+            .host_context
+            .read()
+            .map_err(|_| anyhow!("Failed to lock plugin host context"))?
+            .clone()
+            .map(host::PluginHostContextScope::enter);
 
         match self.engine.call_fn(&mut scope, ast, fn_name, args) {
             Ok(result) => Ok(result),
@@ -144,6 +229,19 @@ impl PluginRuntime for RhaiRuntime {
 
     fn manifest(&self) -> &PluginManifest {
         &self.manifest
+    }
+
+    #[cfg(not(target_arch = "wasm32"))]
+    fn install_host_context(&self, context: Arc<host::PluginHostContext>) -> Result<()> {
+        let mut slot = self
+            .host_context
+            .write()
+            .map_err(|_| anyhow!("Failed to lock plugin host context"))?;
+        if slot.is_some() {
+            return Err(anyhow!("Plugin host context is already installed"));
+        }
+        *slot = Some(context);
+        Ok(())
     }
 }
 

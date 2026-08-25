@@ -30,6 +30,8 @@ fn test_generation(task: Option<BackendTask>) -> BackendGeneration {
             .expect("test cookie"),
         task,
         shutdown_sender: None,
+        shutdown_coordinator: deve_cli::native_runtime::NativeRuntimeShutdownCoordinator::new(),
+        pending_transport: None,
         transport_stopping: false,
         runtime_restart_required: false,
         probe_cancel: None,
@@ -201,6 +203,99 @@ async fn mobile_embedded_backend_supervisor_shutdown_drains_webview_handoff_gate
         .expect("shutdown drain timeout")
         .expect("shutdown task")
         .expect("shutdown result");
+}
+
+#[tokio::test]
+async fn handoff_gate_timeout_does_not_remove_authority_runtime_state() {
+    let supervisor = test_supervisor(test_generation(None));
+    let handoff = supervisor.webview_handoff_gate.lock().await;
+
+    let error = supervisor
+        .shutdown(Duration::from_millis(1))
+        .await
+        .expect_err("busy handoff gate must time out without destructive cleanup");
+
+    assert!(matches!(error, MobileEmbeddedBackendError::ShutdownTimeout));
+    assert_eq!(
+        supervisor.snapshot().expect("snapshot").service_state,
+        MobileEmbeddedBackendServiceState::EndpointSessionReady
+    );
+    drop(handoff);
+    supervisor
+        .shutdown(Duration::from_secs(1))
+        .await
+        .expect("retry shutdown after handoff completion");
+}
+
+#[tokio::test]
+async fn supervisor_drop_aborts_pending_replacement_generation() {
+    struct DropSignal(Option<oneshot::Sender<()>>);
+    impl Drop for DropSignal {
+        fn drop(&mut self) {
+            if let Some(sender) = self.0.take() {
+                let _ = sender.send(());
+            }
+        }
+    }
+
+    let (dropped_tx, dropped_rx) = oneshot::channel();
+    let task = tauri::async_runtime::spawn(async move {
+        let _signal = DropSignal(Some(dropped_tx));
+        std::future::pending::<()>().await;
+        Ok(())
+    });
+    tokio::task::yield_now().await;
+    let (shutdown_sender, _shutdown_receiver) = oneshot::channel();
+    let mut generation = test_generation(None);
+    generation.pending_transport = Some(
+        crate::embedded_backend::supervisor_types::PendingTransport {
+            transition_token: generation.transition_token,
+            task,
+            shutdown_sender,
+            shutdown_coordinator: deve_cli::native_runtime::NativeRuntimeShutdownCoordinator::new(),
+        },
+    );
+
+    drop(test_supervisor(generation));
+
+    tokio::time::timeout(Duration::from_secs(1), dropped_rx)
+        .await
+        .expect("pending replacement abort deadline")
+        .expect("pending replacement future dropped");
+}
+
+#[tokio::test]
+async fn supervisor_shutdown_retires_pending_replacement_generation() {
+    let (pending_shutdown_tx, pending_shutdown_rx) = oneshot::channel();
+    let (retired_tx, retired_rx) = oneshot::channel();
+    let task = tauri::async_runtime::spawn(async move {
+        let _ = pending_shutdown_rx.await;
+        let _ = retired_tx.send(());
+        Ok(())
+    });
+    let mut generation = test_generation(None);
+    generation.pending_transport = Some(
+        crate::embedded_backend::supervisor_types::PendingTransport {
+            transition_token: generation.transition_token,
+            task,
+            shutdown_sender: pending_shutdown_tx,
+            shutdown_coordinator: deve_cli::native_runtime::NativeRuntimeShutdownCoordinator::new(),
+        },
+    );
+    let supervisor = test_supervisor(generation);
+
+    supervisor
+        .shutdown(Duration::from_secs(1))
+        .await
+        .expect("shutdown retires the supervisor-owned candidate");
+    tokio::time::timeout(Duration::from_secs(1), retired_rx)
+        .await
+        .expect("pending replacement retirement deadline")
+        .expect("pending replacement received shutdown");
+    assert_eq!(
+        supervisor.snapshot().expect("snapshot").service_state,
+        MobileEmbeddedBackendServiceState::Stopped
+    );
 }
 
 #[test]

@@ -18,8 +18,16 @@ impl RuntimeShutdownDeadline {
         self.begin_at(tokio::time::Instant::now(), timeout)
     }
 
+    pub(crate) fn begin_until(&self, deadline: tokio::time::Instant) -> tokio::time::Instant {
+        self.admit(deadline)
+    }
+
     fn begin_at(&self, now: tokio::time::Instant, timeout: Duration) -> tokio::time::Instant {
         let proposed = now.checked_add(timeout).unwrap_or(now);
+        self.admit(proposed)
+    }
+
+    fn admit(&self, proposed: tokio::time::Instant) -> tokio::time::Instant {
         let mut deadline = self
             .deadline
             .lock()
@@ -34,6 +42,7 @@ impl RuntimeShutdownDeadline {
     }
 }
 
+#[cfg(test)]
 pub(super) fn deadline_after(timeout: Duration) -> tokio::time::Instant {
     tokio::time::Instant::now()
         .checked_add(timeout)

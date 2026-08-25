@@ -54,6 +54,27 @@ pub struct NativeEmbeddedServerRuntime {
     runtime: Option<EmbeddedServerRuntime>,
 }
 
+/// Coordinates the one absolute shutdown deadline shared by a native
+/// transport generation and the process-scoped runtime that owns it.
+#[derive(Clone, Default)]
+pub struct NativeRuntimeShutdownCoordinator {
+    deadline: RuntimeShutdownDeadline,
+}
+
+impl NativeRuntimeShutdownCoordinator {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    pub fn begin(&self, timeout: Duration) -> tokio::time::Instant {
+        self.deadline.begin(timeout)
+    }
+
+    pub fn begin_until(&self, deadline: tokio::time::Instant) -> tokio::time::Instant {
+        self.deadline.begin_until(deadline)
+    }
+}
+
 #[derive(Debug)]
 pub struct NativeEmbeddedTransportError {
     message: String,
@@ -209,12 +230,12 @@ where
     options.port = listener.port();
     let runtime = NativeEmbeddedServerRuntime::initialize(&options).await?;
     let transport = runtime.transport();
-    let shutdown_deadline = RuntimeShutdownDeadline::default();
+    let shutdown_coordinator = NativeRuntimeShutdownCoordinator::new();
     let serve_result = transport
-        .serve_with_shutdown_deadline(options, listener, shutdown, shutdown_deadline.clone())
+        .serve_with_shutdown_coordinator(options, listener, shutdown, shutdown_coordinator.clone())
         .await;
     let shutdown_result = runtime
-        .shutdown_until(shutdown_deadline.begin(SERVER_RUNTIME_SHUTDOWN_TIMEOUT))
+        .shutdown_with_coordinator(SERVER_RUNTIME_SHUTDOWN_TIMEOUT, &shutdown_coordinator)
         .await;
     match (serve_result, shutdown_result) {
         (Ok(()), Ok(())) => Ok(()),
@@ -265,18 +286,22 @@ impl NativeEmbeddedServerRuntime {
         }
     }
 
-    pub async fn shutdown(mut self, timeout: Duration) -> anyhow::Result<()> {
-        let Some(runtime) = self.runtime.take() else {
-            return Ok(());
-        };
-        runtime.shutdown(timeout).await
+    pub async fn shutdown(self, timeout: Duration) -> anyhow::Result<()> {
+        self.shutdown_with_coordinator(timeout, &NativeRuntimeShutdownCoordinator::new())
+            .await
     }
 
-    async fn shutdown_until(mut self, deadline: tokio::time::Instant) -> anyhow::Result<()> {
+    pub async fn shutdown_with_coordinator(
+        mut self,
+        timeout: Duration,
+        shutdown_coordinator: &NativeRuntimeShutdownCoordinator,
+    ) -> anyhow::Result<()> {
         let Some(runtime) = self.runtime.take() else {
             return Ok(());
         };
-        runtime.shutdown_until(deadline).await
+        runtime
+            .shutdown_until(shutdown_coordinator.begin(timeout))
+            .await
     }
 }
 
@@ -290,21 +315,35 @@ impl NativeEmbeddedTransportRuntime {
     where
         F: std::future::Future<Output = ()> + Send + 'static,
     {
-        self.serve_with_shutdown_deadline(
+        self.serve_with_shutdown_coordinator(
             options,
             listener,
             shutdown,
-            RuntimeShutdownDeadline::default(),
+            NativeRuntimeShutdownCoordinator::new(),
         )
         .await
     }
 
-    async fn serve_with_shutdown_deadline<F>(
+    pub async fn serve_with_listener_until_shutdown_with_coordinator<F>(
+        &self,
+        options: NativeLocalBackendOptions,
+        listener: NativeLoopbackListener,
+        shutdown: F,
+        shutdown_coordinator: NativeRuntimeShutdownCoordinator,
+    ) -> Result<(), NativeEmbeddedTransportError>
+    where
+        F: std::future::Future<Output = ()> + Send + 'static,
+    {
+        self.serve_with_shutdown_coordinator(options, listener, shutdown, shutdown_coordinator)
+            .await
+    }
+
+    async fn serve_with_shutdown_coordinator<F>(
         &self,
         mut options: NativeLocalBackendOptions,
         listener: NativeLoopbackListener,
         shutdown: F,
-        shutdown_deadline: RuntimeShutdownDeadline,
+        shutdown_coordinator: NativeRuntimeShutdownCoordinator,
     ) -> Result<(), NativeEmbeddedTransportError>
     where
         F: std::future::Future<Output = ()> + Send + 'static,
@@ -319,7 +358,7 @@ impl NativeEmbeddedTransportRuntime {
                 listener,
                 native_server_launch_options(&options),
                 shutdown,
-                shutdown_deadline,
+                shutdown_coordinator.deadline,
             )
             .await
             .map_err(NativeEmbeddedTransportError::from)

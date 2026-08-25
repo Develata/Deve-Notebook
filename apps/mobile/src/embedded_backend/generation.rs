@@ -12,7 +12,7 @@ use std::sync::atomic::AtomicBool;
 
 use deve_cli::native_runtime::{
     NativeEmbeddedTransportRuntime, NativeLocalBackendOptions, NativeLoopbackListener,
-    bind_native_loopback_listener,
+    NativeRuntimeShutdownCoordinator, bind_native_loopback_listener,
 };
 use deve_core::config::AppProfile;
 use tauri::async_runtime::JoinHandle;
@@ -95,9 +95,15 @@ pub(super) fn prepare_transport(
 pub(super) fn spawn_transport(
     runtime: &NativeEmbeddedTransportRuntime,
     prepared: &mut PreparedTransport,
-) -> (BackendTask, oneshot::Sender<()>) {
+) -> (
+    BackendTask,
+    oneshot::Sender<()>,
+    NativeRuntimeShutdownCoordinator,
+) {
     let (shutdown_sender, shutdown_receiver) = oneshot::channel();
+    let shutdown_coordinator = NativeRuntimeShutdownCoordinator::new();
     let runtime = runtime.clone();
+    let transport_shutdown_coordinator = shutdown_coordinator.clone();
     let options = prepared.options.clone();
     let listener = prepared
         .listener
@@ -105,16 +111,21 @@ pub(super) fn spawn_transport(
         .expect("prepared loopback listener is consumed exactly once");
     let task = tauri::async_runtime::spawn(async move {
         runtime
-            .serve_with_listener_until_shutdown(options, listener, async move {
-                let _ = shutdown_receiver.await;
-            })
+            .serve_with_listener_until_shutdown_with_coordinator(
+                options,
+                listener,
+                async move {
+                    let _ = shutdown_receiver.await;
+                },
+                transport_shutdown_coordinator,
+            )
             .await
             .map_err(|error| BackendTaskFailure {
                 sessions_retired: error.sessions_retired(),
                 message: error.to_string(),
             })
     });
-    (task, shutdown_sender)
+    (task, shutdown_sender, shutdown_coordinator)
 }
 
 pub(super) fn started_shell() -> MobileShell {
@@ -243,9 +254,10 @@ pub(super) async fn await_transport_task(
 pub(super) async fn stop_transport(
     task: BackendTask,
     shutdown_sender: oneshot::Sender<()>,
+    shutdown_coordinator: &NativeRuntimeShutdownCoordinator,
 ) -> Result<(), MobileEmbeddedBackendError> {
+    let deadline = shutdown_coordinator.begin(super::MOBILE_EMBEDDED_BACKEND_SHUTDOWN_TIMEOUT);
     let _ = shutdown_sender.send(());
-    let deadline = tokio::time::Instant::now() + super::MOBILE_EMBEDDED_BACKEND_SHUTDOWN_TIMEOUT;
     await_transport_task(task, deadline).await
 }
 

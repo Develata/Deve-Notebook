@@ -17,6 +17,10 @@
 #[cfg(not(target_arch = "wasm32"))]
 use crate::plugin::manifest::PluginManifest;
 #[cfg(not(target_arch = "wasm32"))]
+use crate::plugin::resource_budget::{
+    MAX_PLUGIN_COUNT, MAX_PLUGIN_MANIFEST_BYTES, MAX_PLUGIN_SCRIPT_BYTES, read_utf8_file_bounded,
+};
+#[cfg(not(target_arch = "wasm32"))]
 use crate::plugin::runtime::{PluginRuntime, RhaiRuntime};
 #[cfg(not(target_arch = "wasm32"))]
 use anyhow::{Context, Result, bail};
@@ -61,25 +65,33 @@ impl PluginLoader {
             return Ok(plugins);
         }
 
+        let mut plugin_paths = Vec::new();
         for entry in fs::read_dir(&self.plugin_dir)? {
             let entry = entry?;
             let path = entry.path();
 
             if entry.file_type()?.is_dir() {
-                match self
-                    .load_plugin(&path)
-                    .with_context(|| format!("Failed to load plugin at {:?}", path))
-                {
-                    Ok(runtime) => {
-                        println!("Loaded plugin: {}", runtime.manifest().name);
-                        plugins.push(runtime);
+                plugin_paths.push(path);
+                if plugin_paths.len() > MAX_PLUGIN_COUNT {
+                    bail!("Plugin directory exceeds the configured plugin-count budget");
+                }
+            }
+        }
+        plugin_paths.sort();
+        for path in plugin_paths {
+            match self
+                .load_plugin(&path)
+                .with_context(|| format!("Failed to load plugin at {:?}", path))
+            {
+                Ok(runtime) => {
+                    println!("Prepared plugin: {}", runtime.manifest().name);
+                    plugins.push(runtime);
+                }
+                Err(e) => {
+                    if fail_closed {
+                        return Err(e);
                     }
-                    Err(e) => {
-                        if fail_closed {
-                            return Err(e);
-                        }
-                        eprintln!("Failed to load plugin at {:?}: {}", path, e);
-                    }
+                    eprintln!("Failed to load plugin at {:?}: {}", path, e);
                 }
             }
         }
@@ -90,20 +102,27 @@ impl PluginLoader {
     pub fn load_plugin(&self, path: &Path) -> Result<Box<dyn PluginRuntime>> {
         // 1. Read manifest.json
         let manifest_path = path.join("manifest.json");
-        let manifest_content = fs::read_to_string(&manifest_path)
-            .with_context(|| format!("Missing manifest.json in {:?}", path))?;
+        let manifest_content =
+            read_utf8_file_bounded(&manifest_path, MAX_PLUGIN_MANIFEST_BYTES, "plugin manifest")
+                .with_context(|| format!("Failed to read manifest.json in {:?}", path))?;
 
         let manifest: PluginManifest = serde_json::from_str(&manifest_content)
             .with_context(|| "Failed to parse manifest.json")?;
 
         // 2. Read entry script
         let entry_path = validate_plugin_entry(path, &manifest.entry)?;
-        let script_content = fs::read_to_string(&entry_path)
-            .with_context(|| format!("Missing entry script '{}' in {:?}", manifest.entry, path))?;
+        let script_content =
+            read_utf8_file_bounded(&entry_path, MAX_PLUGIN_SCRIPT_BYTES, "plugin entry script")
+                .with_context(|| {
+                    format!(
+                        "Failed to read entry script '{}' in {:?}",
+                        manifest.entry, path
+                    )
+                })?;
 
-        // 3. Initialize Runtime (传递插件目录路径以支持模块解析)
+        // 3. Prepare Runtime. Host APIs are not executable until the composition root activates it.
         let mut runtime = RhaiRuntime::new(manifest.clone(), path.to_path_buf());
-        runtime.load(manifest, &script_content)?;
+        runtime.prepare(manifest, &script_content)?;
 
         Ok(Box::new(runtime))
     }

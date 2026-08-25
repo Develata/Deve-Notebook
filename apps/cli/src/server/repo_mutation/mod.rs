@@ -16,7 +16,6 @@ pub(crate) use binding::{
 };
 pub(crate) use execution::MutationExecution;
 pub(crate) use gate::{MountedRepoAdmission, RepoMutationGateError, RepoMutationPublicationGate};
-#[cfg(not(test))]
 pub(crate) use plugin::{CliManagedNoteMutationHost, CliManagedSourceControlMutationHost};
 pub(crate) use publication::MutationPublication;
 

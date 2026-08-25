@@ -3,9 +3,11 @@
 //!   - 15_settings#native-ai-provider-settings
 
 use super::{
-    NativeLocalBackendOptions, bind_native_loopback_listener, bind_native_loopback_listener_exact,
-    init_default_native_backend, load_native_plugins, native_ai_provider_settings_root,
+    NativeLocalBackendOptions, NativeRuntimeShutdownCoordinator, bind_native_loopback_listener,
+    bind_native_loopback_listener_exact, init_default_native_backend, load_native_plugins,
+    native_ai_provider_settings_root,
 };
+use std::time::Duration;
 
 #[test]
 fn native_default_backend_starts_empty_without_creating_repo_authority() {
@@ -112,13 +114,19 @@ fn native_loopback_listener_exact_rejects_occupied_port() {
 
 #[test]
 fn native_high_level_loopback_shutdown_reuses_transport_deadline() {
-    let source = include_str!("../native_runtime.rs")
-        .split("#[cfg(test)]")
-        .next()
-        .expect("native runtime source");
+    let coordinator = NativeRuntimeShutdownCoordinator::new();
+    let absolute = tokio::time::Instant::now() + Duration::from_secs(5);
 
-    assert!(source.contains("RuntimeShutdownDeadline::default()"));
-    assert!(source.contains("serve_with_shutdown_deadline"));
-    assert!(source.contains("shutdown_until"));
-    assert!(!source.contains("runtime.shutdown(Duration::from_secs(5))"));
+    assert_eq!(coordinator.begin_until(absolute), absolute);
+    assert_eq!(
+        coordinator.begin(Duration::from_secs(30)),
+        absolute,
+        "runtime owner cleanup must not restart the transport budget"
+    );
+
+    let replacement = NativeRuntimeShutdownCoordinator::new();
+    assert!(
+        replacement.begin(Duration::from_secs(5)) > absolute,
+        "a replacement transport generation owns a fresh coordinator"
+    );
 }

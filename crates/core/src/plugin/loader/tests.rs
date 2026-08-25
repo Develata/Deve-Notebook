@@ -34,11 +34,13 @@ fn test_plugin_loader() {
 
     // 4. Load
     let loader = PluginLoader::new(dir.path().to_path_buf());
-    let plugins = loader.load_all().expect("Failed to load plugins");
+    let mut plugins = loader.load_all().expect("Failed to load plugins");
 
     assert_eq!(plugins.len(), 1);
-    let plugin = &plugins[0];
+    let plugin = &mut plugins[0];
     assert_eq!(plugin.manifest().id, "test-plugin");
+    assert!(plugin.call("hello", vec![]).is_err());
+    plugin.activate().expect("activate after host admission");
 
     let res = plugin.call("hello", vec![]).expect("Failed to call");
     assert_eq!(res.clone().into_string().unwrap(), "world");
@@ -338,4 +340,87 @@ fn load_plugin_allows_nested_rhai_entry() {
     let plugin = loader.load_plugin(&plugin_dir).expect("load plugin");
 
     assert_eq!(plugin.manifest().id, "nested-plugin");
+}
+
+#[test]
+#[cfg(not(target_arch = "wasm32"))]
+fn loader_prepares_without_running_top_level_host_calls() {
+    let dir = tempdir().expect("tempdir");
+    let plugin_dir = dir.path().join("prepared-plugin");
+    fs::create_dir(&plugin_dir).expect("mkdir plugin");
+    fs::write(
+        plugin_dir.join("manifest.json"),
+        r#"{
+            "id": "prepared-plugin",
+            "name": "Prepared Plugin",
+            "version": "1.0.0",
+            "entry": "main.rhai"
+        }"#,
+    )
+    .expect("manifest");
+    fs::write(plugin_dir.join("main.rhai"), "throw \"top-level-ran\";").expect("entry");
+
+    let loader = PluginLoader::new(dir.path().to_path_buf());
+    let plugin = loader
+        .load_plugin(&plugin_dir)
+        .expect("prepare must not execute top-level code");
+
+    let error = plugin
+        .activate()
+        .expect_err("activation executes top-level code exactly at admission");
+    assert!(error.to_string().contains("top-level-ran"));
+    assert!(plugin.activate().is_err(), "failed activation is terminal");
+}
+
+#[test]
+#[cfg(not(target_arch = "wasm32"))]
+fn loader_rejects_plugin_count_over_aggregate_budget() {
+    let dir = tempdir().expect("tempdir");
+    for index in 0..=crate::plugin::resource_budget::MAX_PLUGIN_COUNT {
+        fs::create_dir(dir.path().join(format!("plugin-{index:03}"))).expect("plugin dir");
+    }
+
+    let error = match PluginLoader::new(dir.path().to_path_buf()).load_all_strict() {
+        Ok(_) => panic!("plugin count over budget must fail closed"),
+        Err(error) => error,
+    };
+
+    assert!(error.to_string().contains("plugin-count budget"));
+}
+
+#[test]
+#[cfg(not(target_arch = "wasm32"))]
+fn loader_rejects_oversized_manifest_and_entry() {
+    let dir = tempdir().expect("tempdir");
+    let manifest_plugin = dir.path().join("manifest-large");
+    fs::create_dir(&manifest_plugin).expect("manifest dir");
+    fs::write(
+        manifest_plugin.join("manifest.json"),
+        vec![b' '; (crate::plugin::resource_budget::MAX_PLUGIN_MANIFEST_BYTES + 1) as usize],
+    )
+    .expect("large manifest");
+    let loader = PluginLoader::new(dir.path().to_path_buf());
+    let manifest_error = match loader.load_plugin(&manifest_plugin) {
+        Ok(_) => panic!("oversized manifest must fail closed"),
+        Err(error) => error,
+    };
+    assert!(format!("{manifest_error:#}").contains("resource budget"));
+
+    let entry_plugin = dir.path().join("entry-large");
+    fs::create_dir(&entry_plugin).expect("entry dir");
+    fs::write(
+        entry_plugin.join("manifest.json"),
+        r#"{"id":"entry-large","name":"Entry Large","version":"1","entry":"main.rhai"}"#,
+    )
+    .expect("manifest");
+    fs::write(
+        entry_plugin.join("main.rhai"),
+        vec![b' '; (crate::plugin::resource_budget::MAX_PLUGIN_SCRIPT_BYTES + 1) as usize],
+    )
+    .expect("large entry");
+    let entry_error = match loader.load_plugin(&entry_plugin) {
+        Ok(_) => panic!("oversized entry must fail closed"),
+        Err(error) => error,
+    };
+    assert!(format!("{entry_error:#}").contains("resource budget"));
 }

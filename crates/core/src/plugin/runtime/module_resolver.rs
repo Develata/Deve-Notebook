@@ -1,23 +1,27 @@
 //! plan_ref:
 //!   - 19_plugins#plugin-runtime-boundary
 //!
-use rhai::module_resolvers::FileModuleResolver;
-use rhai::{Engine, Module, ModuleResolver, Position, Shared};
+use crate::plugin::resource_budget::{MAX_PLUGIN_SCRIPT_BYTES, read_utf8_file_bounded};
+use rhai::{Engine, GlobalRuntimeState, Module, ModuleResolver, Position, Scope, Shared};
+use std::collections::{BTreeMap, BTreeSet};
 use std::io::ErrorKind;
 use std::path::{Component, Path, PathBuf};
+use std::sync::Mutex;
 
 /// File-backed Rhai module resolver constrained to one plugin directory.
 #[derive(Debug)]
 pub(super) struct GuardedFileModuleResolver {
-    inner: FileModuleResolver,
     base_dir: PathBuf,
+    cache: Mutex<BTreeMap<PathBuf, Shared<Module>>>,
+    in_flight: Mutex<BTreeSet<PathBuf>>,
 }
 
 impl GuardedFileModuleResolver {
     pub(super) fn new(base_dir: PathBuf) -> Self {
         Self {
-            inner: FileModuleResolver::new_with_path(&base_dir),
             base_dir,
+            cache: Mutex::new(BTreeMap::new()),
+            in_flight: Mutex::new(BTreeSet::new()),
         }
     }
 
@@ -65,7 +69,7 @@ impl GuardedFileModuleResolver {
         Ok(())
     }
 
-    fn guard_resolved_target(&self, path: &str) -> Result<(), String> {
+    fn guard_resolved_target(&self, path: &str) -> Result<PathBuf, String> {
         self.validate_module_path(path)?;
 
         let canonical_root = std::fs::canonicalize(&self.base_dir).map_err(|err| {
@@ -74,7 +78,8 @@ impl GuardedFileModuleResolver {
                 self.base_dir, err
             )
         })?;
-        let target = self.inner.get_file_path(path, None);
+        let mut target = self.base_dir.join(path);
+        target.set_extension("rhai");
         let canonical_target = canonicalize_existing_ancestor(&target)?;
         if !canonical_target.starts_with(&canonical_root) {
             return Err(format!(
@@ -82,11 +87,67 @@ impl GuardedFileModuleResolver {
                 path
             ));
         }
-        Ok(())
+        Ok(canonical_target)
+    }
+
+    fn resolve_with_runtime(
+        &self,
+        engine: &Engine,
+        global: &mut GlobalRuntimeState,
+        scope: &mut Scope,
+        path: &str,
+    ) -> Result<Shared<Module>, Box<rhai::EvalAltResult>> {
+        let target = self
+            .guard_resolved_target(path)
+            .map_err(|err| -> Box<rhai::EvalAltResult> { err.into() })?;
+        if let Some(module) = self
+            .cache
+            .lock()
+            .map_err(|_| -> Box<rhai::EvalAltResult> { "Plugin module cache lock failed".into() })?
+            .get(&target)
+            .cloned()
+        {
+            return Ok(module);
+        }
+        let _in_flight = ModuleResolutionGuard::claim(&self.in_flight, target.clone(), path)?;
+
+        let script = read_utf8_file_bounded(&target, MAX_PLUGIN_SCRIPT_BYTES, "plugin Rhai module")
+            .map_err(|error| -> Box<rhai::EvalAltResult> {
+                format!("Failed to read plugin module '{path}': {error}").into()
+            })?;
+        let mut ast = engine.compile(&script).map_err(|error| {
+            Box::<rhai::EvalAltResult>::from(format!(
+                "Failed to compile plugin module '{path}': {error}"
+            ))
+        })?;
+        ast.set_source(path);
+        let module: Shared<Module> = Module::eval_ast_as_new_raw(engine, scope, global, &ast)
+            .map_err(|error| {
+                Box::<rhai::EvalAltResult>::from(format!(
+                    "Failed to initialize plugin module '{path}': {error}"
+                ))
+            })?
+            .into();
+        self.cache
+            .lock()
+            .map_err(|_| -> Box<rhai::EvalAltResult> { "Plugin module cache lock failed".into() })?
+            .insert(target, module.clone());
+        Ok(module)
     }
 }
 
 impl ModuleResolver for GuardedFileModuleResolver {
+    fn resolve_raw(
+        &self,
+        engine: &Engine,
+        global: &mut GlobalRuntimeState,
+        scope: &mut Scope,
+        path: &str,
+        _pos: Position,
+    ) -> Result<Shared<Module>, Box<rhai::EvalAltResult>> {
+        self.resolve_with_runtime(engine, global, scope, path)
+    }
+
     fn resolve(
         &self,
         engine: &Engine,
@@ -94,9 +155,43 @@ impl ModuleResolver for GuardedFileModuleResolver {
         path: &str,
         pos: Position,
     ) -> Result<Shared<Module>, Box<rhai::EvalAltResult>> {
-        self.guard_resolved_target(path)
-            .map_err(|err| -> Box<rhai::EvalAltResult> { err.into() })?;
-        self.inner.resolve(engine, source, path, pos)
+        let _ = (source, pos);
+        let mut global = engine.new_global_runtime_state();
+        self.resolve_with_runtime(engine, &mut global, &mut Scope::new(), path)
+    }
+}
+
+struct ModuleResolutionGuard<'a> {
+    in_flight: &'a Mutex<BTreeSet<PathBuf>>,
+    target: PathBuf,
+}
+
+impl<'a> ModuleResolutionGuard<'a> {
+    fn claim(
+        in_flight: &'a Mutex<BTreeSet<PathBuf>>,
+        target: PathBuf,
+        import_path: &str,
+    ) -> Result<Self, Box<rhai::EvalAltResult>> {
+        let mut active = in_flight.lock().map_err(|_| -> Box<rhai::EvalAltResult> {
+            "Plugin module cycle guard lock failed".into()
+        })?;
+        if !active.insert(target.clone()) {
+            return Err(format!("Cyclic plugin module import rejected: '{import_path}'").into());
+        }
+        Ok(Self { in_flight, target })
+    }
+}
+
+impl Drop for ModuleResolutionGuard<'_> {
+    fn drop(&mut self) {
+        match self.in_flight.lock() {
+            Ok(mut active) => {
+                active.remove(&self.target);
+            }
+            Err(poisoned) => {
+                poisoned.into_inner().remove(&self.target);
+            }
+        }
     }
 }
 
@@ -219,6 +314,49 @@ mod tests {
             .expect_err("drive-prefixed module import must fail");
 
         assert!(err.to_string().contains("drive prefixes are not allowed"));
+    }
+
+    #[test]
+    fn oversized_module_is_rejected_before_evaluation() {
+        let dir = tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("large.rhai"),
+            vec![b' '; (MAX_PLUGIN_SCRIPT_BYTES + 1) as usize],
+        )
+        .expect("write large module");
+        let engine = engine_with_resolver(dir.path().to_path_buf());
+
+        let err = engine
+            .eval::<()>(r#"import "large" as large;"#)
+            .expect_err("oversized module must fail closed");
+
+        assert!(err.to_string().contains("resource budget"));
+    }
+
+    #[test]
+    fn cyclic_module_import_is_rejected_before_recursive_evaluation() {
+        let dir = tempdir().expect("tempdir");
+        std::fs::write(
+            dir.path().join("first.rhai"),
+            r#"import "second" as second; fn value() { second::value() }"#,
+        )
+        .expect("write first");
+        std::fs::write(
+            dir.path().join("second.rhai"),
+            r#"import "first" as first; fn value() { first::value() }"#,
+        )
+        .expect("write second");
+        let engine = engine_with_resolver(dir.path().to_path_buf());
+
+        let error = engine
+            .eval::<()>(r#"import "first" as first;"#)
+            .expect_err("cyclic import must fail closed");
+
+        assert!(
+            error
+                .to_string()
+                .contains("Cyclic plugin module import rejected")
+        );
     }
 
     #[cfg(unix)]

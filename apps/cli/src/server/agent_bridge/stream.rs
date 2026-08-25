@@ -6,11 +6,12 @@ use deve_core::protocol::ServerMessage;
 use std::io;
 use std::time::Duration;
 use tokio::io::{AsyncBufRead, AsyncBufReadExt};
-use tokio::process::{Child, ChildStdout};
+use tokio::process::ChildStdout;
 use tokio::time::Instant;
 
+use super::process_tree::{ContainedChild, trusted_cli_command};
+
 const MAX_AGENT_OUTPUT_BYTES: usize = 64 * 1024;
-const CHILD_CLEANUP_TIMEOUT: Duration = Duration::from_secs(1);
 
 #[derive(Debug, PartialEq, Eq)]
 enum BoundedLine {
@@ -26,16 +27,8 @@ pub(super) async fn spawn_and_stream(
     ch: &DualChannel,
     req_id: &str,
 ) -> anyhow::Result<()> {
-    use std::process::Stdio;
-
-    let mut child = tokio::process::Command::new(cli_path)
-        .env_clear()
-        .args(["run", query])
-        .stdin(Stdio::null())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::null())
-        .spawn()
-        .map_err(|err| {
+    let mut command = trusted_cli_command(cli_path, query);
+    let mut child = ContainedChild::spawn(&mut command).map_err(|err| {
             anyhow::anyhow!(
                 "Failed to spawn '{}': {}. Check AGENT_CLI_PATH points to an existing absolute executable path.",
                 cli_path,
@@ -44,14 +37,13 @@ pub(super) async fn spawn_and_stream(
         })?;
 
     let stdout = child
-        .stdout
-        .take()
+        .take_stdout()
         .ok_or_else(|| anyhow::anyhow!("Failed to capture stdout"))?;
     stream_child(child, stdout, timeout_ms, ch, req_id).await
 }
 
 async fn stream_child(
-    mut child: Child,
+    mut child: ContainedChild,
     stdout: ChildStdout,
     timeout_ms: u64,
     ch: &DualChannel,
@@ -67,23 +59,30 @@ async fn stream_child(
     loop {
         tokio::select! {
             _ = &mut deadline => {
-                terminate_child(&mut child).await;
-                return Err(anyhow::anyhow!("Agent CLI timeout"));
+                return fail_after_cleanup(
+                    anyhow::anyhow!("Agent CLI timeout"),
+                    &mut child,
+                ).await;
             }
             read = read_line_bounded(&mut reader, &mut line) => {
                 match read {
                     Ok(BoundedLine::Eof) => break,
                     Ok(BoundedLine::OutputLimit) => {
-                        terminate_child(&mut child).await;
-                        return Err(anyhow::anyhow!("Agent CLI output limit exceeded"));
+                        return fail_after_cleanup(
+                            anyhow::anyhow!("Agent CLI output limit exceeded"),
+                            &mut child,
+                        ).await;
                     }
                     Ok(BoundedLine::Line(raw_bytes)) => {
                         if output_bytes
                             .checked_add(raw_bytes)
                             .is_none_or(|total| total > MAX_AGENT_OUTPUT_BYTES)
                         {
-                            terminate_child(&mut child).await;
-                            return Err(anyhow::anyhow!("Agent CLI output limit exceeded"));
+                            return fail_after_cleanup(
+                                anyhow::anyhow!("Agent CLI output limit exceeded"),
+                                &mut child,
+                            )
+                            .await;
                         }
                         output_bytes += raw_bytes;
                         let text = match std::str::from_utf8(&line) {
@@ -91,8 +90,7 @@ async fn stream_child(
                             Err(err) => {
                                 let primary =
                                     anyhow::anyhow!("Agent CLI stdout read error: {}", err);
-                                terminate_child(&mut child).await;
-                                return Err(primary);
+                                return fail_after_cleanup(primary, &mut child).await;
                             }
                         };
                         let clean = strip_ansi(text);
@@ -106,8 +104,7 @@ async fn stream_child(
                     }
                     Err(err) => {
                         let primary = anyhow::anyhow!("Agent CLI stdout read error: {}", err);
-                        terminate_child(&mut child).await;
-                        return Err(primary);
+                        return fail_after_cleanup(primary, &mut child).await;
                     }
                 }
             }
@@ -118,17 +115,22 @@ async fn stream_child(
         Ok(Ok(status)) => status,
         Ok(Err(err)) => {
             let primary = anyhow::anyhow!("Agent CLI wait error: {}", err);
-            terminate_child(&mut child).await;
-            return Err(primary);
+            return fail_after_cleanup(primary, &mut child).await;
         }
         Err(_) => {
-            terminate_child(&mut child).await;
-            return Err(anyhow::anyhow!("Agent CLI timeout"));
+            return fail_after_cleanup(anyhow::anyhow!("Agent CLI timeout"), &mut child).await;
         }
     };
     if !status.success() {
-        return Err(anyhow::anyhow!("Agent CLI exited with status: {}", status));
+        let primary = anyhow::anyhow!("Agent CLI exited with status: {}", status);
+        return match child.retire_tree_after_wait() {
+            Ok(()) => Err(primary),
+            Err(cleanup) => Err(primary.context(format!("Agent CLI cleanup failed: {cleanup}"))),
+        };
     }
+    child
+        .retire_tree_after_wait()
+        .map_err(|cleanup| anyhow::anyhow!("Agent CLI cleanup failed: {cleanup}"))?;
 
     ch.unicast(ServerMessage::ChatChunk {
         req_id: req_id.to_string(),
@@ -172,17 +174,13 @@ where
     }
 }
 
-async fn terminate_child(child: &mut Child) {
-    match tokio::time::timeout(CHILD_CLEANUP_TIMEOUT, child.kill()).await {
-        Ok(Ok(())) => {}
-        Ok(Err(err)) => tracing::warn!("Agent CLI cleanup kill failed: {}", err),
-        Err(_) => tracing::warn!("Agent CLI cleanup kill timed out"),
-    }
-
-    match tokio::time::timeout(CHILD_CLEANUP_TIMEOUT, child.wait()).await {
-        Ok(Ok(_)) => {}
-        Ok(Err(err)) => tracing::warn!("Agent CLI cleanup wait failed: {}", err),
-        Err(_) => tracing::warn!("Agent CLI cleanup wait timed out"),
+async fn fail_after_cleanup(
+    primary: anyhow::Error,
+    child: &mut ContainedChild,
+) -> anyhow::Result<()> {
+    match child.retire_tree().await {
+        Ok(()) => Err(primary),
+        Err(cleanup) => Err(primary.context(format!("Agent CLI cleanup failed: {cleanup}"))),
     }
 }
 

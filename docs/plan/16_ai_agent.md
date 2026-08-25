@@ -106,6 +106,7 @@ Native AI Chat 是启用 AI 功能时的默认第一方 AI 形态，属于内建
     `output` 的 Responses `response.completed`、Anthropic
     `message_delta.stop_reason`）后才能投影成功；`[DONE]`、EOF 或 transport `StreamEnded` 仅是 framing/连接终止，
     不得自行制造成功终态。
+*   Native provider SSE 必须由 server-owned bounded decoder 增量消费，不能把 framing 与内存上限委托给无界 event buffer：response headers/connect 最多等待 `30 s`，相邻网络 chunk idle 最多 `30 s`，单次请求总时长最多 `5 min`；单个 SSE event/frame 最多 `256 KiB`，累计 wire bytes 最多 `8 MiB`，最终 UTF-8 文本最多 `2 MiB`。每个 delta 必须在 checked-add 通过后才进入累计响应与 WebSocket sink；任一超时、超限、无效 UTF-8、HTTP 非成功状态或 truncated frame 都必须结束请求并 fail-closed，不得发送成功终态。上述值是 768 MB baseline 的硬上限，不由 provider payload 覆盖。
 
 ### 原生模式定义
 
@@ -148,6 +149,7 @@ Native AI Chat 是启用 AI 功能时的默认第一方 AI 形态，属于内建
 *   如果上述边界无法成立，Deve-Notebook **SHOULD** 不内建 CLI Agent；用户可在外部终端自行运行。
 *   若保留 `agent-bridge`，它只能是 default-off、policy-gated 的 Trusted CLI path；它不得被描述成通用插件市场能力，也不得绕过 `AGENT_CLI_PATH` / trusted-mode gating。
 *   `AGENT_CLI_PATH` 必须解析为显式绝对路径；子进程必须清空默认环境、设置超时、输出上限和并发上限，避免退化成开放式 shell/agent runner。
+*   每个 admitted Agent CLI 必须在 child 执行任何用户代码前放入 host-owned process tree containment：Unix 使用创建时独立 process group；Windows 只有实现 suspended/create-time Job Object association 后才可启用。当前 Windows build 必须在 spawn 前把 Trusted CLI 报告为 unavailable，不能用“先 spawn、后 AssignProcessToJobObject”的竞态实现。containment 建立失败必须终止并有界回收 child。正常完成、timeout、输出超限、stdout decode/read error、caller cancellation 与 server shutdown 都必须退休整个进程树并有界 wait；cleanup failure 必须成为 typed request failure，不能发送成功 finish chunk。
 *   `DEVE_AI_AGENT_BRIDGE_ENABLED` 与 `DEVE_AI_AGENT_BRIDGE_TRUSTED` 是
     `ai.agent_bridge.enabled` / `ai.agent_bridge.trusted` 的兼容环境变量别名；它们只改变
     Trusted CLI policy 输入，不授予额外能力，也不得绕过 `AGENT_CLI_PATH` 的绝对路径与可执行文件检查。
@@ -172,8 +174,8 @@ Native AI Chat 是启用 AI 功能时的默认第一方 AI 形态，属于内建
 
 | 能力 | 常驻内存 | 按需内存 | 定位 |
 |------|---------|----------|----------|
-| Native AI Chat | 轻量级 | SSE / provider response buffer | 启用 AI 功能时的第一方基线 |
-| Trusted CLI Agent | 0 MB | 取决于外部 CLI | 可选，默认关闭 |
+| Native AI Chat | 轻量级 | SSE frame 256 KiB / wire 8 MiB / answer 2 MiB 硬上限 | 启用 AI 功能时的第一方基线 |
+| Trusted CLI Agent | 0 MB | stdout 64 KiB + 外部 CLI（process-tree containment） | 可选，默认关闭 |
 
 ## 6. Related Configuration (本章相关配置)
 

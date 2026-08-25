@@ -44,7 +44,9 @@ impl MobileEmbeddedBackendSupervisor {
         mut plan: ResumePlan,
     ) -> Result<MobileEmbeddedBackendResume, MobileEmbeddedBackendError> {
         if let Some(task) = plan.old_task.take() {
-            let deadline = tokio::time::Instant::now() + MOBILE_EMBEDDED_BACKEND_SHUTDOWN_TIMEOUT;
+            let deadline = plan
+                .old_shutdown_coordinator
+                .begin(MOBILE_EMBEDDED_BACKEND_SHUTDOWN_TIMEOUT);
             match await_transport_task(task, deadline).await {
                 Ok(())
                 | Err(MobileEmbeddedBackendError::BackendExitedAfterSessionRetirement(_)) => {}
@@ -86,7 +88,19 @@ impl MobileEmbeddedBackendSupervisor {
                     return Err(error);
                 }
             };
-            let (task, shutdown_sender) = spawn_transport(&plan.transport, &mut prepared);
+            let (task, shutdown_sender, shutdown_coordinator) =
+                spawn_transport(&plan.transport, &mut prepared);
+            let pending = super::super::supervisor_types::PendingTransport {
+                transition_token: plan.transition_token,
+                task,
+                shutdown_sender,
+                shutdown_coordinator,
+            };
+            if let Err((error, pending)) = self.install_pending_candidate(pending) {
+                self.retire_uncommitted_candidate(pending, plan.transition_token)
+                    .await?;
+                return Err(error);
+            }
             let probed = probe_replacement_transport_async(
                 prepared.plan.clone(),
                 prepared.native_session_secret.clone(),
@@ -98,8 +112,9 @@ impl MobileEmbeddedBackendSupervisor {
             let probed = match probed {
                 Ok(probed) => probed,
                 Err(failure) => {
-                    let candidate_exited = backend_requires_restart(Some(&task));
-                    self.retire_uncommitted_candidate(task, shutdown_sender, plan.transition_token)
+                    let pending = self.take_pending_candidate(plan.transition_token)?;
+                    let candidate_exited = backend_requires_restart(Some(&pending.task));
+                    self.retire_uncommitted_candidate(pending, plan.transition_token)
                         .await?;
                     if attempt < REPLACEMENT_ADMISSION_MAX_ATTEMPTS
                         && failure.is_retryable_startup()
@@ -123,7 +138,7 @@ impl MobileEmbeddedBackendSupervisor {
             };
 
             let resumed = self
-                .commit_replacement_candidate(&plan, prepared, probed, task, shutdown_sender)
+                .commit_replacement_candidate(&plan, prepared, probed)
                 .await?;
             replacement_checkpoint(
                 "android_local_backend_replacement_ready",
@@ -142,11 +157,11 @@ impl MobileEmbeddedBackendSupervisor {
         plan: &ResumePlan,
         prepared: super::super::generation::PreparedTransport,
         probed: super::super::generation::ProbedTransport,
-        task: super::super::generation::BackendTask,
-        shutdown_sender: tokio::sync::oneshot::Sender<()>,
     ) -> Result<MobileEmbeddedBackendResume, MobileEmbeddedBackendError> {
-        let mut candidate_task = Some(task);
-        let mut candidate_shutdown = Some(shutdown_sender);
+        let pending = self.take_pending_candidate(plan.transition_token)?;
+        let mut candidate_task = Some(pending.task);
+        let mut candidate_shutdown = Some(pending.shutdown_sender);
+        let candidate_shutdown_coordinator = pending.shutdown_coordinator;
         let commit = match self.lock_inner() {
             Ok(mut inner) => match ensure_current_transition(&inner, plan.transition_token) {
                 Err(error) => Err(error),
@@ -156,6 +171,7 @@ impl MobileEmbeddedBackendSupervisor {
                         probed.bootstrap.script.native_session_cookie.clone();
                     inner.task = candidate_task.take();
                     inner.shutdown_sender = candidate_shutdown.take();
+                    inner.shutdown_coordinator = candidate_shutdown_coordinator.clone();
                     inner.transport_stopping = false;
                     inner.runtime_restart_required = false;
                     inner.probe_cancel = None;
@@ -185,8 +201,13 @@ impl MobileEmbeddedBackendSupervisor {
             Ok(resumed) => Ok(resumed),
             Err(error) => {
                 self.retire_uncommitted_candidate(
-                    candidate_task.expect("failed commit retains candidate task"),
-                    candidate_shutdown.expect("failed commit retains candidate shutdown sender"),
+                    super::super::supervisor_types::PendingTransport {
+                        transition_token: plan.transition_token,
+                        task: candidate_task.expect("failed commit retains candidate task"),
+                        shutdown_sender: candidate_shutdown
+                            .expect("failed commit retains candidate shutdown sender"),
+                        shutdown_coordinator: candidate_shutdown_coordinator,
+                    },
                     plan.transition_token,
                 )
                 .await?;
@@ -197,11 +218,16 @@ impl MobileEmbeddedBackendSupervisor {
 
     async fn retire_uncommitted_candidate(
         &self,
-        task: super::super::generation::BackendTask,
-        shutdown_sender: tokio::sync::oneshot::Sender<()>,
+        pending: super::super::supervisor_types::PendingTransport,
         transition_token: u64,
     ) -> Result<(), MobileEmbeddedBackendError> {
-        match stop_transport(task, shutdown_sender).await {
+        match stop_transport(
+            pending.task,
+            pending.shutdown_sender,
+            &pending.shutdown_coordinator,
+        )
+        .await
+        {
             Ok(()) | Err(MobileEmbeddedBackendError::BackendExitedAfterSessionRetirement(_)) => {
                 Ok(())
             }
@@ -210,6 +236,49 @@ impl MobileEmbeddedBackendSupervisor {
                 Err(error)
             }
         }
+    }
+
+    fn install_pending_candidate(
+        &self,
+        pending: super::super::supervisor_types::PendingTransport,
+    ) -> Result<
+        (),
+        (
+            MobileEmbeddedBackendError,
+            super::super::supervisor_types::PendingTransport,
+        ),
+    > {
+        let mut inner = match self.lock_inner() {
+            Ok(inner) => inner,
+            Err(error) => return Err((error, pending)),
+        };
+        if let Err(error) = ensure_current_transition(&inner, pending.transition_token) {
+            return Err((error, pending));
+        }
+        if inner.pending_transport.is_some() {
+            return Err((
+                MobileEmbeddedBackendError::LifecycleTransitionCancelled,
+                pending,
+            ));
+        }
+        inner.pending_transport = Some(pending);
+        Ok(())
+    }
+
+    fn take_pending_candidate(
+        &self,
+        transition_token: u64,
+    ) -> Result<super::super::supervisor_types::PendingTransport, MobileEmbeddedBackendError> {
+        let mut inner = self.lock_inner()?;
+        let pending = inner
+            .pending_transport
+            .take()
+            .ok_or(MobileEmbeddedBackendError::LifecycleTransitionCancelled)?;
+        if pending.transition_token != transition_token {
+            inner.pending_transport = Some(pending);
+            return Err(MobileEmbeddedBackendError::LifecycleTransitionCancelled);
+        }
+        Ok(pending)
     }
 }
 

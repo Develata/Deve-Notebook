@@ -17,9 +17,11 @@ mod tests {
             .unwrap()
             .join("plugins");
         let loader = PluginLoader::new(plugin_dir.clone());
-        loader
+        let plugin = loader
             .load_plugin(&plugin_dir.join("ai-chat"))
-            .expect("Failed to load ai-chat plugin")
+            .expect("Failed to prepare ai-chat plugin");
+        plugin.activate().expect("activate ai-chat plugin");
+        plugin
     }
 
     #[test]

@@ -23,6 +23,8 @@ mod fs;
 #[cfg(not(target_arch = "wasm32"))]
 mod git;
 #[cfg(not(target_arch = "wasm32"))]
+mod managed_context;
+#[cfg(not(target_arch = "wasm32"))]
 mod managed_note;
 #[cfg(not(target_arch = "wasm32"))]
 mod managed_source_control;
@@ -57,13 +59,13 @@ use rhai::EvalAltResult;
 use std::sync::{Arc, OnceLock};
 
 #[cfg(not(target_arch = "wasm32"))]
-pub use managed_note::{
-    ManagedNoteMutationHost, ManagedNoteWriteIntent, set_managed_note_mutation_host,
-};
+pub use managed_context::{PluginHostContext, PluginHostContextScope};
+#[cfg(not(target_arch = "wasm32"))]
+pub use managed_note::{ManagedNoteMutationHost, ManagedNoteWriteIntent};
 #[cfg(not(target_arch = "wasm32"))]
 pub use managed_source_control::{
     ManagedSourceControlCommitIntent, ManagedSourceControlMutationHost,
-    ManagedSourceControlStageIntent, set_managed_source_control_mutation_host,
+    ManagedSourceControlStageIntent,
 };
 
 /// Engine-neutral carrier that preserves a product `ServerError` across a

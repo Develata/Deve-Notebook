@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Deferred`
 - `Status`: `Deferred`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-08-20`
+- `Last Review`: `2026-08-25`
 - `Counterpart Feature`: `docs/features/17_plugins.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
 - `Primary Code Areas`: `crates/core/src/plugin/`, `docs/plan/plugins/`
@@ -38,8 +38,10 @@ MCP 相关文字只作为历史决策保留。扩展路线是 Skills 调用受�
 ### 必须保持的边界
 
 *   **Capabilities Default Deny**：manifest capability 未声明时，host API 必须拒绝对应能力。
+*   **Two-Phase Runtime Admission**：外部与编译期内建 Rhai runtime 都必须先完成有界资源读取、manifest 解析与脚本编译，得到不可调用的 prepared runtime；只有 server composition root 已构造 `AppState` 并为该 runtime generation 注入实际拥有的 repo/sync/delegated `PluginHostContext` 后，才可显式 activate 并执行 top-level 初始化。managed mutation host 不得存入 process-global `OnceLock`；新旧 Mobile backend generation 短暂重叠时，每次 top-level/call 只能解析到该 runtime 自己的 context，不能误路由到另一代 authority。扫描/编译阶段不得执行任何 host function；prepared runtime 被调用、重复安装 context、重复激活或激活失败后继续注册都必须 fail-closed。
 *   **Fail-Closed RPC**：非法消息、未知插件、运行时错误、不可序列化结果都必须返回结构化错误，不得静默成功或 fallback 到核心命令。
 *   **Ledger-Managed Boundary**：托管笔记、`.notegit/` 与 ledger 对象不得通过裸文件写入绕过 authority；若需要写托管笔记，必须走 ledger-aware host functions。
+*   **Host Context Required for Raw Writes**：`fs_write` 判断目标是否属于 ledger / Projection Workspace 时，必须取得 composition root 注入的 repo host context；context 尚未安装、已退休或读取失败时必须拒绝裸文件写入，不得把“无法判断”解释为“非托管路径”。remote delegated plugin-host 没有本地 repo manager 时同样不得取得本地裸写权限。
 *   **Managed Note Mutation Host**：plugin `note_write` 必须通过窄接口
     `ManagedNoteMutationHost` 注入 server adapter，并进入当前 repo 的
     `RepoMutationPublicationGate`。Core plugin runtime 不得反向依赖 CLI；Rhai 解析/执行不得持有
@@ -50,7 +52,9 @@ MCP 相关文字只作为历史决策保留。扩展路线是 Skills 调用受�
     不得复用 HTTP facade 绕过 gate。Core plugin runtime 不得反向依赖 CLI。
 *   **Source-Control Writer Gate**：plugin-host 暴露 source-control writer host functions 时，必须显式接入当前 repo/sync writer gate 与 NoteGit/ngit authority；不得接收 mirror/off 之类的 legacy bridge policy。缺少本地 managed host 时必须 fail-closed，除非调用目标是明确的 remote proxy delegated API。delegated API 必须以显式 authority（例如 `DelegatedRemoteProxy`）进入，不得把 `REMOTE_PROXY_SCOPE_NONCE = 1` 解释为普通 browser HTTP mutation grant。
 *   **Skill Path Boundary**：Rhai `skill::get(name)` 只接受非空、受限长度的 ASCII `[A-Za-z0-9_-]` identifier，并只读取 skills root 的直接 regular `.md` child。路径分隔符、`.` / `..`、绝对路径、控制字符、Unicode 混淆名与 symlink/reparse target 必须在文件读取前 fail-closed；capability admission 不授予任意文件读取能力。文件打开或验证失败的公开外层错误必须收敛为固定分类，不得携带 host path、OS detail 或文件内容；内部错误链必须保留 typed I/O source，供受控诊断与跨平台测试分类。
+*   **Bounded Plugin Resources**：每次扫描最多 `64` 个 plugin；manifest 最多 `64 KiB`；entry script 与每个 imported Rhai module 最多 `1 MiB`；单个 `fs_read` / grep 候选文件最多 `1 MiB`；skill 最多 `128` 个、单个 Markdown 最多 `256 KiB`、列表累计正文与描述最多 `8 MiB`。读取必须先验证 regular non-link handle 与 metadata，再使用 `limit + 1` 的有界读取复核，并在返回前确认 pathname 仍指向同一 opened identity；超限、读取期增长、无效 UTF-8 或 identity 替换必须 fail-closed（grep 可把单个不可搜索候选分类为跳过），不得先完整分配后再截断。Rhai 必须同时限制 operation=`100000`、call levels=`64`、variables=`256`、modules=`32`、string=`1 MiB`、array=`16384`、map=`4096`，search 仍须保留 depth/result 上限。
 *   未引入认证层的 plugin-host satellite 必须绑定 loopback，不得默认监听 `0.0.0.0`。
+*   plugin-host satellite 必须监听与独立 `deve serve` 等价的平台终止信号，并通过 Axum graceful shutdown 先停止 admission，再取消所有 upgraded WebSocket session，最后在固定 deadline 内证明 session idle；不得使用永久 pending future、只退休 listener、或依赖进程被强杀。
 *   `agent-bridge` 的拦截属于 `16_ai_agent` 的 Trusted External Agent Bridge，不得被重新包装成通用插件平台能力。
 
 ## 3. Trusted External Agent Runtime

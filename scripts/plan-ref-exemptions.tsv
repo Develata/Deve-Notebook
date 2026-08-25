@@ -392,6 +392,7 @@ crates/core/src/sync/watcher/dispatch_test/path_filter.rs	test	-	Test-only modul
 crates/core/src/sync/watcher/dispatch_test_support.rs	test	-	Test-support-only module; it constructs fixtures and owns no production authority.
 crates/core/src/test_support.rs	test	-	Shared test fixture support; it is compiled only through the crate's cfg(test) module.
 crates/core/src/utils/fs.rs	local-only-infra	-	Generic utility plumbing only; it owns no product state or authority transition.
+crates/core/src/utils/fs/atomic_replace_windows.rs	local-only-infra	-	Windows exact-handle atomic replacement adapter; it owns no product state or authority transition.
 crates/core/src/utils/hash.rs	local-only-infra	-	Generic utility plumbing only; it owns no product state or authority transition.
 crates/core/src/utils/mod.rs	local-only-infra	-	Generic utility plumbing only; it owns no product state or authority transition.
 crates/core/tests/ai_chat_plugin_test.rs	test	-	Test-only module; production behavior is traced through the exercised module.

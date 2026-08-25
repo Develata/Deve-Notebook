@@ -12,7 +12,9 @@ use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
-use deve_cli::native_runtime::{NativeEmbeddedServerRuntime, NativeEmbeddedTransportRuntime};
+use deve_cli::native_runtime::{
+    NativeEmbeddedServerRuntime, NativeEmbeddedTransportRuntime, NativeRuntimeShutdownCoordinator,
+};
 use tokio::sync::Notify;
 
 use super::generation::{
@@ -51,6 +53,7 @@ struct ResumePlan {
     transition_token: u64,
     restart: bool,
     old_task: Option<super::generation::BackendTask>,
+    old_shutdown_coordinator: NativeRuntimeShutdownCoordinator,
     probe_cancel: Arc<AtomicBool>,
 }
 
@@ -85,7 +88,8 @@ impl MobileEmbeddedBackendSupervisor {
         ))
         .map_err(|error| MobileEmbeddedBackendError::RuntimeInitializeFailed(error.to_string()))?;
         let transport = runtime.transport();
-        let (task, shutdown_sender) = spawn_transport(&transport, &mut prepared);
+        let (task, shutdown_sender, shutdown_coordinator) =
+            spawn_transport(&transport, &mut prepared);
         let shell = started_shell();
         let probed = match probe_transport_initial(
             prepared.plan.clone(),
@@ -95,13 +99,16 @@ impl MobileEmbeddedBackendSupervisor {
         ) {
             Ok(probed) => probed,
             Err(error) => {
+                let deadline = shutdown_coordinator.begin(MOBILE_EMBEDDED_BACKEND_SHUTDOWN_TIMEOUT);
                 let _ = shutdown_sender.send(());
                 tauri::async_runtime::block_on(async {
-                    let deadline =
-                        tokio::time::Instant::now() + MOBILE_EMBEDDED_BACKEND_SHUTDOWN_TIMEOUT;
                     let _ = await_transport_task(task, deadline).await;
-                    let remaining = deadline.saturating_duration_since(tokio::time::Instant::now());
-                    let _ = runtime.shutdown(remaining).await;
+                    let _ = runtime
+                        .shutdown_with_coordinator(
+                            MOBILE_EMBEDDED_BACKEND_SHUTDOWN_TIMEOUT,
+                            &shutdown_coordinator,
+                        )
+                        .await;
                 });
                 return Err(error);
             }
@@ -117,6 +124,8 @@ impl MobileEmbeddedBackendSupervisor {
                 native_session_cookie,
                 task: Some(task),
                 shutdown_sender: Some(shutdown_sender),
+                shutdown_coordinator,
+                pending_transport: None,
                 transport_stopping: false,
                 runtime_restart_required: false,
                 probe_cancel: None,
@@ -237,7 +246,9 @@ impl MobileEmbeddedBackendSupervisor {
             || inner.shutdown_sender.is_none()
             || backend_requires_restart(inner.task.as_ref());
         let mut old_task = None;
+        let old_shutdown_coordinator = inner.shutdown_coordinator.clone();
         if restart {
+            old_shutdown_coordinator.begin(MOBILE_EMBEDDED_BACKEND_SHUTDOWN_TIMEOUT);
             if let Some(sender) = inner.shutdown_sender.take() {
                 let _ = sender.send(());
             }
@@ -266,6 +277,7 @@ impl MobileEmbeddedBackendSupervisor {
             transition_token: inner.transition_token,
             restart,
             old_task,
+            old_shutdown_coordinator,
             probe_cancel,
         })
     }

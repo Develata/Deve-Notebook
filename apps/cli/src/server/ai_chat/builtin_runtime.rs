@@ -48,8 +48,8 @@ fn builtin_native_ai_runtime() -> anyhow::Result<Box<dyn PluginRuntime>> {
     }
     let mut runtime = RhaiRuntime::new_embedded_native_ai(manifest.clone());
     runtime
-        .load(manifest, BUILTIN_SCRIPT)
-        .context("Failed to load built-in Native AI runtime")?;
+        .prepare(manifest, BUILTIN_SCRIPT)
+        .context("Failed to prepare built-in Native AI runtime")?;
     Ok(Box::new(runtime))
 }
 
@@ -72,7 +72,11 @@ mod tests {
     }
 
     impl PluginRuntime for DuplicateAiRuntime {
-        fn load(&mut self, _manifest: PluginManifest, _script: &str) -> Result<()> {
+        fn prepare(&mut self, _manifest: PluginManifest, _script: &str) -> Result<()> {
+            Ok(())
+        }
+
+        fn activate(&self) -> Result<()> {
             Ok(())
         }
 

@@ -29,6 +29,9 @@
 - 兼容 Rhai 插件的 skill lookup 只接受简单 ASCII identifier 并只读取 skills 根目录的直接 regular Markdown；插件即使声明 skill capability，也不能通过 `..`、分隔符、绝对路径或 symlink 读取目录外文件。文件不可读或不是 regular file 时，用户只看到稳定的失败分类，不会看到主机路径或系统错误细节。
 - provider key 永不回显；未配置、被清除或 provider stream 返回工具/拒绝/error 时，Chat 必须结束
   loading 并显示明确错误。
+- provider 长时间无数据、总时长过长、单帧/总流量/最终回答超限或 SSE framing 非法时，Chat 必须明确失败并结束 loading；不能因异常 provider 响应持续占用内存。
+- Trusted CLI timeout、输出超限或读取失败时，宿主必须清理整个 CLI 进程树，不能只结束最外层进程。
+- Windows 当前不会启动 Trusted CLI：在 creation-time Job Object containment 完成前，能力探测会明确显示不可用并按配置回退 Native AI；不得短暂启动一个尚未受控的进程。
 
 ### 2. 当前暴露边界
 

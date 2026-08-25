@@ -60,6 +60,10 @@ impl RepoWatcherHandle {
     }
 
     pub fn shutdown_bounded(mut self, timeout: Duration) -> Result<(), WatcherFailure> {
+        self.shutdown_bounded_inner(timeout)
+    }
+
+    fn shutdown_bounded_inner(&mut self, timeout: Duration) -> Result<(), WatcherFailure> {
         let send_error = self.command_tx.take().and_then(|sender| {
             match sender.try_send(worker::WorkerCommand::Shutdown) {
                 Ok(()) | Err(mpsc::TrySendError::Full(_)) => None,
@@ -167,7 +171,7 @@ impl Drop for RepoWatcherHandle {
             generation = self.generation,
             "RepoWatcherHandle dropped without explicit shutdown"
         );
-        if let Err(error) = self.shutdown_inner() {
+        if let Err(error) = self.shutdown_bounded_inner(Duration::from_millis(250)) {
             tracing::error!(
                 repo_id = %self.repo_id,
                 generation = self.generation,
@@ -207,6 +211,29 @@ mod tests {
             .shutdown_bounded(Duration::from_millis(10))
             .expect_err("blocked worker must hit the deadline");
         assert_eq!(failure.kind, WatcherFailureKind::Coordination);
+        assert!(started.elapsed() < Duration::from_secs(1));
+        release_tx.send(()).expect("release detached join waiter");
+    }
+
+    #[test]
+    fn repo_watcher_drop_uses_a_bounded_wait() {
+        let (command_tx, _command_rx) = mpsc::sync_channel(1);
+        let (release_tx, release_rx) = mpsc::channel();
+        let join = std::thread::spawn(move || {
+            let _ = release_rx.recv();
+            Ok(())
+        });
+        let handle = RepoWatcherHandle {
+            repo_id: uuid::Uuid::new_v4(),
+            generation: 1,
+            state: Arc::new(RwLock::new(worker::WorkerStateSlot::running(1))),
+            command_tx: Some(command_tx),
+            join: Some(join),
+        };
+
+        let started = Instant::now();
+        drop(handle);
+
         assert!(started.elapsed() < Duration::from_secs(1));
         release_tx.send(()).expect("release detached join waiter");
     }

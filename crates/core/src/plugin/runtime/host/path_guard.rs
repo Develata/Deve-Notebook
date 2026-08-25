@@ -14,9 +14,10 @@ pub(super) fn is_ledger_managed_write_target(path: &Path) -> Result<bool, String
     {
         return Ok(true);
     }
-    if let Ok(manager) = super::repo_manager()
-        && is_ledger_managed_write_target_for(manager.as_ref(), path)?
-    {
+    let manager = super::repo_manager().map_err(|_| {
+        "Plugin raw write host context is unavailable; refusing filesystem mutation".to_string()
+    })?;
+    if is_ledger_managed_write_target_for(manager.as_ref(), path)? {
         return Ok(true);
     }
     Ok(false)

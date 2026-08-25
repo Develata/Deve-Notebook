@@ -48,9 +48,21 @@ async fn backend_capabilities_http_reports_trusted_cli_when_policy_is_satisfied(
     let json = get_capabilities_json().await;
 
     assert_eq!(json["native_available"], true);
-    assert_eq!(json["trusted_cli_available"], true);
-    assert_eq!(json["effective_backend"], "trusted-cli");
-    assert!(json["effective_backend_reason"].is_null());
+    #[cfg(not(windows))]
+    {
+        assert_eq!(json["trusted_cli_available"], true);
+        assert_eq!(json["effective_backend"], "trusted-cli");
+        assert!(json["effective_backend_reason"].is_null());
+    }
+    #[cfg(windows)]
+    {
+        assert_eq!(json["trusted_cli_available"], false);
+        assert_eq!(json["effective_backend"], "native");
+        assert_eq!(
+            json["effective_backend_reason"],
+            "Trusted CLI is unavailable on Windows until creation-time Job Object containment is implemented"
+        );
+    }
 }
 
 #[tokio::test]
@@ -92,7 +104,10 @@ async fn backend_capabilities_http_does_not_promote_native_mode_to_trusted_cli()
     let json = get_capabilities_json().await;
 
     assert_eq!(json["native_available"], false);
+    #[cfg(not(windows))]
     assert_eq!(json["trusted_cli_available"], true);
+    #[cfg(windows)]
+    assert_eq!(json["trusted_cli_available"], false);
     assert_eq!(json["effective_backend"], "none");
     assert_eq!(
         json["effective_backend_reason"],

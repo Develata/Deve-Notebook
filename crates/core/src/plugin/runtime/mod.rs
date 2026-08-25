@@ -15,6 +15,8 @@
 use crate::plugin::manifest::PluginManifest;
 use anyhow::Result;
 use rhai::Dynamic;
+#[cfg(not(target_arch = "wasm32"))]
+use std::sync::Arc;
 
 pub mod chat_stream;
 pub mod host;
@@ -30,12 +32,27 @@ pub use rhai_v1::RhaiRuntime;
 ///
 /// 允许未来扩展其他脚本引擎 (e.g., Lua, Wasm)。
 pub trait PluginRuntime: Send + Sync {
-    /// 加载插件
+    /// Parse/compile a plugin without executing its top-level initializer.
     ///
     /// **参数**:
     /// - `manifest`: 插件清单
     /// - `script`: 源代码
-    fn load(&mut self, manifest: PluginManifest, script: &str) -> Result<()>;
+    fn prepare(&mut self, manifest: PluginManifest, script: &str) -> Result<()>;
+
+    /// Execute the prepared top-level initializer after host authority is installed.
+    fn activate(&self) -> Result<()>;
+
+    /// Bind the host-owned mutation authority for this runtime generation.
+    #[cfg(not(target_arch = "wasm32"))]
+    fn install_host_context(&self, _context: Arc<host::PluginHostContext>) -> Result<()> {
+        anyhow::bail!("Plugin runtime does not support a managed host context")
+    }
+
+    /// Compatibility helper for isolated runtimes that deliberately own both phases.
+    fn load(&mut self, manifest: PluginManifest, script: &str) -> Result<()> {
+        self.prepare(manifest, script)?;
+        self.activate()
+    }
 
     /// 调用函数
     ///

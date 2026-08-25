@@ -13,6 +13,8 @@ case.ai-008.flow.flow-ai-chat	none	flow.ai.chat	AI-008	web	browser	ci	required	d
 case.ai-009.flow.flow-ai-chat	none	flow.ai.chat	AI-009	web	browser	ci	required	document	doc.ai-009	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
 case.ai-010	none	none	AI-010	native	multi-platform	ci	required	source-ref	source.ai-010	apps/cli/src/server/ai_chat/builtin_runtime.rs	source-bound	built-in Native AI registration and duplicate-id fail-closed contract
 case.ai-011	none	none	AI-011	server	integration	ci	required	test	test.ai-011	cargo test -p deve_cli ai_chat -- --nocapture	source-bound	exact OpenAI Chat, OpenAI Responses, and Anthropic request, authentication, and stream adapters
+case.ai-012.unix	none	none	AI-012	server	integration	ci	required	test	test.ai-012-unix	cargo test -p deve_cli agent_bridge -- --nocapture	source-bound	Unix process-tree retirement on success, timeout, cancellation, and output-limit paths
+case.ai-012.windows	none	none	AI-012	server	integration	ci	required	test	test.ai-012-windows	cargo test -p deve_cli agent_bridge -- --nocapture	source-bound	Windows creation-time Job containment remains fail-closed before spawn
 case.ai-feat-01.flow.flow-ai-chat	none	flow.ai.chat	AI-FEAT-01	web	browser	ci	required	document	doc.ai-feat-01	docs/features/10_ai_agent.md	source-bound	feature or operation walkthrough evidence contract
 case.auth-001.flow.flow-auth-login	none	flow.auth.login	AUTH-001	web	browser	ci	required	document	doc.auth-001	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
 case.auth-002.flow.flow-auth-session-unauthorized	none	flow.auth.session-unauthorized	AUTH-002	web	browser	ci	required	document	doc.auth-002	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
@@ -170,6 +172,7 @@ case.plug-001.flow.flow-ai-trusted-external-agent-boundary	none	flow.ai.trusted-
 case.plug-001.flow.flow-plugin-runtime-boundary	none	flow.plugin.runtime-boundary	PLUG-001	core	plugin	ci	required	document	doc.plug-001	docs/features/operation-coverage.md	source-bound	feature or operation walkthrough evidence contract
 case.plug-002	none	none	PLUG-002	core	plugin	ci	required	document	doc.plug-002	docs/features/17_plugins.md	source-bound	migrated manual evidence contract
 case.plug-003	none	none	PLUG-003	core	plugin	ci	required	document	doc.plug-003	docs/features/17_plugins.md	source-bound	migrated manual evidence contract
+case.plug-004	none	none	PLUG-004	server	integration	ci	required	test	test.plug-004	cargo test -p deve_cli plugin_host -- --nocapture	source-bound	loopback plugin-host listener and upgraded WebSocket sessions retire under one deadline
 case.pos-001	none	none	POS-001	core	test	ci	required	document	doc.pos-001	docs/features/02_positioning.md	source-bound	migrated manual evidence contract
 case.pos-002	none	none	POS-002	core	test	ci	required	document	doc.pos-002	docs/features/02_positioning.md	source-bound	migrated manual evidence contract
 case.pos-003	none	none	POS-003	core	test	ci	required	document	doc.pos-003	docs/features/02_positioning.md	source-bound	migrated manual evidence contract

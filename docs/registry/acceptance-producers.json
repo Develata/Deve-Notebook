@@ -328,6 +328,96 @@
       "note": "Run exact provider request/stream adapters plus protected redacted AI settings authority and UI command contracts"
     },
     {
+      "producer_id": "ci.agent-bridge-process-tree-unix",
+      "evidence_ids": [
+        "test.ai-012-unix"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "ci"
+      ],
+      "host_os": [
+        "linux",
+        "macos"
+      ],
+      "timeout_seconds": 600,
+      "required_env": [],
+      "environment": {},
+      "claims_env": {},
+      "artifacts": [],
+      "steps": [
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" }, { "literal": "--lib" }, { "literal": "agent_bridge" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        }
+      ],
+      "note": "Prove Unix trusted-agent timeout and cleanup paths retire the admitted process group"
+    },
+    {
+      "producer_id": "ci.agent-bridge-containment-windows",
+      "evidence_ids": [
+        "test.ai-012-windows"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "ci"
+      ],
+      "host_os": [
+        "windows"
+      ],
+      "timeout_seconds": 600,
+      "required_env": [],
+      "environment": {},
+      "claims_env": {},
+      "artifacts": [],
+      "steps": [
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" }, { "literal": "--lib" }, { "literal": "agent_bridge" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        }
+      ],
+      "note": "Prove Windows trusted-agent admission fails before spawn until creation-time Job containment exists"
+    },
+    {
+      "producer_id": "ci.plugin-host-lifecycle",
+      "evidence_ids": [
+        "test.plug-004"
+      ],
+      "dependencies": [],
+      "tiers": [
+        "ci"
+      ],
+      "host_os": [
+        "linux",
+        "macos",
+        "windows"
+      ],
+      "timeout_seconds": 600,
+      "required_env": [],
+      "environment": {},
+      "claims_env": {},
+      "artifacts": [],
+      "steps": [
+        {
+          "program": "cargo",
+          "args": [
+            { "literal": "test" }, { "literal": "--locked" }, { "literal": "-p" },
+            { "literal": "deve_cli" }, { "literal": "--lib" }, { "literal": "plugin_host" },
+            { "literal": "--" }, { "literal": "--nocapture" }
+          ]
+        }
+      ],
+      "note": "Prove listener and upgraded plugin-host WebSocket sessions retire under the shared shutdown deadline"
+    },
+    {
       "producer_id": "ci.projection-recovery",
       "evidence_ids": [
         "test.cli.critical-delivery-order",

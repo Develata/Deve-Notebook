@@ -1,10 +1,13 @@
 //! plan_ref:
 //!   - 19_plugins#skills-cli-extension-boundary
 
+use crate::plugin::resource_budget::{
+    MAX_SKILL_COUNT, MAX_SKILL_FILE_BYTES, MAX_SKILL_TOTAL_BYTES,
+    read_utf8_handle_bounded_and_verify,
+};
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 use std::fs::File;
-use std::io::Read;
 use std::path::Path;
 use std::path::PathBuf;
 
@@ -48,23 +51,39 @@ impl SkillManager {
             return Ok(skills);
         }
 
+        let mut paths = Vec::new();
         for entry in std::fs::read_dir(&self.skills_dir)? {
             let entry = entry?;
             let path = entry.path();
             if path.extension().is_some_and(|ext| ext == "md") {
-                let name = path
-                    .file_stem()
-                    .and_then(|name| name.to_str())
-                    .ok_or_else(|| anyhow::anyhow!("Skill filename must be valid UTF-8"))?;
-                validate_skill_name(name)?;
-                let file = self.open_skill_file(&path)?.ok_or_else(|| {
-                    anyhow::anyhow!("Skill file disappeared during bounded lookup")
-                })?;
-                skills.push(
-                    self.load_skill_from_file(&path, file)
-                        .with_context(|| format!("Failed to load skill from {:?}", path))?,
-                );
+                paths.push(path);
+                if paths.len() > MAX_SKILL_COUNT {
+                    anyhow::bail!("Skill directory exceeds the configured skill-count budget");
+                }
             }
+        }
+        paths.sort();
+        let mut total_bytes = 0usize;
+        for path in paths {
+            let name = path
+                .file_stem()
+                .and_then(|name| name.to_str())
+                .ok_or_else(|| anyhow::anyhow!("Skill filename must be valid UTF-8"))?;
+            validate_skill_name(name)?;
+            let file = self
+                .open_skill_file(&path)?
+                .ok_or_else(|| anyhow::anyhow!("Skill file disappeared during bounded lookup"))?;
+            let skill = self
+                .load_skill_from_file(&path, file)
+                .context("Failed to load skill file")?;
+            total_bytes = total_bytes
+                .checked_add(skill.description.len())
+                .and_then(|bytes| bytes.checked_add(skill.content.len()))
+                .ok_or_else(|| anyhow::anyhow!("Skill aggregate size overflow"))?;
+            if total_bytes > MAX_SKILL_TOTAL_BYTES {
+                anyhow::bail!("Skill directory exceeds the aggregate text budget");
+            }
+            skills.push(skill);
         }
         Ok(skills)
     }
@@ -77,9 +96,13 @@ impl SkillManager {
         }
     }
 
-    fn load_skill_from_file(&self, path: &Path, mut file: File) -> Result<Skill> {
-        let mut raw = String::new();
-        file.read_to_string(&mut raw)?;
+    fn load_skill_from_file(&self, path: &Path, file: File) -> Result<Skill> {
+        let raw = read_utf8_handle_bounded_and_verify(
+            file,
+            path,
+            MAX_SKILL_FILE_BYTES,
+            "skill Markdown",
+        )?;
 
         // Simple frontmatter parsing
         // Look for --- ... --- block
@@ -196,5 +219,55 @@ mod tests {
 
         assert!(manager.get("linked").is_err());
         assert!(manager.list().is_err());
+    }
+
+    #[test]
+    fn skill_manager_rejects_oversized_markdown() {
+        let dir = tempfile::tempdir().expect("root");
+        std::fs::write(
+            dir.path().join("large.md"),
+            vec![b'x'; (super::MAX_SKILL_FILE_BYTES + 1) as usize],
+        )
+        .expect("large skill");
+
+        let error = SkillManager::new(dir.path().to_path_buf())
+            .get("large")
+            .expect_err("oversized skill must fail closed");
+
+        assert!(error.to_string().contains("resource budget"));
+    }
+
+    #[test]
+    fn skill_manager_rejects_count_over_aggregate_budget() {
+        let dir = tempfile::tempdir().expect("root");
+        for index in 0..=super::MAX_SKILL_COUNT {
+            std::fs::write(dir.path().join(format!("skill_{index:03}.md")), "x").expect("skill");
+        }
+
+        let error = SkillManager::new(dir.path().to_path_buf())
+            .list()
+            .expect_err("skill count over budget must fail closed");
+
+        assert!(error.to_string().contains("skill-count budget"));
+    }
+
+    #[test]
+    fn skill_manager_rejects_total_text_over_aggregate_budget() {
+        let dir = tempfile::tempdir().expect("root");
+        let per_skill = super::MAX_SKILL_FILE_BYTES as usize;
+        let skill_count = super::MAX_SKILL_TOTAL_BYTES / per_skill + 1;
+        for index in 0..skill_count {
+            std::fs::write(
+                dir.path().join(format!("skill_{index:03}.md")),
+                vec![b'x'; per_skill],
+            )
+            .expect("skill");
+        }
+
+        let error = SkillManager::new(dir.path().to_path_buf())
+            .list()
+            .expect_err("skill aggregate text over budget must fail closed");
+
+        assert!(error.to_string().contains("aggregate text budget"));
     }
 }

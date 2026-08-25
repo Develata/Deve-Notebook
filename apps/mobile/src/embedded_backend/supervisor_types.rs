@@ -56,6 +56,8 @@ pub(super) struct BackendGeneration {
     pub(super) native_session_cookie: MobileNativeSessionCookie,
     pub(super) task: Option<BackendTask>,
     pub(super) shutdown_sender: Option<oneshot::Sender<()>>,
+    pub(super) shutdown_coordinator: deve_cli::native_runtime::NativeRuntimeShutdownCoordinator,
+    pub(super) pending_transport: Option<PendingTransport>,
     pub(super) transport_stopping: bool,
     pub(super) runtime_restart_required: bool,
     pub(super) probe_cancel: Option<Arc<AtomicBool>>,
@@ -65,6 +67,13 @@ pub(super) struct BackendGeneration {
     pub(super) service_state: MobileEmbeddedBackendServiceState,
     pub(super) last_error: Option<String>,
     pub(super) last_error_transition_token: Option<u64>,
+}
+
+pub(super) struct PendingTransport {
+    pub(super) transition_token: u64,
+    pub(super) task: BackendTask,
+    pub(super) shutdown_sender: oneshot::Sender<()>,
+    pub(super) shutdown_coordinator: deve_cli::native_runtime::NativeRuntimeShutdownCoordinator,
 }
 
 impl MobileEmbeddedBackendResume {

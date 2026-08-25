@@ -126,6 +126,14 @@ impl AgentBridgePolicy {
         if !is_executable_file(Path::new(&path)) {
             return Err("AGENT_CLI_PATH must point to an executable file".to_string());
         }
+        #[cfg(windows)]
+        {
+            Err(
+                "Trusted CLI is unavailable on Windows until creation-time Job Object containment is implemented"
+                    .to_string(),
+            )
+        }
+        #[cfg(not(windows))]
         Ok(path)
     }
 

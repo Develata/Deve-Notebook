@@ -8,7 +8,7 @@ use crate::ledger::traits::RepoSelector;
 use crate::protocol::ScPathTarget;
 use crate::source_control::CommitInfo;
 use anyhow::Result;
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 #[derive(Clone, Debug)]
 pub struct ManagedSourceControlCommitIntent {
@@ -29,21 +29,7 @@ pub trait ManagedSourceControlMutationHost: Send + Sync {
     -> Result<CommitInfo>;
 }
 
-static MANAGED_SOURCE_CONTROL_MUTATION_HOST: OnceLock<Arc<dyn ManagedSourceControlMutationHost>> =
-    OnceLock::new();
-
-pub fn set_managed_source_control_mutation_host(
-    host: Arc<dyn ManagedSourceControlMutationHost>,
-) -> Result<()> {
-    MANAGED_SOURCE_CONTROL_MUTATION_HOST
-        .set(host)
-        .map_err(|_| anyhow::anyhow!("ManagedSourceControlMutationHost already set"))
-}
-
 pub(super) fn managed_source_control_mutation_host()
 -> Result<Arc<dyn ManagedSourceControlMutationHost>> {
-    MANAGED_SOURCE_CONTROL_MUTATION_HOST
-        .get()
-        .cloned()
-        .ok_or_else(|| anyhow::anyhow!("ManagedSourceControlMutationHost not configured"))
+    super::managed_context::managed_source_control_mutation_host()
 }

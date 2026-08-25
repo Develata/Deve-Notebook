@@ -8,6 +8,7 @@
 //! **安全**: 所有操作需通过 Capability 检查。
 
 use crate::plugin::manifest::Capability;
+use crate::plugin::resource_budget::{MAX_PLUGIN_HOST_TEXT_BYTES, read_utf8_file_bounded};
 use rhai::{Engine, EvalAltResult};
 use std::path::Path;
 use std::sync::Arc;
@@ -35,7 +36,8 @@ pub fn register_fs_api(engine: &mut Engine, caps: Arc<Capability>) {
                     )
                     .into()
                 })?;
-            std::fs::read_to_string(target).map_err(|_| "IO Error: Read failed".into())
+            read_utf8_file_bounded(&target, MAX_PLUGIN_HOST_TEXT_BYTES, "plugin fs_read target")
+                .map_err(|error| format!("IO Error: Read failed: {error}").into())
         },
     );
 

@@ -19,6 +19,9 @@
 - 插件或外部扩展即使存在，也应与核心 authority、repo scope、写入主链隔离。
 - 用户不应被误导为“插件可以直接替代核心工作流”。
 - 插件 host 暴露 Source Control writer 时，必须经由当前 writer gate 与 NoteGit/ngit authority；缺失 gate 的本地 writer 必须拒绝。
+- 插件扫描只负责有界读取与编译；只有宿主 repo/sync authority 与当前代际专属 HostContext 安装完成后才执行插件初始化。宿主上下文缺失或已经属于另一 backend 代际时，插件文件写入会被拒绝，而不是被当成普通非托管路径。
+- 过多或过大的 plugin、manifest、脚本、模块、skill 或文件读取必须在超过累计预算时拒绝；插件错误不得拖垮低内存宿主。
+- plugin-host 收到退出信号时会显式关闭当前 WebSocket 会话；仅 listener 停止而已连接仍存活不算退出完成。
 
 ### 3. 未来预留
 

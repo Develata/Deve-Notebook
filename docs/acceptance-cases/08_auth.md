@@ -209,16 +209,20 @@
     - security_assert: security_md_supply_chain_policy_present true
 
 - case_id: AUTH-013
-  goal: Host identity key owner-only 权限。
+  goal: Host identity / repo key owner-only、no-follow 且并发首次初始化只发布一个值。
   preconditions:
     - Unix-like host
     - identity.key 存在或由启动流程生成
   steps:
     - run: cargo test -p deve_cli identity_key_permissions -- --nocapture
+    - run: cargo test -p deve_core security::storage -- --nocapture
     - run: scripts/check-auth-baseline.sh
   assertions:
     - cli_assert: identity_key_permission_corrected_to_0600 true
     - cli_assert: identity_key_non_file_fails_closed true
+    - core_assert: identity_and_repo_key_use_regular_non_link_create_new_handles true
+    - core_assert: concurrent_first_initializers_return_exact_persisted_key true
+    - core_assert: corrupt_existing_key_is_never_overwritten true
 
 - case_id: AUTH-017
   goal: RemoteBrowser 的远端认证会话不得升级为宿主 native IPC capability。

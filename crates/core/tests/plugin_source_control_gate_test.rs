@@ -20,6 +20,14 @@ struct RecordingManagedSourceControlHost {
     staged_path: Mutex<Option<String>>,
 }
 
+struct RejectingManagedNoteHost;
+
+impl host::ManagedNoteMutationHost for RejectingManagedNoteHost {
+    fn write_managed_note(&self, _intent: host::ManagedNoteWriteIntent) -> anyhow::Result<()> {
+        anyhow::bail!("managed note host is outside this source-control test")
+    }
+}
+
 impl host::ManagedSourceControlMutationHost for RecordingManagedSourceControlHost {
     fn stage_source_control(
         &self,
@@ -161,8 +169,9 @@ fn plugin_sc_commit_uses_ngit_authority_api() {
     let managed = Arc::new(RecordingManagedSourceControlHost::default());
 
     host::set_source_control_api(api.clone()).expect("source control api");
-    host::set_managed_source_control_mutation_host(managed.clone())
-        .expect("managed source control host");
+    let _managed_host_scope = host::PluginHostContextScope::enter(Arc::new(
+        host::PluginHostContext::new(Arc::new(RejectingManagedNoteHost), managed.clone()),
+    ));
     host::set_repo_manager(repo).expect("repo manager");
     host::set_sync_manager(sync).expect("sync manager");
 

@@ -5,7 +5,7 @@
 //! Narrow host-owned mutation boundary for managed-note plugin writes.
 
 use anyhow::Result;
-use std::sync::{Arc, OnceLock};
+use std::sync::Arc;
 
 /// Business intent emitted by the Rhai host after capability and managed-path checks.
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -21,17 +21,6 @@ pub trait ManagedNoteMutationHost: Send + Sync {
     fn write_managed_note(&self, intent: ManagedNoteWriteIntent) -> Result<()>;
 }
 
-static MANAGED_NOTE_MUTATION_HOST: OnceLock<Arc<dyn ManagedNoteMutationHost>> = OnceLock::new();
-
-pub fn set_managed_note_mutation_host(host: Arc<dyn ManagedNoteMutationHost>) -> Result<()> {
-    MANAGED_NOTE_MUTATION_HOST
-        .set(host)
-        .map_err(|_| anyhow::anyhow!("ManagedNoteMutationHost already set"))
-}
-
 pub(super) fn managed_note_mutation_host() -> Result<Arc<dyn ManagedNoteMutationHost>> {
-    MANAGED_NOTE_MUTATION_HOST
-        .get()
-        .cloned()
-        .ok_or_else(|| anyhow::anyhow!("ManagedNoteMutationHost not configured"))
+    super::managed_context::managed_note_mutation_host()
 }

@@ -18,9 +18,10 @@ mod tests {
 
         let loader = PluginLoader::new(plugin_dir.clone());
         // Load specific plugin
-        let _runtime = loader
+        let runtime = loader
             .load_plugin(&plugin_dir)
             .expect("Failed to load plugin");
+        runtime.activate().expect("activate plugin");
 
         // Execute run_test
         // Note: The script executes immediately on load.

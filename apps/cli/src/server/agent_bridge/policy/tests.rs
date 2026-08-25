@@ -212,6 +212,7 @@ fn windows_policy_does_not_trust_pathext_for_cli_path_admission() {
 }
 
 #[test]
+#[cfg(not(windows))]
 fn trusted_policy_exposes_run_config() {
     let cli_path = std::env::current_exe()
         .expect("current exe")
@@ -228,6 +229,30 @@ fn trusted_policy_exposes_run_config() {
     let config = policy.run_config().expect("config");
     assert_eq!(config.cli_path, cli_path);
     assert_eq!(config.timeout_ms, 1);
+}
+
+#[test]
+#[cfg(windows)]
+fn trusted_policy_fails_before_windows_spawn_without_atomic_job_association() {
+    let cli_path = std::env::current_exe()
+        .expect("current exe")
+        .to_string_lossy()
+        .into_owned();
+    let policy = AgentBridgePolicy {
+        enabled: true,
+        trusted: true,
+        native_enabled: true,
+        requested_mode: "trusted-cli".to_string(),
+        cli_path: Some(cli_path),
+        timeout_ms: 30_000,
+    };
+
+    assert_eq!(
+        policy
+            .run_config()
+            .expect_err("Windows must fail before spawn"),
+        "Trusted CLI is unavailable on Windows until creation-time Job Object containment is implemented"
+    );
 }
 
 #[test]
@@ -317,7 +342,10 @@ fn capabilities_do_not_promote_native_mode_to_trusted_cli_when_native_is_disable
     let capabilities = policy.capabilities_with_registration(true);
 
     assert!(!capabilities.native_available);
+    #[cfg(not(windows))]
     assert!(capabilities.trusted_cli_available);
+    #[cfg(windows)]
+    assert!(!capabilities.trusted_cli_available);
     assert_eq!(capabilities.effective_backend, "none");
     assert_eq!(
         capabilities.effective_backend_reason.as_deref(),

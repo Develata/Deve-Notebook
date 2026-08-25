@@ -1,8 +1,12 @@
 //! plan_ref: infra
 
+#[cfg(windows)]
+mod atomic_replace_windows;
 mod authority;
 mod file_lock;
 mod identity;
+#[cfg(windows)]
+mod owner_only;
 mod quarantine;
 
 #[cfg_attr(target_arch = "wasm32", allow(unused_imports))]
@@ -55,99 +59,7 @@ pub fn replace_file_atomically(
     source: &Path,
     destination: &Path,
 ) -> std::io::Result<()> {
-    use std::mem::{offset_of, size_of};
-    use std::os::windows::ffi::OsStrExt;
-    use std::os::windows::io::AsRawHandle;
-    use windows_sys::Win32::Storage::FileSystem::{
-        FILE_RENAME_INFO, FileRenameInfo, SetFileInformationByHandle,
-    };
-
-    validate_regular_handle(source_file, source, "atomic replacement temp")?;
-    ensure_open_file_matches_path(source_file, source, "atomic replacement temp")?;
-    let source_parent = source.parent().ok_or_else(|| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "atomic replacement source has no parent",
-        )
-    })?;
-    let destination_parent = destination.parent().ok_or_else(|| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "atomic replacement destination has no parent",
-        )
-    })?;
-    let name = destination.file_name().ok_or_else(|| {
-        std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "atomic replacement destination has no file name",
-        )
-    })?;
-    let source_parent_canonical = std::fs::canonicalize(source_parent)?;
-    let destination_parent_canonical = std::fs::canonicalize(destination_parent)?;
-    if source_parent_canonical != destination_parent_canonical {
-        return Err(std::io::Error::new(
-            std::io::ErrorKind::InvalidInput,
-            "atomic replacement must remain within one canonical directory",
-        ));
-    }
-    // Build the destination from the same canonical parent used for the
-    // containment check so the path passed to FILE_RENAME_INFO cannot diverge
-    // from the directory whose identity was validated above.
-    let destination_canonical = destination_parent_canonical.join(name);
-    let mut destination_wide = destination_canonical
-        .as_os_str()
-        .encode_wide()
-        .collect::<Vec<_>>();
-    let name_bytes = destination_wide
-        .len()
-        .checked_mul(size_of::<u16>())
-        .ok_or_else(|| std::io::Error::other("atomic replacement path is too long"))?;
-    let header_bytes = offset_of!(FILE_RENAME_INFO, FileName);
-    destination_wide.push(0);
-    let buffer_bytes = header_bytes
-        .checked_add(name_bytes)
-        .and_then(|bytes| bytes.checked_add(size_of::<u16>()))
-        .ok_or_else(|| std::io::Error::other("atomic replacement buffer overflow"))?;
-    let buffer_words = buffer_bytes.div_ceil(size_of::<usize>());
-    let mut buffer = vec![0_usize; buffer_words];
-    let info = buffer.as_mut_ptr().cast::<FILE_RENAME_INFO>();
-    // SAFETY: `Vec<usize>` provides sufficient alignment and capacity for the
-    // fixed header plus the exact UTF-16 payload. The source handle remains
-    // alive and names the already-validated temp file throughout the call.
-    unsafe {
-        (*info).Anonymous.ReplaceIfExists = true;
-        (*info).RootDirectory = std::ptr::null_mut();
-        (*info).FileNameLength = u32::try_from(name_bytes).map_err(|_| {
-            std::io::Error::new(
-                std::io::ErrorKind::InvalidInput,
-                "atomic replacement path exceeds Win32 length budget",
-            )
-        })?;
-        std::ptr::copy_nonoverlapping(
-            destination_wide.as_ptr(),
-            (*info).FileName.as_mut_ptr(),
-            destination_wide.len(),
-        );
-    }
-    // SAFETY: the handle is valid, owns DELETE access, and `buffer` contains a
-    // correctly sized FILE_RENAME_INFO followed by its UTF-16 file name.
-    let renamed = unsafe {
-        SetFileInformationByHandle(
-            source_file.as_raw_handle(),
-            FileRenameInfo,
-            info.cast(),
-            u32::try_from(buffer_bytes).map_err(|_| {
-                std::io::Error::new(
-                    std::io::ErrorKind::InvalidInput,
-                    "atomic replacement buffer exceeds Win32 size budget",
-                )
-            })?,
-        )
-    };
-    if renamed == 0 {
-        return Err(std::io::Error::last_os_error());
-    }
-    Ok(())
+    atomic_replace_windows::replace_file_atomically(source_file, source, destination)
 }
 
 pub fn checked_exists(path: &Path, context: &str) -> Result<bool> {
@@ -191,13 +103,63 @@ pub fn create_regular_file_new(path: &Path, context: &str) -> std::io::Result<Fi
     Ok(file)
 }
 
+/// Creates a new authority file with owner-only Unix permissions from the
+/// first observable handle and without following a final-component link.
+#[cfg(not(windows))]
+pub fn create_owner_only_regular_file_new(path: &Path, context: &str) -> std::io::Result<File> {
+    let mut options = OpenOptions::new();
+    options.read(true).write(true).create_new(true);
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    apply_no_follow(&mut options);
+    let file = options.open(path).map_err(|error| {
+        std::io::Error::new(
+            error.kind(),
+            format!("Failed to create {context} without following links at {path:?}: {error}"),
+        )
+    })?;
+    validate_regular_handle(&file, path, context)?;
+    Ok(file)
+}
+
+#[cfg(windows)]
+pub fn create_owner_only_regular_file_new(path: &Path, context: &str) -> std::io::Result<File> {
+    let file = owner_only::create_owner_only_regular_file_new(path, context)?;
+    validate_regular_handle(&file, path, context)?;
+    Ok(file)
+}
+
+/// Opens an existing authority file and enforces owner-only access on the
+/// exact opened handle before any secret bytes are read.
+pub fn open_owner_only_regular_file_read(path: &Path, context: &str) -> std::io::Result<File> {
+    #[cfg(unix)]
+    let file = {
+        use std::os::unix::fs::PermissionsExt;
+        let file = open_regular_file_read(path, context)?;
+        if file.metadata()?.permissions().mode() & 0o777 != 0o600 {
+            file.set_permissions(std::fs::Permissions::from_mode(0o600))?;
+        }
+        file
+    };
+    #[cfg(windows)]
+    let file = owner_only::open_owner_only_regular_file_read(path, context)?;
+    #[cfg(not(any(unix, windows)))]
+    let file = open_regular_file_read(path, context)?;
+    validate_regular_handle(&file, path, context)?;
+    ensure_open_file_matches_path(&file, path, context)?;
+    Ok(file)
+}
+
 /// Opens or creates a regular lock file without following a final-component
 /// symlink/reparse point. Callers should lock it, then call
 /// [`ensure_open_file_matches_path`] before relying on the pathname as a mutex.
 pub fn open_regular_file_lock(path: &Path, context: &str) -> std::io::Result<File> {
     let mut options = OpenOptions::new();
     options.read(true).write(true).create(true).truncate(false);
-    apply_no_follow(&mut options);
+    apply_lock_options(&mut options);
     let file = options.open(path).map_err(|error| {
         std::io::Error::new(
             error.kind(),
@@ -206,6 +168,22 @@ pub fn open_regular_file_lock(path: &Path, context: &str) -> std::io::Result<Fil
     })?;
     validate_regular_handle(&file, path, context)?;
     Ok(file)
+}
+
+#[cfg(windows)]
+fn apply_lock_options(options: &mut OpenOptions) {
+    use std::os::windows::fs::OpenOptionsExt;
+    use windows_sys::Win32::Storage::FileSystem::{
+        FILE_FLAG_OPEN_REPARSE_POINT, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE,
+    };
+    options
+        .share_mode(FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE)
+        .custom_flags(FILE_FLAG_OPEN_REPARSE_POINT);
+}
+
+#[cfg(not(windows))]
+fn apply_lock_options(options: &mut OpenOptions) {
+    apply_no_follow(options);
 }
 
 /// Revalidates that a locked/open handle is still the file named by `path`.

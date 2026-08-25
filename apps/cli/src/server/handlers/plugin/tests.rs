@@ -50,7 +50,11 @@ impl FailingPlugin {
 }
 
 impl PluginRuntime for FailingPlugin {
-    fn load(&mut self, _manifest: PluginManifest, _script: &str) -> Result<()> {
+    fn prepare(&mut self, _manifest: PluginManifest, _script: &str) -> Result<()> {
+        Ok(())
+    }
+
+    fn activate(&self) -> Result<()> {
         Ok(())
     }
 
@@ -93,7 +97,11 @@ impl ProbePlugin {
 }
 
 impl PluginRuntime for ProbePlugin {
-    fn load(&mut self, _manifest: PluginManifest, _script: &str) -> Result<()> {
+    fn prepare(&mut self, _manifest: PluginManifest, _script: &str) -> Result<()> {
+        Ok(())
+    }
+
+    fn activate(&self) -> Result<()> {
         Ok(())
     }
 

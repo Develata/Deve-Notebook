@@ -171,12 +171,14 @@ fn shutdown_result(failures: Vec<WatcherFailure>) -> Result<(), WatcherSuperviso
 
 impl Drop for WatcherSupervisor {
     fn drop(&mut self) {
-        for failure in self.shutdown_collect() {
-            tracing::error!(
-                error = %failure,
-                cleanup = ?failure.cleanup,
-                "best-effort watcher supervisor shutdown failed during Drop"
-            );
+        if let Err(error) = self.shutdown_bounded(Duration::from_millis(250)) {
+            for failure in error.failures {
+                tracing::error!(
+                    error = %failure,
+                    cleanup = ?failure.cleanup,
+                    "bounded watcher supervisor shutdown failed during Drop"
+                );
+            }
         }
     }
 }

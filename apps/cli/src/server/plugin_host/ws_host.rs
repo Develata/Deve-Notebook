@@ -27,6 +27,9 @@ async fn handle_socket(
     socket: axum::extract::ws::WebSocket,
     peer_id: String,
 ) {
+    let Some(_session) = state.lifecycle.begin_session() else {
+        return;
+    };
     let (sender, mut receiver) = socket.split();
     let (unicast_tx, unicast_rx) = send::new_unicast_channel();
     let (diff_unicast_tx, diff_unicast_rx) = send::new_diff_unicast_channel();
@@ -49,6 +52,7 @@ async fn handle_socket(
 
     loop {
         let msg = tokio::select! {
+            _ = state.lifecycle.cancelled() => break,
             changed = retire_session_rx.changed() => {
                 if changed.is_err() || *retire_session_rx.borrow() {
                     break;

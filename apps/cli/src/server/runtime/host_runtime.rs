@@ -27,6 +27,33 @@ pub(crate) fn install_sync_host_api(
     Ok(())
 }
 
+pub(crate) fn activate_plugin_runtimes(
+    plugins: &[Box<dyn deve_core::plugin::runtime::PluginRuntime>],
+) -> anyhow::Result<()> {
+    for plugin in plugins {
+        let plugin_id = plugin.manifest().id.clone();
+        plugin
+            .activate()
+            .map_err(|error| error.context(format!("Failed to activate plugin '{plugin_id}'")))?;
+    }
+    Ok(())
+}
+
+pub(crate) fn install_plugin_host_contexts(
+    plugins: &[Box<dyn deve_core::plugin::runtime::PluginRuntime>],
+    context: Arc<host::PluginHostContext>,
+) -> anyhow::Result<()> {
+    for plugin in plugins {
+        let plugin_id = plugin.manifest().id.clone();
+        plugin
+            .install_host_context(context.clone())
+            .map_err(|error| {
+                error.context(format!("Failed to bind plugin '{plugin_id}' host context"))
+            })?;
+    }
+    Ok(())
+}
+
 pub(crate) fn prepare_host_layout(repo: &RepoManager) -> anyhow::Result<PathBuf> {
     notegit::prepare(repo)
 }

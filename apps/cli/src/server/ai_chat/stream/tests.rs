@@ -198,3 +198,98 @@ fn missing_provider_terminal_event_is_rejected() {
         "Native AI provider stream ended before a valid terminal event"
     );
 }
+
+#[test]
+fn bounded_sse_decoder_handles_split_crlf_and_multiline_data() {
+    let mut decoder = BoundedSseDecoder::default();
+    let mut events = Vec::new();
+    let mut collect = |event| {
+        events.push(event);
+        Ok(StreamStep::Continue)
+    };
+    assert_eq!(
+        decoder.push(b"data: first\r", &mut collect).unwrap(),
+        StreamStep::Continue
+    );
+    decoder
+        .push(b"\ndata: second\r\n\r\n", &mut collect)
+        .expect("split frame");
+
+    assert_eq!(events, vec!["first\nsecond"]);
+    decoder.finish().expect("clean frame boundary");
+}
+
+#[test]
+fn bounded_sse_decoder_rejects_oversized_event() {
+    let mut decoder = BoundedSseDecoder::default();
+    let mut ignore = |_| Ok(StreamStep::Continue);
+    let error = decoder
+        .push(&vec![b'x'; MAX_SSE_EVENT_BYTES + 1], &mut ignore)
+        .expect_err("oversized event must fail closed");
+
+    assert!(error.to_string().contains("SSE event limit exceeded"));
+}
+
+#[test]
+fn bounded_sse_decoder_rejects_terminal_json_without_frame_boundary() {
+    let mut decoder = BoundedSseDecoder::default();
+    let mut events = Vec::new();
+    let mut collect = |event| {
+        events.push(event);
+        Ok(StreamStep::Continue)
+    };
+    decoder
+        .push(
+            br#"data: {"choices":[{"finish_reason":"stop"}]}"#,
+            &mut collect,
+        )
+        .expect("bounded input");
+
+    let error = decoder
+        .finish()
+        .expect_err("EOF must not dispatch an unterminated SSE frame");
+    assert!(error.to_string().contains("frame was truncated"));
+    assert!(events.is_empty());
+}
+
+#[test]
+fn bounded_sse_decoder_accepts_lone_cr_and_preserves_empty_data_line() {
+    let mut decoder = BoundedSseDecoder::default();
+    let mut events = Vec::new();
+    let mut collect = |event| {
+        events.push(event);
+        Ok(StreamStep::Continue)
+    };
+
+    decoder
+        .push(b"data:\rdata: second\r\r", &mut collect)
+        .expect("lone CR framing");
+
+    assert_eq!(events, vec!["\nsecond"]);
+    decoder.finish().expect("clean lone CR boundary");
+}
+
+#[test]
+fn output_budget_is_checked_before_sink_projection() {
+    let sent = Arc::new(Mutex::new(Vec::new()));
+    let sent_for_sink = sent.clone();
+    let sink = ChatStreamSink::new(move |message| {
+        sent_for_sink.lock().unwrap().push(message);
+    });
+    let mut output = "1234".to_string();
+    let mut finish_reason = None;
+
+    let error = apply_sse_event_with_limit(
+        "req-limit",
+        ParsedSseEvent::ContentDelta("5".to_string()),
+        &mut output,
+        &mut finish_reason,
+        &sink,
+        4,
+    )
+    .expect_err("output overflow must fail before projection");
+
+    assert!(error.to_string().contains("output limit exceeded"));
+    assert_eq!(output, "1234");
+    assert!(sent.lock().unwrap().is_empty());
+}

@@ -12,7 +12,7 @@
 //! - Identity Key 必须始终存在 (首次启动时自动生成)
 //! - Repo Key 可选，但一旦生成必须保持一致性
 
-use anyhow::{Context, Result, bail};
+use anyhow::{Result, bail};
 use deve_core::security::IdentityKeyPair;
 use std::path::Path;
 use std::sync::Arc;
@@ -34,47 +34,14 @@ pub fn load_or_generate_identity_key(host_key_dir: &Path) -> anyhow::Result<Arc<
     Ok(kp)
 }
 
-#[cfg(unix)]
 fn enforce_owner_only_identity_key(path: &Path) -> Result<()> {
-    use std::os::unix::fs::PermissionsExt;
-
-    let metadata = std::fs::metadata(path)
-        .with_context(|| format!("Failed to read identity key metadata: {:?}", path))?;
-    if !metadata.is_file() {
+    if !std::fs::metadata(path)?.is_file() {
         bail!("Identity key path is not a file: {:?}", path);
     }
-
-    let mode = metadata.permissions().mode() & 0o777;
-    if mode != 0o600 {
-        let mut permissions = metadata.permissions();
-        permissions.set_mode(0o600);
-        std::fs::set_permissions(path, permissions).with_context(|| {
-            format!(
-                "Failed to set owner-only identity key permissions: {:?}",
-                path
-            )
-        })?;
-        tracing::warn!(
-            path = ?path,
-            old_mode = format_args!("{mode:o}"),
-            new_mode = "600",
-            "Corrected identity key permissions to owner-only"
-        );
-    }
-    Ok(())
-}
-
-#[cfg(not(unix))]
-fn enforce_owner_only_identity_key(path: &Path) -> Result<()> {
-    let metadata = std::fs::metadata(path)
-        .with_context(|| format!("Failed to read identity key metadata: {:?}", path))?;
-    if !metadata.is_file() {
-        bail!("Identity key path is not a file: {:?}", path);
-    }
-    tracing::warn!(
-        path = ?path,
-        "Owner-only identity key permission enforcement is not portable on this platform"
-    );
+    drop(deve_core::utils::fs::open_owner_only_regular_file_read(
+        path,
+        "identity key",
+    )?);
     Ok(())
 }
 

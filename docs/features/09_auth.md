@@ -73,6 +73,7 @@
   blocker、Mounted、writer gate、transaction 与 publication 判断。CLI 不获得通用 Ledger、watcher 或
   Source Control authority；`removal-repair`已是独立typed surface，不复用普通Execute capability。
 - proxy admission 失败时 CLI 显式报认证/代理不可用，不退回匿名访问、browser grant 或直写 DB。
+- 首次启动并发触发 identity/repo key 初始化时，所有调用必须观察同一个已持久化 key；existing corrupt/non-file/link target 必须报错，不能竞态覆盖或各自返回不同密钥。
 
 ## 非目标
 

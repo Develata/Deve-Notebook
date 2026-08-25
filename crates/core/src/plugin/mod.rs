@@ -14,4 +14,5 @@
 
 pub mod loader;
 pub mod manifest;
+pub(crate) mod resource_budget;
 pub mod runtime;

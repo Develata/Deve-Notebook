@@ -236,10 +236,27 @@
     - server_assert: provider_tool_or_refusal_events_fail_closed true
     - server_assert: truncated_provider_streams_fail_before_success_projection true
     - server_assert: done_without_protocol_terminal_fails_closed true
+    - server_assert: provider_connect_idle_total_frame_wire_and_output_budgets_fail_closed true
+    - server_assert: incomplete_terminal_sse_frame_fails_closed true
+    - server_assert: lone_cr_and_empty_data_sse_lines_are_parsed_without_unbounded_buffering true
+    - server_assert: provider_delta_is_admitted_before_sink_projection true
     - server_assert: external_rhai_plugin_has_no_native_ai_stream_authority true
     - server_assert: embedded_backend_reinitializes_same_stream_handler true
     - server_assert: rhai_receives_no_provider_secret_or_network_authority true
     - log_not_contains_any: ["fixture-secret", "Authorization: Bearer", "x-api-key"]
+
+- case_id: AI-012
+  goal: Trusted CLI 的所有终止路径退休整个进程树。
+  preconditions:
+    - trusted-cli policy 已显式启用并绑定测试 executable
+  steps:
+    - run: cargo test -p deve_cli agent_bridge -- --nocapture
+  assertions:
+    - cli_assert: unix_agent_child_uses_dedicated_process_group true
+    - cli_assert: windows_agent_policy_fails_before_spawn_until_atomic_job_association_exists true
+    - cli_assert: containment_failure_kills_child_and_fails_closed true
+    - cli_assert: timeout_output_limit_read_error_and_cancellation_retire_process_tree true
+    - cli_assert: cleanup_failure_prevents_success_finish_chunk true
 
 - case_id: PLUG-001
   goal: Trusted External Agent 仅保留接口位，不要求当前 release 完整实现。
@@ -269,11 +286,34 @@
     - 存在未来 host api / plugin capability 文档
   steps:
     - doc_read: "docs/plan/19_plugins.md"
+    - run: cargo test -p deve_core plugin::loader -- --nocapture
+    - run: cargo test -p deve_core plugin::runtime::rhai_v1 -- --nocapture
     - run: cargo test -p deve_core plugin::runtime::module_resolver -- --nocapture
+    - run: cargo test -p deve_core plugin::runtime::host::fs -- --nocapture
+    - run: cargo test -p deve_core skill_manager -- --nocapture
     - run: cargo test -p deve_core source_control_write_gate_missing_dependencies_fail_closed -- --nocapture
   assertions:
     - doc_contains: "<projection_base>/<workspace_segment>/**/*.md"
     - doc_contains: ".notegit"
     - doc_contains: "ledger-aware host functions"
+    - plugin_assert: loader_prepares_without_running_top_level_host_calls true
+    - plugin_assert: composition_root_activates_only_after_host_authority_install true
+    - plugin_assert: overlapping_runtime_generations_keep_managed_host_contexts_isolated true
+    - plugin_assert: raw_write_without_repo_host_context_fails_closed true
+    - plugin_assert: manifest_entry_module_fs_read_grep_and_skill_inputs_are_bounded true
+    - plugin_assert: plugin_skill_and_rhai_aggregate_budgets_fail_closed true
     - plugin_assert: source_control_writer_gate_fail_closed_without_local_gate true
+
+- case_id: PLUG-004
+  goal: loopback plugin-host satellite 具备受控退出生命周期。
+  preconditions:
+    - plugin-host 已绑定 loopback listener
+  steps:
+    - run: cargo test -p deve_cli plugin_host -- --nocapture
+    - run: cargo test -p deve_cli production_shutdown_signal -- --nocapture
+  assertions:
+    - cli_assert: plugin_host_binds_loopback_only true
+    - cli_assert: plugin_host_shutdown_signal_retires_listener true
+    - cli_assert: plugin_host_shutdown_retires_active_websocket_sessions true
+    - cli_assert: plugin_host_does_not_depend_on_forced_process_exit true
 ```

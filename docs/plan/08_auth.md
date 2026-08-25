@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-07-22`
+- `Last Review`: `2026-08-25`
 - `Counterpart Feature`: `docs/features/09_auth.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/08_auth.md`
 - `Primary Code Areas`: `crates/core/src/security/auth/`, `apps/cli/src/server/auth/`, `apps/web/src/api/auth_probe.rs`, `apps/web/src/app/auth_monitor.rs`
@@ -289,7 +289,8 @@ session。生产环境或未显式进入 development 时设置该开关必须 fa
 
 ### 6.7 Key and File Permissions {#key-and-file-permissions}
 
-- 宿主机上的 `identity.key` / auth secret material 文件权限 **MUST** 为 owner-only。
+- 宿主机上的 `identity.key`、repo-scoped `repo.key` 与 auth secret material 文件权限 **MUST** 为 owner-only。Unix 必须从首次 create 以 `0600` 发布并对既有 exact handle 收紧为 `0600`；Windows 必须在 `CreateFileW(CREATE_NEW)` 时携带只授予当前 token user 的 protected DACL，并在读取既有 key 前通过带 `WRITE_DAC` 的 no-reparse exact handle 重设同一 protected DACL。仅依赖父目录继承、创建后再补 ACL 或记录“不便携”warning 不满足合同。
+- `identity.key` / `repo.key` 的首次初始化必须是跨线程、跨进程的单一发布：调用方先取得同目录 regular non-link lock，锁内重新读取；仍缺失时才生成，并通过 owner-only、no-follow、`create_new` handle 完整写入、`sync_all` 与父目录 sync 后返回。不得使用 check-then-`fs::write`、覆盖既有 key、跟随 symlink/reparse point，或返回与最终持久文件不同的竞态 loser key。锁、读取、创建、同步或 identity 复核失败都必须 fail-closed；已存在但损坏的 key 不得被自动重生覆盖。
 - 所有本地 ledger fact writer 必须绑定由该 `identity.key` 推导出的物理 PeerId；`FactActor` 仅作诊断，不能参与签名、source proof 或 VersionVector。
 - 浏览器端不得导出 peer private key 或 session material 到 localStorage / URL / logs。
 
