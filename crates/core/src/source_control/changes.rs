@@ -78,13 +78,42 @@ pub fn get_committed_content(db: &Database, doc_id: DocId) -> Result<Option<Stri
 pub fn detect_doc_change(committed: Option<&str>, current: Option<&str>) -> Option<ChangeStatus> {
     match (committed, current) {
         // 新文档 (无快照但有当前内容)
-        (None, Some(cur)) if !cur.is_empty() => Some(ChangeStatus::Added),
+        (None, Some(_)) => Some(ChangeStatus::Added),
         // 已删除 (有快照但无当前内容)
         (Some(_), None) => Some(ChangeStatus::Deleted),
         // 已修改 (内容不同)
         (Some(old), Some(new)) if old != new => Some(ChangeStatus::Modified),
         // 无变更
         _ => None,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::detect_doc_change;
+    use crate::source_control::ChangeStatus;
+
+    #[test]
+    fn detects_empty_new_document_as_added() {
+        assert_eq!(detect_doc_change(None, Some("")), Some(ChangeStatus::Added));
+    }
+
+    #[test]
+    fn preserves_adjacent_change_statuses() {
+        assert_eq!(
+            detect_doc_change(None, Some("content")),
+            Some(ChangeStatus::Added)
+        );
+        assert_eq!(
+            detect_doc_change(Some("content"), None),
+            Some(ChangeStatus::Deleted)
+        );
+        assert_eq!(
+            detect_doc_change(Some("old"), Some("new")),
+            Some(ChangeStatus::Modified)
+        );
+        assert_eq!(detect_doc_change(Some("same"), Some("same")), None);
+        assert_eq!(detect_doc_change(None, None), None);
     }
 }
 

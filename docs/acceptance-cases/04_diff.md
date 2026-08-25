@@ -125,6 +125,7 @@
     - Source Control 面板可用
   steps:
     - run: scripts/check-source-control-baseline.sh
+    - run: cargo test -p deve_core --lib source_control::changes::tests -- --nocapture
     - run: cargo test -p deve_cli source_control -- --nocapture
     - run: cargo test -p deve_web commit_write_block -- --nocapture
     - run: cargo test -p deve_web commit_refresh -- --nocapture
@@ -231,6 +232,7 @@
     - run: cargo test -p deve_cli confirmed_ledger_changes -- --nocapture
     - run: cargo test -p deve_web confirmed_ledger_changes -- --nocapture
   assertions:
+    - api_assert: empty_new_document_is_reported_as_added true
     - ui_assert: source_control_commit_available true
     - ui_assert: source_control_commit_shortcut_prevents_textarea_default true
     - ui_assert: source_control_commit_and_push_cli_only_notice true
