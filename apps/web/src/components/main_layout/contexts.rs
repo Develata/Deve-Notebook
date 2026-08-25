@@ -65,6 +65,22 @@ pub fn use_mobile_breakpoint() -> ReadSignal<bool> {
         }
     };
     update_is_mobile();
-    window_event_listener(leptos::ev::resize, move |_ev: UiEvent| update_is_mobile());
+    let resize_listener =
+        window_event_listener(leptos::ev::resize, move |_ev: UiEvent| update_is_mobile());
+    on_cleanup(move || resize_listener.remove());
     is_mobile
+}
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn mobile_breakpoint_listener_has_explicit_owner_cleanup() {
+        let source = include_str!("contexts.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .expect("source before tests");
+
+        assert!(source.contains("let resize_listener ="));
+        assert!(source.contains("on_cleanup(move || resize_listener.remove())"));
+    }
 }

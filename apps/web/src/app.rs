@@ -51,11 +51,15 @@ pub fn App() -> impl IntoView {
     let (auth_state, set_auth_state) = signal(AuthState::Checking);
     let page_active = RwSignal::new(current_page_active());
 
-    window_event_listener(leptos::ev::focus, move |_| {
+    let focus_listener = window_event_listener(leptos::ev::focus, move |_| {
         page_active.set(current_page_active());
     });
-    window_event_listener(leptos::ev::blur, move |_| {
+    let blur_listener = window_event_listener(leptos::ev::blur, move |_| {
         page_active.set(current_page_active());
+    });
+    on_cleanup(move || {
+        focus_listener.remove();
+        blur_listener.remove();
     });
     mount_visibility_listener(page_active);
 
@@ -149,6 +153,13 @@ mod tests {
     use crate::components::login::AuthState;
     use crate::i18n::Locale;
 
+    fn source_before_tests() -> &'static str {
+        include_str!("app.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .expect("source before tests")
+    }
+
     #[test]
     fn logout_success_enters_unauthenticated_state() {
         assert!(matches!(
@@ -166,5 +177,15 @@ mod tests {
             }
             other => panic!("expected logout failure state, got {other:?}"),
         }
+    }
+
+    #[test]
+    fn app_window_listeners_are_removed_with_owner_cleanup() {
+        let source = source_before_tests();
+
+        assert!(source.contains("let focus_listener = window_event_listener"));
+        assert!(source.contains("let blur_listener = window_event_listener"));
+        assert!(source.contains("focus_listener.remove();"));
+        assert!(source.contains("blur_listener.remove();"));
     }
 }

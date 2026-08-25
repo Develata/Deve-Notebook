@@ -85,12 +85,12 @@ fn attach_trusted_cli_fallback(
             if latest_message_is_notice(messages, &notice) {
                 return;
             }
-            messages.push(ChatMessage {
-                role: "assistant".to_string(),
-                content: notice,
-                req_id: None,
-                ts_ms: js_sys::Date::now() as u64,
-            });
+            messages.push(ChatMessage::new(
+                "assistant",
+                notice,
+                None,
+                js_sys::Date::now() as u64,
+            ));
         });
     });
 }
@@ -215,12 +215,7 @@ mod tests {
     #[test]
     fn suppresses_duplicate_fallback_notice_when_multiple_surfaces_mount() {
         let notice = "trusted-cli fallback";
-        let messages = vec![ChatMessage {
-            role: "assistant".to_string(),
-            content: notice.to_string(),
-            req_id: None,
-            ts_ms: 1,
-        }];
+        let messages = vec![ChatMessage::new("assistant", notice, None, 1)];
 
         assert!(latest_message_is_notice(&messages, notice));
     }
@@ -229,18 +224,8 @@ mod tests {
     fn allows_fallback_notice_after_user_message() {
         let notice = "trusted-cli fallback";
         let messages = vec![
-            ChatMessage {
-                role: "assistant".to_string(),
-                content: notice.to_string(),
-                req_id: None,
-                ts_ms: 1,
-            },
-            ChatMessage {
-                role: "user".to_string(),
-                content: "try again".to_string(),
-                req_id: None,
-                ts_ms: 2,
-            },
+            ChatMessage::new("assistant", notice, None, 1),
+            ChatMessage::new("user", "try again", None, 2),
         ];
 
         assert!(!latest_message_is_notice(&messages, notice));
@@ -249,12 +234,12 @@ mod tests {
     #[test]
     fn plugin_response_with_same_content_is_not_treated_as_fallback_notice() {
         let notice = "trusted-cli fallback";
-        let messages = vec![ChatMessage {
-            role: "assistant".to_string(),
-            content: notice.to_string(),
-            req_id: Some("plugin-response".to_string()),
-            ts_ms: 1,
-        }];
+        let messages = vec![ChatMessage::new(
+            "assistant",
+            notice,
+            Some("plugin-response".to_string()),
+            1,
+        )];
 
         assert!(!latest_message_is_notice(&messages, notice));
     }

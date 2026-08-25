@@ -49,9 +49,10 @@ pub fn use_layout(
     chat_visible: ReadSignal<bool>,
 ) -> LayoutHookReturn {
     let (viewport_width, set_viewport_width) = signal(current_viewport_width());
-    window_event_listener(leptos::ev::resize, move |_| {
+    let resize_listener = window_event_listener(leptos::ev::resize, move |_| {
         set_viewport_width.set(current_viewport_width());
     });
+    on_cleanup(move || resize_listener.remove());
 
     let sidebar_initial = read_width("ui_sidebar_width").unwrap_or(DEFAULT_LEFT_WIDTH);
     let center_initial = read_width("ui_center_panel_width");
@@ -257,4 +258,18 @@ fn current_viewport_width() -> i32 {
         .and_then(|v| v.as_f64())
         .map(|w| w.round() as i32)
         .unwrap_or(DEFAULT_DESKTOP_VIEWPORT_WIDTH)
+}
+
+#[cfg(test)]
+mod lifecycle_tests {
+    #[test]
+    fn layout_resize_listener_has_explicit_owner_cleanup() {
+        let source = include_str!("use_layout.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .expect("source before tests");
+
+        assert!(source.contains("let resize_listener = window_event_listener"));
+        assert!(source.contains("on_cleanup(move || resize_listener.remove())"));
+    }
 }

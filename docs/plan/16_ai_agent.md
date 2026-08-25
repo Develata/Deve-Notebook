@@ -5,7 +5,7 @@
 - `Layer`: `Peripheral / Optional Product Layer`
 - `Status`: `Optional Product Layer`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-08-13`
+- `Last Review`: `2026-08-25`
 - `Counterpart Feature`: `docs/features/10_ai_agent.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/10_plugins.md`
 - `Primary Code Areas`: `apps/cli/src/server/ai_chat/`, `apps/cli/src/server/agent_bridge/`, `apps/web/src/components/chat/`, `apps/web/src/api/ai_backend.rs`, `crates/core/src/plugin/runtime/chat_stream.rs`
@@ -82,6 +82,14 @@ Native AI Chat 是启用 AI 功能时的默认第一方 AI 形态，属于内建
     拼 provider URL、携带 API key 或拥有 network authority。
 *   Chat stream handler 是同一 server binary 的进程级基础设施：同一内建实现的重复初始化必须幂等，以支持
     Android 同进程 embedded backend generation replacement；不同实现或外部替换仍必须 fail-closed。
+*   Web Chat 的每条本地消息 **MUST** 在集中构造点取得稳定的 UI-only identity；该 identity **MUST NOT**
+    由 `req_id`、可变消息正文、role 或时间戳派生，也不得序列化为 server/protocol 字段。相同请求前缀、
+    相同毫秒时间或无 `req_id` 的消息仍必须保持独立 identity。
+*   Chat keyed row **MUST** 以该 identity 作为 key，并按 identity 响应式读取当前消息正文；流式 delta
+    到达时必须更新同一 row/DOM，而不得因可变正文变化而重建或复用错误消息。Markdown、TeX 与代码高亮
+    仅是消息 body 的 presentation projection；单个 delta 的投影范围应限定在发生变化的消息 body，
+    不得重新渲染或重新高亮整个聊天历史。消息结构索引的性能预算与增量维护策略属于
+    `21_perf_budget#critical-path-budget`，不得用改变消息 identity 或正文权威来换取性能。
 *   只有编译期内建 `ai-chat` runtime 可以注册 chat stream host API 并取得 request-local stream scope。
     外部 Rhai plugin 即使猜中 host function 名称也必须得到 unknown-function/capability denial，不能借用 server
     provider secret、网络出口或付费调用额度。

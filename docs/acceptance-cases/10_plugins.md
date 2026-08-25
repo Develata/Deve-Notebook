@@ -35,11 +35,14 @@
         $not_math$
         ```
     - run: cargo test -p deve_web chat_math -- --nocapture
+    - run: cargo test -p deve_web chat_message_ui_identity -- --nocapture
   assertions:
     - ui_assert: chat_inline_math_rendered true
     - ui_assert: chat_block_math_rendered true
     - ui_assert: chat_code_block_contains_literal "$not_math$"
     - ui_assert: chat_streaming_not_blocked_by_math_render_error true
+    - ui_assert: chat_streaming_reuses_same_message_row true
+    - ui_assert: identical_non_request_messages_render_as_distinct_rows true
 
 - case_id: AI-002
   goal: `/plan` 进入原生 PLAN 模式，且 slash command 本身不会调用任何工具。

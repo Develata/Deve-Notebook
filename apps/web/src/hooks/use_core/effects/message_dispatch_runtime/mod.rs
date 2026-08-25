@@ -10,7 +10,7 @@ use super::message_dispatch_gate::{
 };
 use super::message_runtime::handle_chat_chunk;
 use crate::i18n::{Locale, t};
-use crate::runtime::domain::SearchHit;
+use crate::runtime::domain::{ChatMessage, SearchHit};
 use deve_core::models::{PeerId, RepoId};
 
 pub fn handle_plugin_response_message(
@@ -59,10 +59,10 @@ fn finish_chat_request_from_plugin_response(
         matched_chat_message = true;
         if let Some(text) = response_text {
             if message.content.is_empty() {
-                message.content.push_str(text);
+                message.append_content(text);
             }
         } else if let Some(text) = error_text {
-            append_plugin_error_text(&mut message.content, text);
+            append_plugin_error_text(message, text);
         }
     });
     if matched_chat_message {
@@ -70,14 +70,14 @@ fn finish_chat_request_from_plugin_response(
     }
 }
 
-fn append_plugin_error_text(content: &mut String, detail: &str) {
-    if detail.is_empty() || content.contains(detail) {
+fn append_plugin_error_text(message: &mut ChatMessage, detail: &str) {
+    if detail.is_empty() || message.content.contains(detail) {
         return;
     }
-    if !content.is_empty() {
-        content.push_str("\n\n");
+    if !message.content.is_empty() {
+        message.append_content("\n\n");
     }
-    content.push_str(detail);
+    message.append_content(detail);
 }
 
 fn plugin_response_text(result: Option<&serde_json::Value>) -> Option<&str> {

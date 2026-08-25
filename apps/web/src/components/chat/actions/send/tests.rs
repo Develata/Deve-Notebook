@@ -97,24 +97,9 @@ fn non_backend_chat_message_plans_are_not_rewritten_by_localization() {
 #[test]
 fn bounded_history_keeps_recent_user_and_assistant_turns() {
     let history = bounded_chat_history(vec![
-        ChatMessage {
-            role: "system".into(),
-            content: "ignored".into(),
-            req_id: None,
-            ts_ms: 0,
-        },
-        ChatMessage {
-            role: "user".into(),
-            content: "first".into(),
-            req_id: None,
-            ts_ms: 0,
-        },
-        ChatMessage {
-            role: "assistant".into(),
-            content: "second".into(),
-            req_id: Some("req-1".into()),
-            ts_ms: 0,
-        },
+        ChatMessage::new("system", "ignored", None, 0),
+        ChatMessage::new("user", "first", None, 0),
+        ChatMessage::new("assistant", "second", Some("req-1".into()), 0),
     ]);
 
     assert_eq!(
@@ -129,11 +114,13 @@ fn bounded_history_keeps_recent_user_and_assistant_turns() {
 #[test]
 fn bounded_history_limits_message_count() {
     let messages = (0..12)
-        .map(|idx| ChatMessage {
-            role: if idx % 2 == 0 { "user" } else { "assistant" }.into(),
-            content: format!("m{idx}"),
-            req_id: None,
-            ts_ms: 0,
+        .map(|idx| {
+            ChatMessage::new(
+                if idx % 2 == 0 { "user" } else { "assistant" },
+                format!("m{idx}"),
+                None,
+                0,
+            )
         })
         .collect();
 

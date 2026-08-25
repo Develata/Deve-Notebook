@@ -78,12 +78,7 @@ mod tests {
     use crate::runtime::domain::ChatMessage;
 
     fn chat_message(req_id: Option<&str>) -> ChatMessage {
-        ChatMessage {
-            role: "assistant".to_string(),
-            content: String::new(),
-            req_id: req_id.map(str::to_string),
-            ts_ms: 0,
-        }
+        ChatMessage::new("assistant", String::new(), req_id.map(str::to_string), 0)
     }
 
     #[test]

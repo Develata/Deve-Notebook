@@ -14,12 +14,12 @@ fn init_chat_error_case(content: &str) -> (Owner, crate::hooks::use_core::state:
     let signals = init_signals(connection_status);
     signals.set_plugin_request_ids.set(vec!["req-1".into()]);
     signals.set_is_chat_streaming.set(true);
-    signals.set_chat_messages.set(vec![ChatMessage {
-        role: "assistant".into(),
-        content: content.into(),
-        req_id: Some("req-1".into()),
-        ts_ms: 0,
-    }]);
+    signals.set_chat_messages.set(vec![ChatMessage::new(
+        "assistant",
+        content,
+        Some("req-1".into()),
+        0,
+    )]);
     (runtime, signals)
 }
 

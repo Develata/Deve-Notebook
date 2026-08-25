@@ -74,7 +74,9 @@ pub fn MobileFooter(pending_ack_count: Memo<usize>) -> impl IntoView {
         set_is_narrow.set(width <= 360.0);
     };
     update_narrow();
-    window_event_listener(leptos::ev::resize, move |_ev: UiEvent| update_narrow());
+    let resize_listener =
+        window_event_listener(leptos::ev::resize, move |_ev: UiEvent| update_narrow());
+    on_cleanup(move || resize_listener.remove());
 
     let on_to_start = Callback::new(move |_| set_ver.set(0));
     let on_prev = Callback::new(move |_| {
@@ -144,6 +146,13 @@ pub fn MobileFooter(pending_ack_count: Memo<usize>) -> impl IntoView {
 mod tests {
     use super::{bottom_bar_after_outside_click, bottom_bar_state_attrs};
 
+    fn source_before_tests() -> &'static str {
+        include_str!("footer.rs")
+            .split("#[cfg(test)]")
+            .next()
+            .expect("source before tests")
+    }
+
     #[test]
     fn mobile_bottom_bar_collapsed_state_is_single_line() {
         assert_eq!(bottom_bar_state_attrs(false), ("collapsed", "single"));
@@ -154,5 +163,13 @@ mod tests {
     fn mobile_bottom_bar_expand_outside_click_collapses() {
         assert!(!bottom_bar_after_outside_click(true));
         assert!(!bottom_bar_after_outside_click(false));
+    }
+
+    #[test]
+    fn mobile_footer_resize_listener_has_explicit_owner_cleanup() {
+        let source = source_before_tests();
+
+        assert!(source.contains("let resize_listener ="));
+        assert!(source.contains("on_cleanup(move || resize_listener.remove())"));
     }
 }

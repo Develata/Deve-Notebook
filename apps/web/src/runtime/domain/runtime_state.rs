@@ -7,6 +7,7 @@
 
 use deve_core::models::{PeerId, VersionVector};
 use std::fmt;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum AiBackendMode {
@@ -57,10 +58,76 @@ impl PartialEq<&str> for AiBackendMode {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ChatMessage {
+    /// Stable identity owned by the Web UI; it is never sent over the wire.
+    pub ui_id: u64,
     pub role: String,
     pub content: String,
     pub req_id: Option<String>,
     pub ts_ms: u64,
+    /// Monotonic local revision used to invalidate only this row's content projection.
+    pub content_revision: u64,
+}
+
+impl ChatMessage {
+    pub fn new(
+        role: impl Into<String>,
+        content: impl Into<String>,
+        req_id: Option<String>,
+        ts_ms: u64,
+    ) -> Self {
+        static NEXT_UI_ID: AtomicU64 = AtomicU64::new(1);
+        let ui_id = NEXT_UI_ID
+            .fetch_update(Ordering::Relaxed, Ordering::Relaxed, |next| {
+                next.checked_add(1)
+            })
+            .expect("chat UI message identity exhausted");
+        Self {
+            ui_id,
+            role: role.into(),
+            content: content.into(),
+            req_id,
+            ts_ms,
+            content_revision: 0,
+        }
+    }
+
+    pub fn append_content(&mut self, delta: &str) -> bool {
+        if delta.is_empty() {
+            return false;
+        }
+        self.content.push_str(delta);
+        self.content_revision = self
+            .content_revision
+            .checked_add(1)
+            .expect("chat message content revision exhausted");
+        true
+    }
+}
+
+#[cfg(test)]
+mod chat_message_tests {
+    use super::ChatMessage;
+
+    #[test]
+    fn chat_message_ui_identity_is_unique_for_same_timestamp_and_content() {
+        let first = ChatMessage::new("assistant", "same prefix", None, 42);
+        let second = ChatMessage::new("assistant", "same prefix", None, 42);
+
+        assert_ne!(first.ui_id, second.ui_id);
+    }
+
+    #[test]
+    fn chat_message_append_preserves_identity_and_advances_content_revision() {
+        let mut message = ChatMessage::new("assistant", "prefix", Some("req-1".into()), 42);
+        let ui_id = message.ui_id;
+
+        assert!(message.append_content(" delta"));
+        assert_eq!(message.ui_id, ui_id);
+        assert_eq!(message.content, "prefix delta");
+        assert_eq!(message.content_revision, 1);
+        assert!(!message.append_content(""));
+        assert_eq!(message.content_revision, 1);
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]

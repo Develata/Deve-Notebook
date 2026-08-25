@@ -22,12 +22,12 @@ fn protocol_error_finishes_pending_chat_placeholder() {
     let signals = init_signals(connection_status);
     signals.set_is_chat_streaming.set(true);
     signals.set_plugin_request_ids.set(vec!["req-1".into()]);
-    signals.set_chat_messages.set(vec![ChatMessage {
-        role: "assistant".into(),
-        content: String::new(),
-        req_id: Some("req-1".into()),
-        ts_ms: 0,
-    }]);
+    signals.set_chat_messages.set(vec![ChatMessage::new(
+        "assistant",
+        String::new(),
+        Some("req-1".into()),
+        0,
+    )]);
 
     assert!(finish_pending_chat_on_protocol_error(
         &ServerError::with_detail(
@@ -57,12 +57,12 @@ fn protocol_error_appends_after_partial_chat_content() {
     let signals = init_signals(connection_status);
     signals.set_is_chat_streaming.set(true);
     signals.set_plugin_request_ids.set(vec!["req-1".into()]);
-    signals.set_chat_messages.set(vec![ChatMessage {
-        role: "assistant".into(),
-        content: "partial".into(),
-        req_id: Some("req-1".into()),
-        ts_ms: 0,
-    }]);
+    signals.set_chat_messages.set(vec![ChatMessage::new(
+        "assistant",
+        "partial",
+        Some("req-1".into()),
+        0,
+    )]);
 
     assert!(finish_pending_chat_on_protocol_error(
         &ServerError::with_detail(ServerErrorCode::RequestFailed, "transport failed"),
@@ -85,12 +85,12 @@ fn protocol_error_does_not_clear_unmatched_chat_request() {
     let signals = init_signals(connection_status);
     signals.set_is_chat_streaming.set(true);
     signals.set_plugin_request_ids.set(vec!["req-1".into()]);
-    signals.set_chat_messages.set(vec![ChatMessage {
-        role: "assistant".into(),
-        content: String::new(),
-        req_id: Some("other-req".into()),
-        ts_ms: 0,
-    }]);
+    signals.set_chat_messages.set(vec![ChatMessage::new(
+        "assistant",
+        String::new(),
+        Some("other-req".into()),
+        0,
+    )]);
 
     assert!(!finish_pending_chat_on_protocol_error(
         &ServerError::with_detail(ServerErrorCode::RequestFailed, "transport failed"),

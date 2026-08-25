@@ -188,12 +188,12 @@ fn accepts_chat_finish_for_existing_message_after_response_ack() {
     runtime.set();
     let (connection_status, _) = signal(ConnectionStatus::Connected);
     let signals = init_signals(connection_status);
-    signals.set_chat_messages.set(vec![ChatMessage {
-        role: "assistant".into(),
-        content: String::new(),
-        req_id: Some("req-1".into()),
-        ts_ms: 0,
-    }]);
+    signals.set_chat_messages.set(vec![ChatMessage::new(
+        "assistant",
+        String::new(),
+        Some("req-1".into()),
+        0,
+    )]);
     assert!(accepts_chat_chunk("req-1", signals));
     assert!(!accepts_chat_chunk("stale", signals));
 }
@@ -206,12 +206,12 @@ fn plugin_text_response_stops_loading() {
     let signals = init_signals(connection_status);
     signals.set_plugin_request_ids.set(vec!["req-1".into()]);
     signals.set_is_chat_streaming.set(true);
-    signals.set_chat_messages.set(vec![ChatMessage {
-        role: "assistant".into(),
-        content: String::new(),
-        req_id: Some("req-1".into()),
-        ts_ms: 0,
-    }]);
+    signals.set_chat_messages.set(vec![ChatMessage::new(
+        "assistant",
+        String::new(),
+        Some("req-1".into()),
+        0,
+    )]);
 
     handle_plugin_response_message(
         "req-1".into(),
@@ -240,12 +240,12 @@ fn plugin_text_response_does_not_duplicate_streamed_chat_content() {
     let signals = init_signals(connection_status);
     signals.set_plugin_request_ids.set(vec!["req-1".into()]);
     signals.set_is_chat_streaming.set(true);
-    signals.set_chat_messages.set(vec![ChatMessage {
-        role: "assistant".into(),
-        content: "hello".into(),
-        req_id: Some("req-1".into()),
-        ts_ms: 0,
-    }]);
+    signals.set_chat_messages.set(vec![ChatMessage::new(
+        "assistant",
+        "hello",
+        Some("req-1".into()),
+        0,
+    )]);
 
     handle_plugin_response_message(
         "req-1".into(),

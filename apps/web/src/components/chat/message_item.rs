@@ -9,6 +9,7 @@ use crate::runtime::domain::ChatMessage;
 use crate::utils::{markdown::render_markdown, time::format_time_of_day};
 use leptos::html;
 use leptos::prelude::*;
+use std::collections::HashMap;
 use wasm_bindgen::{JsCast, JsValue};
 
 fn render_chat_math(element: &web_sys::HtmlElement) -> bool {
@@ -34,6 +35,33 @@ fn render_chat_math(element: &web_sys::HtmlElement) -> bool {
         .ok()
         .and_then(|value| value.as_bool())
         .unwrap_or(false)
+}
+
+fn highlight_chat_code_blocks(element: &web_sys::HtmlElement) {
+    let Some(window) = web_sys::window() else {
+        return;
+    };
+    let Ok(hljs) = js_sys::Reflect::get(window.as_ref(), &JsValue::from_str("hljs")) else {
+        return;
+    };
+    let Ok(highlight) = js_sys::Reflect::get(&hljs, &JsValue::from_str("highlightElement")) else {
+        return;
+    };
+    let Some(highlight) = highlight.dyn_ref::<js_sys::Function>() else {
+        return;
+    };
+    let Ok(nodes) = element.query_selector_all("pre code") else {
+        return;
+    };
+    for index in 0..nodes.length() {
+        let Some(node) = nodes.item(index) else {
+            continue;
+        };
+        let Ok(code) = node.dyn_into::<web_sys::HtmlElement>() else {
+            continue;
+        };
+        let _ = highlight.call1(&hljs, code.as_ref());
+    }
 }
 
 pub(crate) fn should_show_apply_label(
@@ -81,6 +109,25 @@ pub(crate) fn mobile_chat_timestamp_marker(mobile: bool) -> Option<&'static str>
     mobile.then_some("visible")
 }
 
+pub(crate) fn build_message_index(messages: &[ChatMessage]) -> HashMap<u64, usize> {
+    messages
+        .iter()
+        .enumerate()
+        .map(|(index, message)| (message.ui_id, index))
+        .collect()
+}
+
+fn message_for_id<'a>(
+    messages: &'a [ChatMessage],
+    message_indices: &HashMap<u64, usize>,
+    message_id: u64,
+) -> Option<&'a ChatMessage> {
+    message_indices
+        .get(&message_id)
+        .and_then(|index| messages.get(*index))
+        .filter(|message| message.ui_id == message_id)
+}
+
 /// Handles click events on markdown content.
 /// Prevents link navigation unless Ctrl/Meta key is pressed.
 fn handle_link_click(ev: web_sys::MouseEvent) {
@@ -101,51 +148,78 @@ fn handle_link_click(ev: web_sys::MouseEvent) {
 
 #[component]
 pub fn MessageItem(
-    msg: ChatMessage,
+    messages: ReadSignal<Vec<ChatMessage>>,
+    message_indices: Memo<HashMap<u64, usize>>,
+    message_id: u64,
     session_mode: ReadSignal<ChatSessionMode>,
     #[prop(optional)] mobile: bool,
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
-    let is_user = msg.role == "user";
-    let content = msg.content.clone();
-    let math_content = content.clone();
+    let message_metadata = Memo::new(move |_| {
+        message_indices.with(|indices| {
+            messages.with(|items| {
+                message_for_id(items, indices, message_id)
+                    .map(|message| (message.role == "user", message.ts_ms))
+                    .unwrap_or((false, 0))
+            })
+        })
+    });
+    let is_user = Memo::new(move |_| message_metadata.get().0);
+    let ts_ms = Memo::new(move |_| message_metadata.get().1);
+    let content_revision = Memo::new(move |_| {
+        message_indices.with(|indices| {
+            messages.with(|items| {
+                message_for_id(items, indices, message_id)
+                    .map(|message| message.content_revision)
+                    .unwrap_or(0)
+            })
+        })
+    });
     let body_ref = NodeRef::<html::Div>::new();
     let sender_text = move || {
-        if is_user {
+        if is_user.get() {
             t::chat::you(locale.get())
         } else {
             t::chat::assistant(locale.get())
         }
     };
     let content_html = move || {
-        let apply_label = should_show_apply_label(is_user, session_mode.get())
+        let _ = content_revision.get();
+        let apply_label = should_show_apply_label(is_user.get(), session_mode.get())
             .then(|| t::chat::apply(locale.get()));
-        render_markdown(&content, apply_label)
+        message_indices.with(|indices| {
+            messages.with_untracked(|items| {
+                let content = message_for_id(items, indices, message_id)
+                    .map(|message| message.content.as_str())
+                    .unwrap_or_default();
+                render_markdown(content, apply_label)
+            })
+        })
     };
-    let ts_ms = msg.ts_ms;
-    let ts_text = move || format_time_of_day(ts_ms, locale.get());
+    let ts_text = move || format_time_of_day(ts_ms.get(), locale.get());
     Effect::new(move |_| {
+        let _ = content_revision.get();
         session_mode.track();
         locale.track();
-        let _ = math_content.len();
         if let Some(el) = body_ref.get() {
             let _ = render_chat_math(&el);
+            highlight_chat_code_blocks(&el);
         }
     });
 
     view! {
         <div class="flex flex-col gap-1">
-            <div class={format!("flex items-center gap-2 {}", if is_user { "flex-row-reverse" } else { "flex-row" })}>
-                <div class={format!("w-6 h-6 rounded flex items-center justify-center text-xs font-bold {}",
-                    if is_user { "bg-accent text-on-accent" } else { "bg-panel text-primary" }
-                )}>
-                    {if is_user { "U" } else { "AI" }}
+            <div class=move || format!("flex items-center gap-2 {}", if is_user.get() { "flex-row-reverse" } else { "flex-row" })>
+                <div class=move || format!("w-6 h-6 rounded flex items-center justify-center text-xs font-bold {}",
+                    if is_user.get() { "bg-accent text-on-accent" } else { "bg-panel text-primary" }
+                )>
+                    {move || if is_user.get() { "U" } else { "AI" }}
                 </div>
                 <span class="text-xs text-muted">{sender_text}</span>
             </div>
 
             <div
-                class=chat_message_bubble_class(is_user, mobile)
+                class=move || chat_message_bubble_class(is_user.get(), mobile)
                 data-deve-mobile-chat-message=move || mobile_chat_message_marker(mobile)
             >
                 <div
@@ -170,11 +244,12 @@ pub fn MessageItem(
 #[cfg(test)]
 mod tests {
     use super::{
-        chat_markdown_body_class, chat_message_bubble_class, mobile_chat_code_scroll_marker,
-        mobile_chat_message_marker, mobile_chat_timestamp_marker, mobile_chat_wrap_marker,
-        should_show_apply_label,
+        build_message_index, chat_markdown_body_class, chat_message_bubble_class, message_for_id,
+        mobile_chat_code_scroll_marker, mobile_chat_message_marker, mobile_chat_timestamp_marker,
+        mobile_chat_wrap_marker, should_show_apply_label,
     };
     use crate::components::chat::slash_commands::ChatSessionMode;
+    use crate::runtime::domain::ChatMessage;
 
     #[test]
     fn chat_apply_label_is_build_only_for_assistant_messages() {
@@ -212,5 +287,27 @@ mod tests {
         assert_eq!(mobile_chat_wrap_marker(false), None);
         assert_eq!(mobile_chat_code_scroll_marker(false), None);
         assert_eq!(mobile_chat_timestamp_marker(false), None);
+    }
+
+    #[test]
+    fn chat_row_lookup_follows_prepend_and_reorder() {
+        let first = ChatMessage::new("assistant", "first", None, 1);
+        let second = ChatMessage::new("user", "second", None, 2);
+        let prepended = ChatMessage::new("assistant", "prepended", None, 3);
+        let messages = vec![prepended, second.clone(), first.clone()];
+        let message_indices = build_message_index(&messages);
+
+        assert_eq!(message_indices.get(&first.ui_id), Some(&2));
+        assert_eq!(message_indices.get(&second.ui_id), Some(&1));
+        assert_eq!(
+            message_for_id(&messages, &message_indices, first.ui_id)
+                .map(|message| message.content.as_str()),
+            Some("first")
+        );
+        assert_eq!(
+            message_for_id(&messages, &message_indices, second.ui_id)
+                .map(|message| message.content.as_str()),
+            Some("second")
+        );
     }
 }

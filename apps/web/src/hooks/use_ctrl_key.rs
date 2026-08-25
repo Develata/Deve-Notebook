@@ -20,30 +20,40 @@ use leptos::prelude::*;
 /// - Handles edge cases: blur event clears state to prevent stuck modifier.
 pub fn use_ctrl_key() {
     // Keydown: Add class when Ctrl/Meta pressed
-    window_event_listener(leptos::ev::keydown, move |ev: web_sys::KeyboardEvent| {
-        if should_mark_ctrl_pressed(ev.ctrl_key(), ev.meta_key())
-            && let Some(body) = body()
-        {
-            let _ = body.class_list().add_1("is-ctrl-pressed");
-        }
-    });
+    let keydown_listener =
+        window_event_listener(leptos::ev::keydown, move |ev: web_sys::KeyboardEvent| {
+            if should_mark_ctrl_pressed(ev.ctrl_key(), ev.meta_key())
+                && let Some(body) = body()
+            {
+                let _ = body.class_list().add_1("is-ctrl-pressed");
+            }
+        });
 
     // Keyup: Remove class when Ctrl/Meta released
-    window_event_listener(leptos::ev::keyup, move |ev: web_sys::KeyboardEvent| {
-        let key = ev.key();
-        if should_clear_ctrl_pressed_on_keyup(&key, ev.ctrl_key(), ev.meta_key())
-            && let Some(body) = body()
-        {
-            let _ = body.class_list().remove_1("is-ctrl-pressed");
-        }
-    });
+    let keyup_listener =
+        window_event_listener(leptos::ev::keyup, move |ev: web_sys::KeyboardEvent| {
+            let key = ev.key();
+            if should_clear_ctrl_pressed_on_keyup(&key, ev.ctrl_key(), ev.meta_key())
+                && let Some(body) = body()
+            {
+                let _ = body.class_list().remove_1("is-ctrl-pressed");
+            }
+        });
 
     // Blur: Clear state when window loses focus (edge case protection)
-    window_event_listener(leptos::ev::blur, move |_| {
-        if let Some(body) = body() {
-            let _ = body.class_list().remove_1("is-ctrl-pressed");
-        }
+    let blur_listener = window_event_listener(leptos::ev::blur, move |_| clear_ctrl_marker());
+    on_cleanup(move || {
+        keydown_listener.remove();
+        keyup_listener.remove();
+        blur_listener.remove();
+        clear_ctrl_marker();
     });
+}
+
+fn clear_ctrl_marker() {
+    if let Some(body) = body() {
+        let _ = body.class_list().remove_1("is-ctrl-pressed");
+    }
 }
 
 fn should_mark_ctrl_pressed(ctrl: bool, meta: bool) -> bool {
@@ -76,6 +86,13 @@ fn browser_window() -> Option<web_sys::Window> {
 mod tests {
     use super::{body, document, should_clear_ctrl_pressed_on_keyup, should_mark_ctrl_pressed};
 
+    fn source_before_tests() -> &'static str {
+        include_str!("use_ctrl_key.rs")
+            .split("#[cfg(all(test")
+            .next()
+            .expect("source before tests")
+    }
+
     #[test]
     fn ctrl_key_dom_helpers_fail_soft_without_browser_window() {
         assert!(document().is_none());
@@ -96,5 +113,20 @@ mod tests {
         assert!(!should_clear_ctrl_pressed_on_keyup("Control", false, true));
         assert!(!should_clear_ctrl_pressed_on_keyup("Meta", true, false));
         assert!(!should_clear_ctrl_pressed_on_keyup("Shift", false, false));
+    }
+
+    #[test]
+    fn ctrl_key_listeners_and_body_marker_have_owner_cleanup() {
+        let source = source_before_tests();
+
+        assert!(source.contains("let keydown_listener ="));
+        assert!(source.contains("window_event_listener(leptos::ev::keydown"));
+        assert!(source.contains("let keyup_listener ="));
+        assert!(source.contains("window_event_listener(leptos::ev::keyup"));
+        assert!(source.contains("let blur_listener = window_event_listener"));
+        assert!(source.contains("keydown_listener.remove();"));
+        assert!(source.contains("keyup_listener.remove();"));
+        assert!(source.contains("blur_listener.remove();"));
+        assert!(source.contains("clear_ctrl_marker();"));
     }
 }

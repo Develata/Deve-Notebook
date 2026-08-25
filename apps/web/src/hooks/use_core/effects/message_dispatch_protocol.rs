@@ -187,9 +187,9 @@ fn append_chat_protocol_error(message: &mut ChatMessage, detail: &str) {
         return;
     }
     if !message.content.is_empty() {
-        message.content.push_str("\n\n");
+        message.append_content("\n\n");
     }
-    message.content.push_str(detail);
+    message.append_content(detail);
 }
 
 fn recover_from_failed_scope_restore(ws: &WsService, signals: CoreSignals) {

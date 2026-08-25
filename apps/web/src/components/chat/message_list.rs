@@ -3,7 +3,7 @@
 //!   - 16_ai_agent#native-ai-chat-runtime
 //!
 use crate::components::chat::empty_state::EmptyState;
-use crate::components::chat::message_item::MessageItem;
+use crate::components::chat::message_item::{MessageItem, build_message_index};
 use crate::components::chat::slash_commands::ChatSessionMode;
 use crate::i18n::{Locale, t};
 use crate::runtime::domain::ChatMessage;
@@ -11,6 +11,7 @@ use base64::Engine;
 use base64::engine::general_purpose::STANDARD;
 use leptos::html;
 use leptos::prelude::*;
+use std::collections::HashMap;
 use wasm_bindgen::JsCast;
 
 pub(crate) fn should_consume_apply_click(session_mode: ChatSessionMode) -> bool {
@@ -28,20 +29,13 @@ pub fn MessageList(
 ) -> impl IntoView {
     let locale = use_context::<RwSignal<Locale>>().expect("locale context");
     let messages_end_ref = NodeRef::<html::Div>::new();
+    let message_indices: Memo<HashMap<u64, usize>> =
+        Memo::new(move |_| messages.with(|items| build_message_index(items)));
 
     Effect::new(move |_| {
         messages.track();
         if let Some(el) = messages_end_ref.get() {
             el.scroll_into_view();
-        }
-        if let Some(window) = web_sys::window() {
-            let hljs = js_sys::Reflect::get(&window, &"hljs".into()).ok();
-            if let Some(hljs) = hljs
-                && let Ok(func) = js_sys::Reflect::get(&hljs, &"highlightAll".into())
-                && let Some(func) = func.dyn_ref::<js_sys::Function>()
-            {
-                let _ = func.call0(&hljs);
-            }
         }
     });
 
@@ -76,9 +70,19 @@ pub fn MessageList(
             } else {
                 view! {
                     <For
-                        each=move || messages.get()
-                        key=|msg| msg.req_id.clone().unwrap_or_else(|| msg.content.chars().take(32).collect())
-                        children=move |msg| view! { <MessageItem msg=msg session_mode=session_mode mobile=mobile /> }
+                        each=move || messages.with(|items| {
+                            items.iter().map(|message| message.ui_id).collect::<Vec<_>>()
+                        })
+                        key=|message_id| *message_id
+                        children=move |message_id| view! {
+                            <MessageItem
+                                messages=messages
+                                message_indices=message_indices
+                                message_id=message_id
+                                session_mode=session_mode
+                                mobile=mobile
+                            />
+                        }
                     />
                 }.into_any()
             }}
@@ -107,5 +111,33 @@ mod tests {
     fn chat_apply_click_is_consumed_only_in_build_mode() {
         assert!(!should_consume_apply_click(ChatSessionMode::Plan));
         assert!(should_consume_apply_click(ChatSessionMode::Build));
+    }
+
+    #[test]
+    fn chat_rows_use_ui_identity_and_skip_global_code_highlight() {
+        let source = include_str!("message_list.rs");
+        let ui_field = ["message", ".", "ui_id"].concat();
+        let identity_key = ["key=", "|message_id|", " *", "message_id"].concat();
+        let legacy_index_prop = ["message_", "index=message_", "index"].concat();
+        let legacy_key = [
+            "msg",
+            ".",
+            "req_id",
+            ".",
+            "clone",
+            "()",
+            ".",
+            "unwrap_or_else",
+        ]
+        .concat();
+        let global_highlight = ["highlight", "All"].concat();
+
+        assert!(source.contains(&ui_field));
+        assert!(source.contains(&identity_key));
+        assert!(source.contains("Memo<HashMap<u64, usize>>"));
+        assert!(source.contains("message_indices=message_indices"));
+        assert!(!source.contains(&legacy_index_prop));
+        assert!(!source.contains(&legacy_key));
+        assert!(!source.contains(&global_highlight));
     }
 }

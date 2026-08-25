@@ -143,12 +143,12 @@ pub fn ChatPanel(#[prop(optional)] mobile: bool, on_close: Callback<()>) -> impl
 
 fn append_chat_message(chat: &ChatContext, role: &str, content: String, req_id: Option<String>) {
     chat.set_messages.update(|msgs| {
-        msgs.push(ChatMessage {
-            role: role.to_string(),
+        msgs.push(ChatMessage::new(
+            role,
             content,
             req_id,
-            ts_ms: js_sys::Date::now() as u64,
-        });
+            js_sys::Date::now() as u64,
+        ));
     });
 }
 

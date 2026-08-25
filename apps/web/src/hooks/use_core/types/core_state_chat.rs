@@ -9,12 +9,12 @@ impl CoreState {
     pub fn append_chat_message(&self, role: &str, content: &str, req_id: Option<String>) {
         self.set_chat_messages
             .update(|msgs: &mut Vec<ChatMessage>| {
-                msgs.push(ChatMessage {
-                    role: role.to_string(),
-                    content: content.to_string(),
+                msgs.push(ChatMessage::new(
+                    role,
+                    content,
                     req_id,
-                    ts_ms: js_sys::Date::now() as u64,
-                });
+                    js_sys::Date::now() as u64,
+                ));
             });
     }
 
@@ -26,16 +26,16 @@ impl CoreState {
                     .rev()
                     .find(|m| m.req_id.as_deref() == Some(req_id))
                 {
-                    msg.content.push_str(delta);
+                    msg.append_content(delta);
                     return;
                 }
 
-                msgs.push(ChatMessage {
-                    role: "assistant".to_string(),
-                    content: delta.to_string(),
-                    req_id: Some(req_id.to_string()),
-                    ts_ms: js_sys::Date::now() as u64,
-                });
+                msgs.push(ChatMessage::new(
+                    "assistant",
+                    delta,
+                    Some(req_id.to_string()),
+                    js_sys::Date::now() as u64,
+                ));
             });
     }
 }

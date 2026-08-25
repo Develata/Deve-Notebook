@@ -134,12 +134,12 @@ impl CommitAiEffectRunner for CommitAiSignalEffectRunner {
 
 fn append_commit_ai_message(chat_ctx: &ChatContext, content: String, req_id: Option<String>) {
     chat_ctx.set_messages.update(|messages| {
-        messages.push(ChatMessage {
-            role: "assistant".into(),
+        messages.push(ChatMessage::new(
+            "assistant",
             content,
             req_id,
-            ts_ms: current_ts_ms(),
-        });
+            current_ts_ms(),
+        ));
     });
 }
 

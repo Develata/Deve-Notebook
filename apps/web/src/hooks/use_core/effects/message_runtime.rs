@@ -18,7 +18,7 @@ pub fn handle_chat_chunk(
                 .rev()
                 .find(|msg| msg.req_id.as_deref() == Some(req_id.as_str()))
             {
-                existing.content.push_str(&delta);
+                existing.append_content(&delta);
             }
         });
     }
@@ -52,18 +52,19 @@ mod tests {
         let signals = init_signals(signal(crate::api::ConnectionStatus::Disconnected).0);
         signals
             .set_chat_messages
-            .set(vec![crate::hooks::use_core::types::ChatMessage {
-                role: "assistant".into(),
-                content: "hello".into(),
-                req_id: Some("req-1".into()),
-                ts_ms: 1,
-            }]);
+            .set(vec![crate::hooks::use_core::types::ChatMessage::new(
+                "assistant",
+                "hello",
+                Some("req-1".into()),
+                1,
+            )]);
 
+        let ui_id = signals.chat_messages.get_untracked()[0].ui_id;
         handle_chat_chunk("req-1".into(), Some(" world".into()), None, signals);
 
-        assert_eq!(
-            signals.chat_messages.get_untracked()[0].content,
-            "hello world"
-        );
+        let message = &signals.chat_messages.get_untracked()[0];
+        assert_eq!(message.content, "hello world");
+        assert_eq!(message.ui_id, ui_id);
+        assert_eq!(message.content_revision, 1);
     }
 }
