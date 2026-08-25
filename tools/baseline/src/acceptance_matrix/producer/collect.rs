@@ -166,7 +166,10 @@ mod tests {
     use crate::acceptance_matrix::receipt::Receipt;
     use std::collections::BTreeMap;
     use std::fs;
+    use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    static NEXT_TEMP_ROOT: AtomicU64 = AtomicU64::new(0);
 
     #[test]
     fn collect_args_require_output_and_inputs() {
@@ -181,7 +184,11 @@ mod tests {
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        std::env::temp_dir().join(format!("deve-acceptance-collect-{unique}"))
+        let serial = NEXT_TEMP_ROOT.fetch_add(1, Ordering::Relaxed);
+        std::env::temp_dir().join(format!(
+            "deve-acceptance-collect-{}-{unique}-{serial}",
+            std::process::id()
+        ))
     }
 
     fn write_receipt(root: &std::path::Path, id: &str, locator: &str) {

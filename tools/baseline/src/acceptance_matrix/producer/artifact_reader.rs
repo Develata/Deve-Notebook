@@ -211,14 +211,21 @@ mod tests {
     use super::{ReceiptArtifactBudget, ReceiptArtifactRoot};
     use crate::acceptance_matrix::receipt_limits::MAX_RECEIPT_BYTES;
     use std::fs;
+    use std::sync::atomic::{AtomicU64, Ordering};
     use std::time::{SystemTime, UNIX_EPOCH};
+
+    static NEXT_TEMP_ROOT: AtomicU64 = AtomicU64::new(0);
 
     fn temp_root() -> std::path::PathBuf {
         let unique = SystemTime::now()
             .duration_since(UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        std::env::temp_dir().join(format!("deve-acceptance-artifacts-{unique}"))
+        let serial = NEXT_TEMP_ROOT.fetch_add(1, Ordering::Relaxed);
+        std::env::temp_dir().join(format!(
+            "deve-acceptance-artifacts-{}-{unique}-{serial}",
+            std::process::id()
+        ))
     }
 
     #[test]
@@ -257,7 +264,10 @@ mod tests {
 
         let error = reader.json_files().unwrap_err();
 
-        assert!(error.to_string().contains("receipts directory"));
+        assert!(
+            error.to_string().contains("receipts directory"),
+            "unexpected error: {error:#}"
+        );
         let _ = fs::remove_dir_all(root);
     }
 
