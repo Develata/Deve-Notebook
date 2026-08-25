@@ -37,6 +37,61 @@ fn desktop_native_backend_local_preference_drops_remote_url() {
 }
 
 #[test]
+fn desktop_native_backend_concurrent_saves_publish_valid_json() {
+    let root = unique_temp_root("concurrent");
+    let workers = (0..16)
+        .map(|index| {
+            let root = root.clone();
+            std::thread::spawn(move || {
+                let preference =
+                    NativeBackendPreference::remote(format!("https://deve-{index}.example"));
+                save_desktop_native_backend_preference(&root, &preference)
+            })
+        })
+        .collect::<Vec<_>>();
+
+    for worker in workers {
+        worker
+            .join()
+            .expect("concurrent save worker")
+            .expect("concurrent save");
+    }
+    let loaded = load_desktop_native_backend_preference(&root).expect("load final preference");
+    assert!(matches!(loaded.mode, NativeBackendMode::Remote));
+    assert!(loaded.remote_url.is_some());
+    assert!(desktop_native_backend_config_path(&root).is_file());
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
+fn desktop_native_backend_post_publish_failure_seals_until_reload() {
+    let root = unique_temp_root("post-publish");
+    std::fs::create_dir_all(&root).expect("create data root");
+    std::fs::write(root.join(".native-backend-fail-after-replace"), b"fail")
+        .expect("install failure marker");
+    let state = DesktopNativeBackendState::from_data_root(Ok::<_, &str>(root.clone()));
+    let preference = NativeBackendPreference::remote("https://deve.example");
+
+    assert!(matches!(
+        state.save_preference(preference.clone()),
+        Err(DesktopNativeBackendError::WriteFailed(_))
+    ));
+    assert!(matches!(
+        state.preference(),
+        Err(DesktopNativeBackendError::DurabilityUncertain)
+    ));
+
+    std::fs::remove_file(root.join(".native-backend-fail-after-replace"))
+        .expect("remove failure marker");
+    let reloaded = DesktopNativeBackendState::from_data_root(Ok::<_, &str>(root.clone()));
+    assert_eq!(
+        reloaded.preference().expect("reloaded preference"),
+        preference
+    );
+    let _ = std::fs::remove_dir_all(root);
+}
+
+#[test]
 fn desktop_native_remote_origin_normalization_keeps_https_origin_only() {
     assert_eq!(
         normalized_native_remote_origin("https://deve.example/").expect("origin"),

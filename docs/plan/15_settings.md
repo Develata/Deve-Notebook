@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Planned / Optional`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-08-20`
+- `Last Review`: `2026-08-25`
 - `Counterpart Feature`: `docs/features/13_settings.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/11_commands_settings.md`
 - `Primary Code Areas`: `crates/core/src/config.rs`, `apps/cli/src/commands/config.rs`, `apps/web/src/components/settings.rs`, `apps/web/src/hooks/use_layout.rs`
@@ -140,6 +140,7 @@ Desktop/Mobile native shell 可以在 Settings 暴露 Backend section，但其�
 
 *   持久化模型为 `NativeBackendPreference { mode: local | remote, remote_url }`，默认 `local`。
 *   持久化位置必须是 app-private data root 下的 host-local JSON 文件，例如 `native-backend.json`；不得写入 `config.toml`、ledger、Projection Locator、projection workspace、browser `localStorage` 或 `sessionStorage`。
+*   保存必须先经同一 app-private data root 内的 host-local exclusive lock 串行化，再以唯一临时文件完成写入与同步，通过 handle-bound atomic replace 发布并同步父目录；不得先删除旧配置，也不得让并发保存共享固定临时路径。任一 pre-publish 失败必须保留旧配置，成功返回后内存投影与落盘值必须一致；replace 已发布但父目录同步失败时，当前 native preference runtime 必须进入 durability-uncertain 并拒绝继续读写，直到进程重启后从落盘值重新装载。
 *   `local` 模式不得要求用户手动启动后端：Desktop 启动受控 `deve_cli serve --native-loopback` 子进程，Android/Mobile 启动 embedded loopback service。
 *   `remote` 模式只保存已校验 HTTPS origin，并且不得启动本机后端或注入本地 endpoint/session bootstrap。
 *   保存 `remote` 前必须由 native 侧短超时请求 `<origin>/api/node/role`，确认响应是结构化 Deve node role；校验失败不得保存。远端认证、cookie 与登录态由远端 Web 自行处理。

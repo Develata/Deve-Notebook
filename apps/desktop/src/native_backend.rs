@@ -3,8 +3,12 @@
 //!   - 15_settings#native-host-local-backend-preference
 
 use std::{
+    io::Write,
     path::{Path, PathBuf},
-    sync::Mutex,
+    sync::{
+        Mutex,
+        atomic::{AtomicU64, Ordering},
+    },
     time::Duration,
 };
 
@@ -12,11 +16,17 @@ use deve_core::native_adapter::{
     NativeBackendMode, NativeBackendPreference, NativeBackendValidationResult, NativeRemoteTarget,
     native_shell_mode_for_backend_preference, validate_native_remote_target,
 };
+use deve_core::utils::fs::{
+    create_atomic_replace_temp, ensure_open_file_matches_path, lock_file_exclusive,
+    open_regular_file_lock, replace_file_atomically, sync_directory,
+};
 use serde_json::Value;
 use thiserror::Error;
 
 const NATIVE_BACKEND_CONFIG_FILE: &str = "native-backend.json";
+const NATIVE_BACKEND_LOCK_FILE: &str = ".native-backend.lock";
 const REMOTE_PROBE_TIMEOUT: Duration = Duration::from_secs(5);
+static NATIVE_BACKEND_TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(1);
 
 #[derive(Debug, Error)]
 pub enum DesktopNativeBackendError {
@@ -28,6 +38,8 @@ pub enum DesktopNativeBackendError {
     ParseFailed(#[source] serde_json::Error),
     #[error("desktop native backend config write failed")]
     WriteFailed(#[source] std::io::Error),
+    #[error("desktop native backend config durability is uncertain; restart is required")]
+    DurabilityUncertain,
     #[error("desktop native backend preference is invalid: {0}")]
     InvalidPreference(String),
     #[error("desktop remote backend probe failed: {0}")]
@@ -40,8 +52,18 @@ pub enum DesktopNativeBackendError {
 
 pub struct DesktopNativeBackendState {
     config_path: Option<PathBuf>,
-    preference: Mutex<NativeBackendPreference>,
+    state: Mutex<DesktopNativeBackendRuntimeState>,
     unavailable_reason: Option<String>,
+}
+
+struct DesktopNativeBackendRuntimeState {
+    preference: NativeBackendPreference,
+    durability_uncertain: bool,
+}
+
+struct DesktopNativeBackendPersistFailure {
+    error: std::io::Error,
+    after_publish: bool,
 }
 
 impl DesktopNativeBackendState {
@@ -56,23 +78,32 @@ impl DesktopNativeBackendState {
                     });
                 Self {
                     config_path: Some(config_path),
-                    preference: Mutex::new(preference),
+                    state: Mutex::new(DesktopNativeBackendRuntimeState {
+                        preference,
+                        durability_uncertain: false,
+                    }),
                     unavailable_reason: None,
                 }
             }
             Err(error) => Self {
                 config_path: None,
-                preference: Mutex::new(NativeBackendPreference::local()),
+                state: Mutex::new(DesktopNativeBackendRuntimeState {
+                    preference: NativeBackendPreference::local(),
+                    durability_uncertain: false,
+                }),
                 unavailable_reason: Some(error.to_string()),
             },
         }
     }
 
     pub fn preference(&self) -> Result<NativeBackendPreference, DesktopNativeBackendError> {
-        self.preference
-            .lock()
-            .map(|preference| preference.clone())
-            .map_err(|_| DesktopNativeBackendError::ConfigRootUnavailable("state poisoned".into()))
+        let state = self.state.lock().map_err(|_| {
+            DesktopNativeBackendError::ConfigRootUnavailable("state poisoned".into())
+        })?;
+        if state.durability_uncertain {
+            return Err(DesktopNativeBackendError::DurabilityUncertain);
+        }
+        Ok(state.preference.clone())
     }
 
     pub(crate) fn save_preference(
@@ -90,12 +121,27 @@ impl DesktopNativeBackendState {
             )
         })?;
         let preference = preference.canonicalized();
-        save_desktop_native_backend_preference_to_path(config_path, &preference)?;
-        let mut current = self.preference.lock().map_err(|_| {
+        native_shell_mode_for_backend_preference(&preference)
+            .map_err(|error| DesktopNativeBackendError::InvalidPreference(error.to_string()))?;
+        let mut state = self.state.lock().map_err(|_| {
             DesktopNativeBackendError::ConfigRootUnavailable("state poisoned".into())
         })?;
-        *current = preference;
-        Ok(())
+        if state.durability_uncertain {
+            return Err(DesktopNativeBackendError::DurabilityUncertain);
+        }
+        match persist_desktop_native_backend_preference(config_path, &preference) {
+            Ok(()) => {
+                state.preference = preference;
+                Ok(())
+            }
+            Err(failure) => {
+                if failure.after_publish {
+                    state.preference = preference;
+                    state.durability_uncertain = true;
+                }
+                Err(DesktopNativeBackendError::WriteFailed(failure.error))
+            }
+        }
     }
 }
 
@@ -113,10 +159,13 @@ pub fn save_desktop_native_backend_preference(
     data_root: &Path,
     preference: &NativeBackendPreference,
 ) -> Result<(), DesktopNativeBackendError> {
-    save_desktop_native_backend_preference_to_path(
+    native_shell_mode_for_backend_preference(preference)
+        .map_err(|error| DesktopNativeBackendError::InvalidPreference(error.to_string()))?;
+    persist_desktop_native_backend_preference(
         &desktop_native_backend_config_path(data_root),
         preference,
     )
+    .map_err(|failure| DesktopNativeBackendError::WriteFailed(failure.error))
 }
 
 fn load_desktop_native_backend_preference_from_path(
@@ -136,28 +185,84 @@ fn load_desktop_native_backend_preference_from_path(
     })
 }
 
-fn save_desktop_native_backend_preference_to_path(
+fn persist_desktop_native_backend_preference(
     config_path: &Path,
     preference: &NativeBackendPreference,
-) -> Result<(), DesktopNativeBackendError> {
-    native_shell_mode_for_backend_preference(preference)
-        .map_err(|error| DesktopNativeBackendError::InvalidPreference(error.to_string()))?;
-    let preference = preference.canonicalized();
-    if let Some(parent) = config_path.parent() {
-        std::fs::create_dir_all(parent).map_err(DesktopNativeBackendError::WriteFailed)?;
-    }
-    let payload = serde_json::to_vec_pretty(&preference).map_err(|error| {
-        DesktopNativeBackendError::WriteFailed(std::io::Error::new(
-            std::io::ErrorKind::InvalidData,
-            error,
-        ))
+) -> Result<(), DesktopNativeBackendPersistFailure> {
+    native_shell_mode_for_backend_preference(preference).map_err(|error| {
+        DesktopNativeBackendPersistFailure {
+            error: std::io::Error::new(std::io::ErrorKind::InvalidInput, error.to_string()),
+            after_publish: false,
+        }
     })?;
-    let temp_path = config_path.with_extension("json.tmp");
-    std::fs::write(&temp_path, payload).map_err(DesktopNativeBackendError::WriteFailed)?;
-    if config_path.exists() {
-        std::fs::remove_file(config_path).map_err(DesktopNativeBackendError::WriteFailed)?;
+    let preference = preference.canonicalized();
+    let parent = config_path
+        .parent()
+        .ok_or_else(|| DesktopNativeBackendPersistFailure {
+            error: std::io::Error::new(
+                std::io::ErrorKind::InvalidInput,
+                "desktop native backend config has no parent",
+            ),
+            after_publish: false,
+        })?;
+    std::fs::create_dir_all(parent).map_err(|error| DesktopNativeBackendPersistFailure {
+        error,
+        after_publish: false,
+    })?;
+    let lock_path = parent.join(NATIVE_BACKEND_LOCK_FILE);
+    let lock = open_regular_file_lock(&lock_path, "desktop native backend config lock").map_err(
+        |error| DesktopNativeBackendPersistFailure {
+            error,
+            after_publish: false,
+        },
+    )?;
+    lock_file_exclusive(&lock).map_err(|error| DesktopNativeBackendPersistFailure {
+        error,
+        after_publish: false,
+    })?;
+    ensure_open_file_matches_path(&lock, &lock_path, "desktop native backend config lock")
+        .map_err(|error| DesktopNativeBackendPersistFailure {
+            error,
+            after_publish: false,
+        })?;
+    let payload = serde_json::to_vec_pretty(&preference).map_err(|error| {
+        DesktopNativeBackendPersistFailure {
+            error: std::io::Error::new(std::io::ErrorKind::InvalidData, error),
+            after_publish: false,
+        }
+    })?;
+    let sequence = NATIVE_BACKEND_TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    let temp_path = config_path.with_file_name(format!(
+        ".{NATIVE_BACKEND_CONFIG_FILE}.tmp-{}-{sequence}",
+        std::process::id()
+    ));
+    let mut temp = create_atomic_replace_temp(&temp_path).map_err(|error| {
+        DesktopNativeBackendPersistFailure {
+            error,
+            after_publish: false,
+        }
+    })?;
+    let mut published = false;
+    let result = (|| -> std::io::Result<()> {
+        temp.write_all(&payload)?;
+        temp.sync_all()?;
+        replace_file_atomically(&temp, &temp_path, config_path)?;
+        published = true;
+        #[cfg(test)]
+        if parent.join(".native-backend-fail-after-replace").exists() {
+            return Err(std::io::Error::other(
+                "injected desktop native backend failure after atomic replace",
+            ));
+        }
+        sync_directory(parent)
+    })();
+    if result.is_err() && !published {
+        let _ = std::fs::remove_file(&temp_path);
     }
-    std::fs::rename(temp_path, config_path).map_err(DesktopNativeBackendError::WriteFailed)
+    result.map_err(|error| DesktopNativeBackendPersistFailure {
+        error,
+        after_publish: published,
+    })
 }
 
 pub fn normalized_native_remote_origin(

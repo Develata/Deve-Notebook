@@ -373,6 +373,9 @@
     - config_assert: native_backend_preference_not_written_to_config_toml true
     - native_assert: remote_backend_save_requires_node_role_probe true
     - native_assert: desktop_use_local_backend_saves_host_local_preference true
+    - native_assert: backend_preference_publish_is_atomic true
+    - native_assert: concurrent_backend_preference_saves_are_locked_and_do_not_share_temp_path true
+    - native_assert: backend_preference_post_publish_failure_seals_until_reload true
     - browser_assert: remote_browser_exposes_no_backend_preference_ipc true
     - gap_assert: mobile_use_local_backend_native_control_required true
 
