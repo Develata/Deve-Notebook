@@ -87,7 +87,7 @@
       "dependencies": ["cli-runtime", "web-shell"],
       "full_trigger": true,
       "exact_paths": [
-        ".dockerignore", ".env.example", "config.example.toml", "Dockerfile",
+        ".dockerignore", ".env.example", "config.example.toml", "Dockerfile", "Dockerfile.candidate",
         "docker-compose.dev.yml", "docker-compose.mesh.yml", "docker-compose.multiclient.yml",
         "docker-compose.remote-import.yml", "docker-compose.yml"
       ],
