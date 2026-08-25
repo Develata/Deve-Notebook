@@ -7,6 +7,8 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 # shellcheck source=scripts/baseline-wrapper.sh
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"
+# shellcheck source=scripts/lib/docker-diagnostics.sh
+source "$ROOT_DIR/scripts/lib/docker-diagnostics.sh"
 COMPOSE_FILE="${DEVE_DOCKER_MULTI_COMPOSE_FILE:-$ROOT_DIR/docker-compose.multiclient.yml}"
 PROJECT="${DEVE_DOCKER_MULTI_PROJECT:-deve-multiclient-$$}"
 HOST_PORT="${DEVE_DOCKER_MULTI_PORT:-3101}"
@@ -111,8 +113,8 @@ cleanup_on_exit() {
 
 diagnose() {
   echo "docker-multiclient-smoke: collecting compose diagnostics" >&2
-  docker_compose ps >&2 || true
-  docker_compose logs --no-color >&2 || true
+  docker_bounded_command_output docker_compose ps >&2 || true
+  docker_bounded_compose_logs docker_compose >&2 || true
 }
 
 wait_for_server() {

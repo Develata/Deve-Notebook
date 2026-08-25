@@ -277,15 +277,10 @@ wait_for_peer() {
 wait_for_mesh_handshake() {
   local connections_a
   local connections_b
-  local logs
   for _ in $(seq 1 60); do
     connections_a="$(mesh_connection_count peer-a "$PEER_B_EXPECTED_ID")"
     connections_b="$(mesh_connection_count peer-b "$PEER_A_EXPECTED_ID")"
     if (( connections_a > 0 && connections_b > 0 )); then
-      logs="$(docker_compose logs --no-color 2>/dev/null || true)"
-      if grep -qF "$TOKEN_A" <<<"$logs" || grep -qF "$TOKEN_B" <<<"$logs"; then
-        fail "P2P token material appeared in compose logs"
-      fi
       return 0
     fi
     sleep 1
@@ -296,58 +291,25 @@ wait_for_mesh_handshake() {
 mesh_connection_count() {
   local service="$1"
   local peer_id="$2"
-  local logs
-  logs="$(docker_compose logs --no-color "$service" 2>/dev/null || true)"
-  count_mesh_evidence_in_logs "$logs" "$peer_id" "$REPO_ID"
+  docker_stream_parse_command mesh-count "$peer_id" "$REPO_ID" \
+    --token "$TOKEN_A" --token "$TOKEN_B" -- \
+    docker_compose logs --no-color "$service"
 }
 
+# Isolated parser contract used by the static shell/Node regression. Production
+# calls use mesh_connection_count so the Docker producer status is checked.
 count_mesh_evidence_in_logs() {
-  local logs="$1"
-  local peer_id="$2"
-  local repo_id="$3"
+  local peer_id="${1:-}"
+  local repo_id="${2:-}"
   [[ -n "$peer_id" && -n "$repo_id" ]] || return 1
-MESH_LOGS="$logs" REPO_ID="$repo_id" "$PYTHON_BIN" - "$peer_id" <<'PY'
-import os
-import re
-import sys
-
-peer_id = sys.argv[1]
-repo_id = os.environ["REPO_ID"]
-ansi = re.compile(r"\x1b\[[0-9;]*m")
-bound_pattern = re.compile(
-    r"Session bound to peer " + re.escape(peer_id) + r" and repo " + re.escape(repo_id)
-)
-authenticated = f'authenticated_peer_id="{peer_id}"'
-
-count = 0
-for raw_line in os.environ["MESH_LOGS"].splitlines():
-    line = ansi.sub("", raw_line)
-    if "P2P mesh connector handshake completed" in line and authenticated in line:
-        count += 1
-    elif bound_pattern.search(line):
-        count += 1
-print(count)
-PY
+  docker_stream_parse_stdin mesh-count "$peer_id" "$repo_id"
 }
 
 server_peer_id_from_logs() {
   local service="$1"
-  local logs
-  logs="$(docker_compose logs --no-color "$service" 2>/dev/null || true)"
-MESH_LOGS="$logs" "$PYTHON_BIN" - <<'PY'
-import os
-import re
-
-ansi = re.compile(r"\x1b\[[0-9;]*m")
-pattern = re.compile(r"Server PeerID: ([^ ]+)")
-for line in reversed(os.environ["MESH_LOGS"].splitlines()):
-    line = ansi.sub("", line)
-    match = pattern.search(line)
-    if match:
-        print(match.group(1).strip('"'))
-        raise SystemExit(0)
-raise SystemExit(1)
-PY
+  docker_stream_parse_command server-peer-id \
+    --token "$TOKEN_A" --token "$TOKEN_B" -- \
+    docker_compose logs --no-color "$service"
 }
 
 wait_for_server_peer_id() {
@@ -440,41 +402,9 @@ PY
 authenticated_peer_id_from_logs() {
   local service="$1"
   local label="$2"
-  local logs
-  logs="$(docker_compose logs --no-color "$service" 2>/dev/null || true)"
-MESH_LOGS="$logs" REPO_ID="$REPO_ID" "$PYTHON_BIN" - "$label" <<'PY'
-import os
-import re
-import sys
-
-label = sys.argv[1]
-repo_id = os.environ["REPO_ID"]
-ansi = re.compile(r"\x1b\[[0-9;]*m")
-pattern = re.compile(r"authenticated_peer_id=([^ ]+)")
-for line in reversed(os.environ["MESH_LOGS"].splitlines()):
-    line = ansi.sub("", line)
-    if "P2P mesh connector handshake completed" not in line:
-        continue
-    if f"peer_label={label}" not in line:
-        continue
-    match = pattern.search(line)
-    if match:
-        print(match.group(1).strip('"'))
-        raise SystemExit(0)
-# The two-peer smoke has exactly one remote per service. Transport control
-# frames can keep the outbound exchange open, delaying its completion log; the
-# server emits this fallback only after signature validation and session bind.
-bound_pattern = re.compile(
-    r"Session bound to peer ([^ ]+) and repo " + re.escape(repo_id)
-)
-for line in reversed(os.environ["MESH_LOGS"].splitlines()):
-    line = ansi.sub("", line)
-    match = bound_pattern.search(line)
-    if match:
-        print(match.group(1).strip('"'))
-        raise SystemExit(0)
-raise SystemExit(1)
-PY
+  docker_stream_parse_command authenticated-peer "$label" "$REPO_ID" \
+    --token "$TOKEN_A" --token "$TOKEN_B" -- \
+    docker_compose logs --no-color "$service"
 }
 
 wait_for_pending_path() {
@@ -569,40 +499,10 @@ create_peer_a_fixture() {
 
 wait_for_remote_ops_handled() {
   local peer_id="$1"
-  local logs
   for _ in $(seq 1 90); do
-    logs="$(docker_compose logs --no-color peer-b 2>/dev/null || true)"
-    if REMOTE_LOGS="$logs" REPO_ID="$REPO_ID" "$PYTHON_BIN" - "$peer_id" <<'PY'
-import os
-import re
-import sys
-
-peer_id = sys.argv[1]
-repo_id = os.environ["REPO_ID"]
-ansi = re.compile(r"\x1b\[[0-9;]*m")
-handled_pattern = re.compile(
-    r"Handled [1-9][0-9]* remote ops from "
-    + re.escape(peer_id)
-    + r" for repo "
-    + re.escape(repo_id)
-)
-authenticated = f'authenticated_peer_id="{peer_id}"'
-applied_pattern = re.compile(r"applied_pushes=([0-9]+)")
-
-for raw_line in os.environ["REMOTE_LOGS"].splitlines():
-    line = ansi.sub("", raw_line)
-    if handled_pattern.search(line):
-        raise SystemExit(0)
-    if "P2P mesh connector handshake completed" not in line:
-        continue
-    if authenticated not in line:
-        continue
-    match = applied_pattern.search(line)
-    if match and int(match.group(1)) > 0:
-        raise SystemExit(0)
-raise SystemExit(1)
-PY
-    then
+    if docker_stream_parse_command remote-ops "$peer_id" "$REPO_ID" \
+      --token "$TOKEN_A" --token "$TOKEN_B" -- \
+      docker_compose logs --no-color peer-b; then
       return 0
     fi
     sleep 1
@@ -640,10 +540,10 @@ disarm_sequence_gap_fault() {
 }
 
 wait_for_sequence_gap_fault() {
-  local logs
   for _ in $(seq 1 60); do
-    logs="$(docker_compose logs --no-color peer-a 2>/dev/null || true)"
-    if grep -q "P2P test fault injected sequence_gap" <<<"$logs"; then
+    if docker_stream_parse_command sequence-gap-fault \
+      --token "$TOKEN_A" --token "$TOKEN_B" -- \
+      docker_compose logs --no-color peer-a; then
       return 0
     fi
     sleep 1
@@ -652,10 +552,10 @@ wait_for_sequence_gap_fault() {
 }
 
 wait_for_sequence_gap_rejection() {
-  local logs
   for _ in $(seq 1 60); do
-    logs="$(docker_compose logs --no-color peer-b 2>/dev/null || true)"
-    if grep -Eq "non-contiguous remote ops: expected seq [0-9]+, received [0-9]+" <<<"$logs"; then
+    if docker_stream_parse_command sequence-gap-rejection \
+      --token "$TOKEN_A" --token "$TOKEN_B" -- \
+      docker_compose logs --no-color peer-b; then
       return 0
     fi
     sleep 1
@@ -735,12 +635,18 @@ restart_peer_b_and_wait_reconnect() {
 
 assert_no_token_material_in_logs_or_persisted_data() {
   local phase="$1"
-  local logs
   local service
   local scan_status
-  logs="$(docker_compose logs --no-color 2>/dev/null || true)"
-  if grep -qF "$TOKEN_A" <<<"$logs" || grep -qF "$TOKEN_B" <<<"$logs"; then
-    fail "P2P token material appeared in compose logs during ${phase} hygiene check"
+  if docker_stream_parse_command token-scan \
+    --token "$TOKEN_A" --token "$TOKEN_B" -- \
+    docker_compose logs --no-color; then
+    :
+  else
+    scan_status=$?
+    if [[ "$scan_status" -eq "$DOCKER_DIAGNOSTIC_TOKEN_STATUS" ]]; then
+      fail "P2P token material appeared in compose logs during ${phase} hygiene check"
+    fi
+    fail "could not scan complete compose logs during ${phase} hygiene check (status ${scan_status})"
   fi
 
   for service in peer-a peer-b; do

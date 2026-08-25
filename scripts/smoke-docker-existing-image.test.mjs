@@ -34,19 +34,17 @@ function meshEvidenceCount(logs, peerId, repoId) {
   const start = p2p.indexOf("count_mesh_evidence_in_logs() {");
   const end = p2p.indexOf("server_peer_id_from_logs() {", start);
   assert.ok(start >= 0 && end > start, "mesh evidence parser function must exist");
-  const python = process.env.DEVE_DOCKER_P2P_MESH_PYTHON_BIN
-    ?? "python3";
   const parser = p2p.slice(start, end).replaceAll("\r\n", "\n");
-  const command = `${parser}
-count_mesh_evidence_in_logs "$MESH_LOGS" "$PEER_ID" "$REPO_ID"`;
-  const forwarded = "MESH_LOGS:PEER_ID:PYTHON_BIN:REPO_ID";
+  const shellQuote = (value) => `'${value.replaceAll("'", "'\"'\"'")}'`;
+  const command = `source scripts/lib/docker-diagnostics.sh
+${parser}
+printf '%s\\n' ${shellQuote(logs)} | count_mesh_evidence_in_logs "$PEER_ID" "$REPO_ID"`;
+  const forwarded = "PEER_ID:REPO_ID";
   return spawnSync("bash", ["-s"], {
     encoding: "utf8",
     env: {
       ...process.env,
-      MESH_LOGS: logs,
       PEER_ID: peerId,
-      PYTHON_BIN: python,
       REPO_ID: repoId,
       WSLENV: process.env.WSLENV ? `${process.env.WSLENV}:${forwarded}` : forwarded,
     },
@@ -120,7 +118,7 @@ test("P2P readiness accepts both authenticated admissions without waiting for ex
 
   const countEnd = p2p.indexOf("server_peer_id_from_logs() {", countStart);
   const count = p2p.slice(countStart, countEnd);
-  assert.match(count, /Session bound to peer/);
+  assert.match(count, /mesh-count/);
   assert.doesNotMatch(count, /Handling SyncHello from/);
 });
 

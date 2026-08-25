@@ -14,6 +14,8 @@ source "$ROOT_DIR/scripts/lib/docker-remote-import-edge.sh"
 source "$ROOT_DIR/scripts/lib/docker-remote-import-stable-edge.sh"
 # shellcheck source=scripts/lib/docker-remote-import-chrome-checkpoint.sh
 source "$ROOT_DIR/scripts/lib/docker-remote-import-chrome-checkpoint.sh"
+# shellcheck source=scripts/lib/docker-diagnostics.sh
+source "$ROOT_DIR/scripts/lib/docker-diagnostics.sh"
 
 COMPOSE_FILE="${DEVE_REMOTE_IMPORT_COMPOSE_FILE:-$ROOT_DIR/docker-compose.remote-import.yml}"
 PLAYWRIGHT_PACKAGE="${DEVE_REMOTE_IMPORT_PLAYWRIGHT_PACKAGE:-playwright@1.55.0}"
@@ -26,13 +28,13 @@ diagnose() {
   printf 'docker-remote-import: collecting diagnostics\n' >&2
   if [[ -n "${DEVE_REMOTE_IMPORT_COMPOSE_FILE:-}" \
     && -n "${DEVE_REMOTE_IMPORT_PROJECT:-}" ]]; then
-    remote_import_fixture_compose ps >&2 || true
-    remote_import_fixture_compose logs --no-color >&2 || true
+    docker_bounded_command_output remote_import_fixture_compose ps >&2 || true
+    docker_bounded_compose_logs remote_import_fixture_compose >&2 || true
   fi
   for log in "$STATE_ROOT"/*.log; do
     [[ -f "$log" ]] || continue
     printf '\n===== %s =====\n' "$(basename -- "$log")" >&2
-    tail -n 160 "$log" >&2 || true
+    docker_bounded_file_output "$log" >&2 || true
   done
 }
 

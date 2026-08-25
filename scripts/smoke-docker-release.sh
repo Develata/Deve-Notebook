@@ -9,6 +9,8 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 # shellcheck source=scripts/lib/docker-msys.sh
 source "$ROOT_DIR/scripts/lib/docker-msys.sh"
+# shellcheck source=scripts/lib/docker-diagnostics.sh
+source "$ROOT_DIR/scripts/lib/docker-diagnostics.sh"
 IMAGE="${DEVE_DOCKER_SMOKE_IMAGE:-deve-notebook:local-smoke}"
 SKIP_BUILD="${DEVE_DOCKER_SMOKE_SKIP_BUILD:-0}"
 CONTAINER_NAME="${DEVE_DOCKER_SMOKE_CONTAINER:-deve-docker-smoke-$$}"
@@ -53,8 +55,11 @@ preflight_host_port() {
 
 diagnose_container_endpoint() {
   echo "docker-release-smoke: host endpoint probe failed; collecting container diagnostics" >&2
-  docker_cmd inspect -f 'health={{if .State.Health}}{{.State.Health.Status}}{{else}}<none>{{end}} status={{.State.Status}}' "$CONTAINER_NAME" >&2 || true
-  docker_cmd exec "$CONTAINER_NAME" curl -fsS "http://127.0.0.1:3001/api/node/role" >&2 || true
+  docker_bounded_command_output docker_cmd inspect \
+    -f 'health={{if .State.Health}}{{.State.Health.Status}}{{else}}<none>{{end}} status={{.State.Status}}' \
+    "$CONTAINER_NAME" >&2 || true
+  docker_bounded_command_output docker_cmd exec "$CONTAINER_NAME" \
+    curl -fsS "http://127.0.0.1:3001/api/node/role" >&2 || true
   echo >&2
 }
 
@@ -161,5 +166,6 @@ for _ in $(seq 1 60); do
 done
 
 diagnose_container_endpoint
-docker_cmd logs "$CONTAINER_NAME" >&2 || true
+docker_bounded_command_output docker_cmd logs \
+  --tail "$DOCKER_DIAGNOSTIC_MAX_LINES" "$CONTAINER_NAME" >&2 || true
 fail "node-role endpoint did not become healthy on port $HOST_PORT"
