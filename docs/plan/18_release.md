@@ -350,6 +350,21 @@ test / check / smoke 脚本的收敛目标是“验证逻辑尽可能由 Rust/CL
 - 不得运行 native package build、installer smoke、store distribution、physical-device 或 production deploy。
 - MAY 运行 `cargo fmt --check`、`cargo clippy --locked --all-targets -- -D warnings`、`cargo check --locked -p deve_web --target wasm32-unknown-unknown`、`cargo test --locked`、`cargo run -p deve_baseline -- all` 与 plan coverage enforcing checks。
 
+check-only 的调度必须按职责边界而不是按历史单 job 组织：确定性合同/文档 gate、Rust lint/WASM
+编译、workspace tests 是互不替代的 required job，可以并行，但都必须进入稳定 `check` fan-in。
+producer shards 同理按依赖和构建亲和性分组；当前 Linux CI 将 storage/repository、Web/投影、
+runtime/plugin 三组分开，Windows containment 与真实 watcher 宿主证据保持独立。分片不得复制
+producer、改变 producer 内部串行语义或把某个 required job 的失败隐藏在其它 job 后面。
+
+check-only cache 只是可丢弃的下载加速投影，不是构建产物或验收证据。Cargo cache 只能覆盖
+registry index/cache/src 与 git db，并以 runner OS、固定 Rust toolchain 和根 `Cargo.lock` digest
+分区；不得缓存 `target/`、不得用较宽的跨 toolchain/profile fallback 恢复旧构建输出。结构 gate
+必须解析 YAML 并 fail-closed 验证 required jobs 的 cache 路径、key、restore prefix 与 fan-in，防止
+后续为了局部提速重新引入多 GB target 上传、陈旧增量状态或不同 shard 之间的隐式构建 authority。
+每个 required job 在 cache restore 后的第一条命令必须是 `cargo fetch --locked`，使同一 OS 上任一
+并发 job 首先保存 cache 时都拥有完整 lockfile 源码集合；cache action 之外的 restore/save 或第三方
+build cache action必须被 required-action allowlist 拒绝。
+
 ### 2.1.4 First-tag Acceptance Matrix {#first-tag-acceptance-matrix}
 
 `docs/registry/acceptance-matrix.tsv` 是验收需求与证据需求的唯一人工维护注册表；
@@ -416,7 +431,7 @@ tag-ready，`gap` 只按上一段的精确 Public Preview accepted-gap 例外处
 正式 tag workflow 必须汇总各平台 receipts 后再运行 tag-ready。
 
 `docs/registry/acceptance-producers.json` 是可执行 evidence producer 的唯一人工维护注册表。
-它登记 producer ID、覆盖的 `test` / `script` / `receipt` `evidence_id`、执行层级、适用 host OS、超时、必需环境变量、
+它登记 producer ID、覆盖的 `test` / `script` / `receipt` `evidence_id`、执行层级、适用 host OS、超时、必需工具与环境变量、
 claims 输出变量、可公开且非凭据的 bound environment、受控 artifact 清单，以及由 `program + args[]` 组成的命令步骤；不得保存 shell command string，
 不得在 JSON 中拼接凭据，也不得把普通文档/source reference 冒充可执行 producer。矩阵中每个
 `tag-ready/required/receipt` evidence，以及每个 `ci/required/test|script` evidence，必须恰好由一个
@@ -424,6 +439,9 @@ producer 覆盖；producer 不得引用矩阵之外的 evidence，也不得在�
 静态 `test|script` evidence 与 runtime `receipt` evidence。registry schema v2 还必须显式登记
 producer dependencies；runner 以稳定拓扑顺序执行，拒绝未知 dependency、cycle 或依赖被 filter
 切掉的 partial plan。
+`required_tools` 是 producer 对 workflow toolchain 的显式需求；当前受控值只有 `node`。直接调用
+Node 或经 shell wrapper 间接调用 Node 的 producer 都必须声明它，CI shard validator 只能依据该
+metadata 要求固定 Node 24，不得通过递归猜测脚本文本推导隐藏工具依赖。
 
 `deve_baseline acceptance-run --tier <ci|full|target-host|tag-ready> --plan`
 只做确定性解析与预检，输出将运行、因 host 不匹配而不可运行、缺少环境变量或不能满足
@@ -455,6 +473,9 @@ test 仍保持独立 authority，CI evidence producer 不得用一个笼统的�
 绕开 canonical command。每个 shard 的 workflow deadline 必须覆盖串行 producer deadlines 之和；若未来
 runner 改为有证据绑定的并行 DAG，则必须覆盖最长依赖路径，并继续包含 finally cleanup 与固定构建余量，
 不能由 Actions 先行强杀合法 producer。
+每次 producer 结束还必须输出固定、无 secret 的 `producer_id/status/duration_ms` 诊断行；该时长来自
+单调时钟，只用于识别 CI 长尾，不是 receipt、pass 证明或跨宿主可比较的性能基准。失败 producer 同样
+必须输出状态与时长，且计时日志不得吞掉原始错误或把 skipped/not-run 伪装为执行成功。
 `full` 增加 Docker/browser
 业务闭环，`target-host` 选择当前宿主的 native/mobile producers，`tag-ready` 用于候选证据生产
 与跨平台缺口预检，不能把单一宿主误报为覆盖所有平台。

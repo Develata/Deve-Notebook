@@ -2,8 +2,8 @@
 //! plan_ref:
 //!   - 18_release#first-tag-acceptance-matrix
 
+use super::super::execution_policy::FINALLY_STEP_TIMEOUT_SECONDS;
 use super::super::model::{Producer, ProducerRegistry};
-use super::super::runner::FINALLY_STEP_TIMEOUT_SECONDS;
 use anyhow::{Context, Result, bail};
 use command::{
     job_commands, reject_tolerated_or_conditional, require_node_24, require_rust_toolchain,
@@ -15,6 +15,8 @@ use std::path::Path;
 use yaml::{as_mapping, as_sequence, as_string, as_u64, optional, required};
 use yaml_rust2::YamlLoader;
 
+mod base_jobs;
+mod cache;
 mod command;
 mod fan_in;
 #[cfg(test)]
@@ -113,7 +115,7 @@ fn validate_text(workflow: &str, registry: &ProducerRegistry) -> Result<()> {
             required_timeout_seconds = required_timeout_seconds
                 .checked_add(cleanup_timeout_seconds)
                 .context("acceptance producers: cumulative cleanup timeout overflow")?;
-            needs_node |= producer.steps.iter().any(|step| step.program == "node");
+            needs_node |= producer.required_tools.iter().any(|tool| tool == "node");
             *counts
                 .get_mut(producer.producer_id.as_str())
                 .expect("CI producer count initialized") += 1;

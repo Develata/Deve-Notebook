@@ -8,13 +8,96 @@ use crate::acceptance_matrix::producer::model::{
 };
 use std::collections::BTreeMap;
 
-const VALID: &str = r#"
+mod boundary_tests;
+
+pub(super) const VALID: &str = r#"
 jobs:
-  core-checks:
+  contract-checks:
     runs-on: ubuntu-latest
     steps:
-      - run: cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan
-      - run: cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier tag-ready --plan
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-source-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-source-rust-1.97.0-
+      - run: cargo fetch --locked
+      - run: |
+          forbidden=(
+            "packages: ""write"
+            "docker/""login-action"
+            "docker/""metadata-action"
+            "docker/""build-push-action"
+            "actions/""upload-artifact"
+            "push: ""true"
+            "ghcr"".io"
+            "tags: ""['v*']"
+          )
+          for pattern in "${forbidden[@]}"; do
+            if grep -nF "$pattern" .github/workflows/check.yml; then
+              echo "check.yml must stay check-only: no package publish, Docker publish, artifacts, registry publish, or tag release trigger."
+              exit 1
+            fi
+          done
+      - run: cargo fmt --check
+      - run: cargo run --locked --quiet -p deve_baseline -- all
+      - run: |
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier tag-ready --plan
+      - run: node --test scripts/android-lifecycle-harness.test.mjs scripts/mobile-android-emulator-journey.test.mjs
+      - run: |
+          scripts/plan-coverage.sh --check-reverse-coverage
+          scripts/plan-coverage.sh --check-metadata-completeness
+          scripts/plan-coverage.sh --check-perf-budget
+          scripts/check-perf-budget-baseline.sh
+          scripts/check-reliability-observability-baseline.sh
+          scripts/plan-coverage.sh --check-no-adr-plan-ref
+          scripts/plan-coverage.sh --check-md-links docs/plan docs/features docs/acceptance-cases
+          scripts/plan-coverage-selftest.sh
+  rust-quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-source-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-source-rust-1.97.0-
+      - run: cargo fetch --locked
+      - run: cargo clippy --locked --all-targets -- -D warnings
+      - run: cargo check --locked -p deve_web --target wasm32-unknown-unknown
+  workspace-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-source-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-source-rust-1.97.0-
+      - run: cargo fetch --locked
+      - run: cargo test --locked
   ci-acceptance-linux:
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -25,6 +108,16 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: 24
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-source-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-source-rust-1.97.0-
+      - run: cargo fetch --locked
       - run: cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan --producer ci.shared --producer ci.linux
       - run: cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --producer ci.shared --producer ci.linux
   ci-acceptance-windows:
@@ -34,22 +127,53 @@ jobs:
       - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
         with:
           toolchain: "1.97.0"
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-source-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-source-rust-1.97.0-
+      - run: cargo fetch --locked
       - run: cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan --producer ci.windows
       - run: cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --producer ci.windows
   watcher-native-fs:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
     steps:
-      - run: cargo test
+      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+      - uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-source-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-source-rust-1.97.0-
+      - run: cargo fetch --locked
+      - run: cargo test --locked -p deve_core --test watcher_platform_fs -- --nocapture --test-threads=1
+      - run: cargo test --locked -p deve_core --test watcher_writeback_loop -- --nocapture --test-threads=1
+      - run: cargo test --locked -p deve_core --test watcher_rename_pairing -- --nocapture --test-threads=1
   check:
     if: ${{ always() }}
     needs:
-      - core-checks
+      - contract-checks
+      - rust-quality
+      - workspace-tests
       - ci-acceptance-linux
       - ci-acceptance-windows
       - watcher-native-fs
     runs-on: ubuntu-latest
     steps:
-      - if: ${{ needs.core-checks.result != 'success' || needs.ci-acceptance-linux.result != 'success' || needs.ci-acceptance-windows.result != 'success' || needs.watcher-native-fs.result != 'success' }}
+      - if: ${{ needs.contract-checks.result != 'success' || needs.rust-quality.result != 'success' || needs.workspace-tests.result != 'success' || needs.ci-acceptance-linux.result != 'success' || needs.ci-acceptance-windows.result != 'success' || needs.watcher-native-fs.result != 'success' }}
         run: exit 1
 "#;
 
@@ -64,6 +188,11 @@ fn producer(producer_id: &str, host_os: &[&str], dependencies: &[&str], program:
         tiers: vec!["ci".to_owned()],
         host_os: host_os.iter().map(|host| (*host).to_owned()).collect(),
         timeout_seconds: 600,
+        required_tools: if program == "node" {
+            vec!["node".to_owned()]
+        } else {
+            Vec::new()
+        },
         required_env: Vec::new(),
         bound_env: Vec::new(),
         environment: BTreeMap::new(),
@@ -89,7 +218,7 @@ fn registry() -> ProducerRegistry {
     }
 }
 
-fn error(workflow: &str) -> String {
+pub(super) fn error(workflow: &str) -> String {
     validate_text(workflow, &registry())
         .expect_err("workflow drift must fail closed")
         .to_string()
@@ -254,7 +383,7 @@ fn rejects_job_expansion_and_execution_modifiers() {
         "dtolnay/rust-toolchain@master",
         1,
     );
-    assert!(error(&wrong_setup_action).contains("must install exact Rust"));
+    assert!(error(&wrong_setup_action).contains("unsupported action"));
 
     let rust_setup = "      - uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88\n        with:\n          toolchain: \"1.97.0\"\n";
     let late_setup = VALID.replacen(rust_setup, "", 1).replacen(
@@ -264,7 +393,11 @@ fn rejects_job_expansion_and_execution_modifiers() {
     );
     assert!(error(&late_setup).contains("before producer commands"));
 
-    let unlocked = VALID.replacen("cargo run --locked", "cargo run", 1);
+    let unlocked = VALID.replacen(
+        "cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan --producer ci.shared --producer ci.linux",
+        "cargo run --quiet -p deve_baseline -- acceptance-run --tier ci --plan --producer ci.shared --producer ci.linux",
+        1,
+    );
     assert!(error(&unlocked).contains("expected --locked"));
 
     let mut cleanup_registry = registry();
@@ -321,14 +454,14 @@ fn rejects_fan_in_that_can_hide_non_success() {
     assert!(error(&fan_in_defaults).contains("may not declare defaults"));
 
     let tolerated_dependency = VALID.replace(
-        "  core-checks:\n    runs-on: ubuntu-latest",
-        "  core-checks:\n    continue-on-error: true\n    runs-on: ubuntu-latest",
+        "  contract-checks:\n    runs-on: ubuntu-latest",
+        "  contract-checks:\n    continue-on-error: true\n    runs-on: ubuntu-latest",
     );
     assert!(error(&tolerated_dependency).contains("required fan-in dependency failure"));
 
     let skipped_dependency_step = VALID.replacen(
-        "      - run: cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan",
-        "      - if: false\n        run: cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan",
+        "      - run: |\n          cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan",
+        "      - if: false\n        run: |\n          cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan",
         1,
     );
     assert!(error(&skipped_dependency_step).contains("may not declare if"));

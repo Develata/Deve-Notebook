@@ -16,6 +16,9 @@
         "windows"
       ],
       "timeout_seconds": 120,
+      "required_tools": [
+        "node"
+      ],
       "required_env": [],
       "environment": {},
       "claims_env": {},
@@ -221,6 +224,9 @@
         "windows"
       ],
       "timeout_seconds": 1200,
+      "required_tools": [
+        "node"
+      ],
       "required_env": [],
       "environment": {},
       "claims_env": {},
@@ -895,6 +901,9 @@
         "windows"
       ],
       "timeout_seconds": 3600,
+      "required_tools": [
+        "node"
+      ],
       "required_env": [],
       "environment": {
         "DEVE_MOBILE_ANDROID_EMULATOR_INSTALL_STARTUP_SMOKE_REQUIRED": "1",
@@ -1031,6 +1040,9 @@
         "windows"
       ],
       "timeout_seconds": 3600,
+      "required_tools": [
+        "node"
+      ],
       "required_env": [
         "DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN",
         "DEVE_MOBILE_ANDROID_REMOTE_USERNAME",
@@ -1325,6 +1337,9 @@
         "linux"
       ],
       "timeout_seconds": 2700,
+      "required_tools": [
+        "node"
+      ],
       "required_env": [],
       "environment": {},
       "claims_env": {},
@@ -1429,6 +1444,9 @@
         "windows"
       ],
       "timeout_seconds": 2700,
+      "required_tools": [
+        "node"
+      ],
       "required_env": [],
       "environment": {},
       "claims_env": {},
@@ -1537,6 +1555,9 @@
         "windows"
       ],
       "timeout_seconds": 5400,
+      "required_tools": [
+        "node"
+      ],
       "required_env": [
         "DEVE_RELEASE_CANDIDATE_IMAGE",
         "DEVE_RELEASE_CANDIDATE_IMAGE_ID"
@@ -1665,6 +1686,9 @@
         "windows"
       ],
       "timeout_seconds": 3600,
+      "required_tools": [
+        "node"
+      ],
       "required_env": [
         "DEVE_RELEASE_CANDIDATE_IMAGE",
         "DEVE_RELEASE_CANDIDATE_IMAGE_ID"
@@ -1729,6 +1753,9 @@
         "windows"
       ],
       "timeout_seconds": 3600,
+      "required_tools": [
+        "node"
+      ],
       "required_env": [
         "DEVE_RELEASE_CANDIDATE_IMAGE",
         "DEVE_RELEASE_CANDIDATE_IMAGE_ID"
@@ -1855,6 +1882,9 @@
         "windows"
       ],
       "timeout_seconds": 120,
+      "required_tools": [
+        "node"
+      ],
       "required_env": [],
       "environment": {},
       "claims_env": {
@@ -1889,6 +1919,9 @@
         "windows"
       ],
       "timeout_seconds": 1800,
+      "required_tools": [
+        "node"
+      ],
       "required_env": [],
       "environment": {
         "DEVE_RELEASE_AUDIT_REQUIRED": "1",

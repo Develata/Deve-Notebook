@@ -2,6 +2,8 @@
 //! plan_ref:
 //!   - 18_release#first-tag-acceptance-matrix
 
+use super::base_jobs::validate_required_base_jobs;
+use super::cache::validate_required_job_cache;
 use super::command::{
     reject_job_execution_modifiers, reject_step_execution_modifiers,
     reject_tolerated_or_conditional,
@@ -13,6 +15,7 @@ use yaml_rust2::yaml::Hash;
 
 const FAN_IN_JOB: &str = "check";
 const FAN_IN_IF: &str = "${{ always() }}";
+const BASE_REQUIRED_JOBS: [&str; 3] = ["contract-checks", "rust-quality", "workspace-tests"];
 
 pub(super) fn validate_fan_in(jobs: &Hash, execution_jobs: &BTreeSet<String>) -> Result<()> {
     let path = format!("check.yml.jobs.{FAN_IN_JOB}");
@@ -30,7 +33,7 @@ pub(super) fn validate_fan_in(jobs: &Hash, execution_jobs: &BTreeSet<String>) ->
     if as_string(required(job, "runs-on", &path)?, &format!("{path}.runs-on"))? != "ubuntu-latest" {
         bail!("acceptance producers: {path} must use the fixed Ubuntu host");
     }
-    let mut ordered_needs = vec!["core-checks".to_owned()];
+    let mut ordered_needs = BASE_REQUIRED_JOBS.map(str::to_owned).to_vec();
     ordered_needs.extend(execution_jobs.iter().cloned());
     ordered_needs.push("watcher-native-fs".to_owned());
     let expected_needs = ordered_needs.iter().cloned().collect::<BTreeSet<_>>();
@@ -68,6 +71,7 @@ pub(super) fn validate_fan_in(jobs: &Hash, execution_jobs: &BTreeSet<String>) ->
             required(dependency_job, "steps", &dependency_path)?,
             &format!("{dependency_path}.steps"),
         )?;
+        validate_required_job_cache(dependency_steps, &dependency_path)?;
         for (index, value) in dependency_steps.iter().enumerate() {
             let step_path = format!("{dependency_path}.steps[{index}]");
             let dependency_step = as_mapping(value, &step_path)?;
@@ -78,6 +82,7 @@ pub(super) fn validate_fan_in(jobs: &Hash, execution_jobs: &BTreeSet<String>) ->
             reject_step_execution_modifiers(dependency_step, &step_path)?;
         }
     }
+    validate_required_base_jobs(jobs)?;
     let steps = as_sequence(required(job, "steps", &path)?, &format!("{path}.steps"))?;
     if steps.len() != 1 {
         bail!("acceptance producers: {path} must contain one exact failure step");

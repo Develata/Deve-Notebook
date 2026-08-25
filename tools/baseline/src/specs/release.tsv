@@ -115,14 +115,6 @@ contains	.github/workflows/check.yml	branches: [main]
 contains	.github/workflows/check.yml	pull_request:
 contains	.github/workflows/check.yml	workflow_dispatch:
 contains	.github/workflows/check.yml	contents: read
-contains	.github/workflows/check.yml	cargo fmt --check
-contains	.github/workflows/check.yml	cargo run --locked --quiet -p deve_baseline -- all
-contains	.github/workflows/check.yml	acceptance-run --tier ci
-contains	.github/workflows/check.yml	node --test scripts/android-lifecycle-harness.test.mjs scripts/mobile-android-emulator-journey.test.mjs
-contains	.github/workflows/check.yml	scripts/check-perf-budget-baseline.sh
-contains	.github/workflows/check.yml	cargo clippy --locked --all-targets -- -D warnings
-contains	.github/workflows/check.yml	cargo check --locked -p deve_web --target wasm32-unknown-unknown
-contains	.github/workflows/check.yml	cargo test --locked
 absent	.github/workflows/check.yml	packages: write
 absent	.github/workflows/check.yml	docker/login-action
 absent	.github/workflows/check.yml	docker/metadata-action

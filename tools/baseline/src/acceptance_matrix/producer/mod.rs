@@ -4,6 +4,7 @@
 
 pub(super) mod artifact_reader;
 pub(super) mod collect;
+mod execution_policy;
 mod file_identity;
 mod model;
 mod plan;

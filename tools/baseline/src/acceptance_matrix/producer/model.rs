@@ -25,6 +25,8 @@ pub(super) struct Producer {
     pub(super) host_os: Vec<String>,
     pub(super) timeout_seconds: u64,
     #[serde(default)]
+    pub(super) required_tools: Vec<String>,
+    #[serde(default)]
     pub(super) required_env: Vec<String>,
     /// Required environment values that are safe to publish in receipts and
     /// form part of the evidence identity (for example an immutable image ID).

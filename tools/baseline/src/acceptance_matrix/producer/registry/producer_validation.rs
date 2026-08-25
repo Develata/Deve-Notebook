@@ -12,6 +12,7 @@ use std::path::{Component, Path};
 
 const ALLOWED_TIERS: [&str; 4] = ["ci", "full", "target-host", "tag-ready"];
 const ALLOWED_HOSTS: [&str; 3] = ["linux", "macos", "windows"];
+const ALLOWED_TOOLS: [&str; 1] = ["node"];
 const RUNNER_STATE_ENV: &str = "DEVE_ACCEPTANCE_PRODUCER_STATE_DIR";
 const RUNNER_BASELINE_ENV: &str = "DEVE_BASELINE_BIN";
 
@@ -42,6 +43,12 @@ pub(super) fn validate_producer(
     require_unique_nonempty(&producer.dependencies, "dependencies", producer)?;
     require_allowed_unique(&producer.tiers, &ALLOWED_TIERS, "tiers", producer)?;
     require_allowed_unique(&producer.host_os, &ALLOWED_HOSTS, "host_os", producer)?;
+    require_allowed_unique(
+        &producer.required_tools,
+        &ALLOWED_TOOLS,
+        "required_tools",
+        producer,
+    )?;
     if !(1..=14_400).contains(&producer.timeout_seconds) {
         bail!(
             "acceptance producers: {} timeout_seconds must be in 1..=14400",
@@ -70,6 +77,14 @@ pub(super) fn validate_producer(
     }
     for step in producer.steps.iter().chain(&producer.finally_steps) {
         validate_step(root, producer, step)?;
+    }
+    if producer.steps.iter().any(|step| step.program == "node")
+        && !producer.required_tools.iter().any(|tool| tool == "node")
+    {
+        bail!(
+            "acceptance producers: {} directly invokes node without declaring required_tools node",
+            producer.producer_id
+        );
     }
     Ok(())
 }

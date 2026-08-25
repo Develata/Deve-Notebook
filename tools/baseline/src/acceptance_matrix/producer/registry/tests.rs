@@ -17,6 +17,7 @@ fn producer() -> Producer {
         tiers: vec!["ci".into()],
         host_os: vec!["windows".into()],
         timeout_seconds: 1,
+        required_tools: Vec::new(),
         required_env: Vec::new(),
         bound_env: Vec::new(),
         environment: BTreeMap::new(),
@@ -37,6 +38,27 @@ fn identifiers_and_environment_names_are_narrow() {
     assert!(sensitive_env_name("DEVE_REMOTE_PASSWORD"));
     assert!(sensitive_env_name("DEVE_API_KEY"));
     assert!(!sensitive_env_name("DEVE_RELEASE_CANDIDATE_IMAGE_ID"));
+}
+
+#[test]
+fn direct_node_steps_require_explicit_tool_metadata() {
+    let mut producer = producer();
+    producer.artifacts.clear();
+    producer.steps.push(ProducerStep {
+        program: "node".into(),
+        args: vec![ProducerArg::LiteralString("--version".into())],
+    });
+    let error = validate_producer(Path::new("."), &producer, &BTreeMap::new())
+        .expect_err("undeclared Node tool requirement must fail closed")
+        .to_string();
+    assert!(
+        error.contains("without declaring required_tools node"),
+        "{error}"
+    );
+
+    producer.required_tools.push("node".into());
+    validate_producer(Path::new("."), &producer, &BTreeMap::new())
+        .expect("declared Node tool requirement");
 }
 
 #[test]

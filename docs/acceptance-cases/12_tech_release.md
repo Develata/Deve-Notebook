@@ -469,6 +469,9 @@
     - stdout_contains: "deve_baseline -- all"
     - release_assert: push_ci_check_only true
     - release_assert: push_ci_no_package_publish_or_production true
+    - contract_assert: check_contract_quality_and_workspace_test_jobs_are_independent_required_jobs true
+    - contract_assert: check_only_cargo_cache_is_source_only_and_toolchain_lockfile_scoped true
+    - contract_assert: check_only_target_cache_and_broad_restore_fallback_forbidden true
 
 - case_id: REL-013
   goal: Reliability / Observability 治理合同可由发布前基线验证。
@@ -524,6 +527,7 @@
     - contract_assert: ci_workflow_rejects_matrix_custom_shell_or_step_deadline true
     - contract_assert: stable_check_fan_in_rejects_every_non_success_result true
     - contract_assert: ci_shard_deadlines_cover_producer_cleanup_and_build_margin true
+    - contract_assert: every_executed_producer_reports_status_and_monotonic_duration_without_receipt_authority true
     - contract_assert: producer_shell_command_strings_forbidden true
     - contract_assert: producer_bound_environment_is_public_non_secret true
     - contract_assert: producer_timeout_failure_writes_failed_receipts true

@@ -2,6 +2,7 @@
 //! plan_ref:
 //!   - 18_release#first-tag-acceptance-matrix
 
+use super::execution_policy::FINALLY_STEP_TIMEOUT_SECONDS;
 use super::model::{Producer, ProducerArg, ProducerStep};
 use super::plan::{ProducerPlan, git_output, git_status};
 use super::registry;
@@ -11,14 +12,19 @@ use crate::acceptance_matrix::receipt::{
 use anyhow::{Context, Result, bail};
 use std::collections::BTreeMap;
 use std::fs;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 #[cfg(windows)]
 use std::process::Command;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
-
-pub(super) const FINALLY_STEP_TIMEOUT_SECONDS: u64 = 60;
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 pub(super) fn run_producer(root: &Path, receipt_dir: &Path, plan: &ProducerPlan<'_>) -> Result<()> {
+    with_producer_duration(&plan.producer.producer_id, || {
+        run_producer_inner(root, receipt_dir, plan)
+    })
+}
+
+fn run_producer_inner(root: &Path, receipt_dir: &Path, plan: &ProducerPlan<'_>) -> Result<()> {
     let claims_root = receipt_dir.join("claims").join(&plan.producer.producer_id);
     let state_root = receipt_dir.join("state").join(&plan.producer.producer_id);
     let (mut environment, producer_inputs) = producer_environment(plan.producer, &state_root)?;
@@ -60,18 +66,30 @@ pub(super) fn run_static_producer(
     state_parent: &Path,
     plan: &ProducerPlan<'_>,
 ) -> Result<()> {
+    with_producer_duration(&plan.producer.producer_id, || {
+        run_static_producer_inner(root, state_parent, plan)
+    })
+}
+
+fn run_static_producer_inner(
+    root: &Path,
+    state_parent: &Path,
+    plan: &ProducerPlan<'_>,
+) -> Result<()> {
     let state_root = state_parent.join(&plan.producer.producer_id);
     let (environment, producer_inputs) = producer_environment(plan.producer, &state_root)?;
     let execution_spec = execution_spec(plan.producer, &environment, producer_inputs)?;
     let head = git_output(root, ["rev-parse", "HEAD"])?;
-    let started = std::time::Instant::now();
+    let execution_started = Instant::now();
     println!(
         "acceptance-run: running {} ({})",
         plan.producer.producer_id, plan.producer.note
     );
     let mut primary_error = None;
     for step in &execution_spec.steps {
-        let remaining = execution_spec.timeout.saturating_sub(started.elapsed());
+        let remaining = execution_spec
+            .timeout
+            .saturating_sub(execution_started.elapsed());
         if remaining.is_zero() {
             primary_error = Some(anyhow::anyhow!(
                 "acceptance-run: producer {} timed out before the next step",
@@ -133,6 +151,29 @@ pub(super) fn run_static_producer(
         return Err(error);
     }
     Ok(())
+}
+
+fn with_producer_duration<T>(
+    producer_id: &str,
+    operation: impl FnOnce() -> Result<T>,
+) -> Result<T> {
+    let started = Instant::now();
+    let result = operation();
+    report_producer_duration(producer_id, result.is_ok(), started.elapsed());
+    result
+}
+
+fn report_producer_duration(producer_id: &str, success: bool, duration: Duration) {
+    let diagnostic = producer_duration_diagnostic(producer_id, success, duration);
+    let _ = writeln!(io::stdout().lock(), "{diagnostic}");
+}
+
+fn producer_duration_diagnostic(producer_id: &str, success: bool, duration: Duration) -> String {
+    let status = if success { "ok" } else { "failed" };
+    format!(
+        "acceptance-run: producer {producer_id} status={status} duration_ms={}",
+        duration.as_millis()
+    )
 }
 
 fn producer_environment(
@@ -327,6 +368,9 @@ fn expected_target_os(surface: &str) -> &str {
 
 #[cfg(test)]
 mod tests {
+    use super::{producer_duration_diagnostic, with_producer_duration};
+    use std::time::Duration;
+
     #[cfg(windows)]
     use super::git_bash_candidates;
 
@@ -337,5 +381,31 @@ mod tests {
             r"C:\tools\git\mingw64\libexec\git-core",
         ));
         assert!(candidates.contains(&std::path::PathBuf::from(r"C:\tools\git\bin\bash.exe")));
+    }
+
+    #[test]
+    fn producer_duration_diagnostic_is_fixed_and_secret_free() {
+        assert_eq!(
+            producer_duration_diagnostic(
+                "ci.storage-repository-cases",
+                true,
+                Duration::from_millis(1234),
+            ),
+            "acceptance-run: producer ci.storage-repository-cases status=ok duration_ms=1234"
+        );
+        assert_eq!(
+            producer_duration_diagnostic("ci.failed", false, Duration::from_millis(9)),
+            "acceptance-run: producer ci.failed status=failed duration_ms=9"
+        );
+    }
+
+    #[test]
+    fn duration_wrapper_preserves_the_primary_error() {
+        let error = with_producer_duration("ci.failed", || -> anyhow::Result<()> {
+            anyhow::bail!("primary producer failure")
+        })
+        .expect_err("operation must remain failed")
+        .to_string();
+        assert_eq!(error, "primary producer failure");
     }
 }

@@ -113,6 +113,8 @@
 - Receipt 同时绑定 evidence locator、surface/mode、target OS 与命令前后 clean HEAD；平台 producer/聚合尚未闭环时，tag workflow 必须在任何公开发布前明确失败。producer 超时清理必须只终止经隔离校验的 child process group，不能误伤 CI runner 或宿主父进程组；主动脱离该 group 的宿主资源必须预先登记 ownership 并由显式 finally step 回收，Windows tree cleanup 未验证成功时也必须 fail-closed。
 - 普通 CI 必须实际执行 producer registry 中全部适用的 required test/script evidence，不能只打印 plan；候选聚合 workflow 必须验证显式 source run 与当前 HEAD 相同，Rust collector/tag-ready 通过后，tag workflow 才能进入任何公开发布步骤。
 - 普通 CI 的 required producer 必须按兼容宿主显式分片并由稳定 `check` 状态统一汇合；未知、漏跑、重复、宿主不匹配、依赖不完整、skipped、not-run、容错吞错或超时前强杀都不能被报告为通过。该分片只改变调度与反馈时延，不改变 producer registry、workspace test 或 release receipt 的权威。
+- 普通 CI 的合同/文档检查、Rust lint/WASM 编译、workspace tests 也必须作为独立 required job 并行运行；当前 Linux producer 再按 storage/repository、Web/投影、runtime/plugin 三条职责边界拆分，任何一条都不能被稳定 `check` fan-in 漏接。
+- check-only Cargo cache 只允许缓存按 OS、Rust toolchain 与根 lockfile 分区的 registry source 和 git db；每条 required job 首先执行完整 locked fetch，独立 restore/save、第三方 build cache、`target/`、跨 profile/toolchain 的宽 fallback 与缓存命中不得被当作构建或验收证据。producer 必须输出固定的无 secret duration 诊断，供后续识别长尾，但该诊断不冒充 receipt。
 - Android target-host 的 Linux runner 在执行 Mobile `native-packaging` 宿主测试前，必须准备 GTK3、WebKitGTK 4.1 与 Rsvg 开发依赖；这些包只证明测试可编译，不代表 Linux Desktop artifact 已恢复，也不能用跳过该宿主测试替代依赖安装。
 - `REL-013` reliability/observability governance baseline 固定 SLO/SLI、telemetry schema、metrics taxonomy、tracing、health mapping、alert tier 与 DR index 的发布前检查；它是合同漂移闸门，不声明 runtime telemetry 已完整实现。
 

@@ -15,14 +15,33 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  core-checks:
-    name: Core checks
+  contract-checks:
+    name: Contracts and documentation
     runs-on: ubuntu-latest
-    timeout-minutes: 90
-
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
-
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+          components: rustfmt
+      - name: Install Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Cache Cargo sources
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-source-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-source-rust-1.97.0-
+      - name: Fetch complete locked Cargo sources
+        run: cargo fetch --locked
       - name: Guard check-only boundary
         run: |
           forbidden=(
@@ -41,45 +60,16 @@ jobs:
               exit 1
             fi
           done
-
-      - name: Install Rust 1.97.0
-        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
-        with:
-          toolchain: "1.97.0"
-          targets: wasm32-unknown-unknown
-          components: clippy,rustfmt
-
-      - name: Install Node.js 24
-        uses: actions/setup-node@v6
-        with:
-          node-version: 24
-
-      - name: Cache cargo registry and build
-        uses: actions/cache@v6
-        with:
-          path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-check-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-check-
-            ${{ runner.os }}-cargo-
-
       - name: Check formatting
         run: cargo fmt --check
-
       - name: Check Rust baseline contracts
         run: cargo run --locked --quiet -p deve_baseline -- all
-
       - name: Check acceptance producer plan
         run: |
           cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan
           cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier tag-ready --plan
-
       - name: Check Android lifecycle harness contracts
         run: node --test scripts/android-lifecycle-harness.test.mjs scripts/mobile-android-emulator-journey.test.mjs
-
       - name: Check plan coverage
         run: |
           scripts/plan-coverage.sh --check-reverse-coverage
@@ -91,104 +81,199 @@ jobs:
           scripts/plan-coverage.sh --check-md-links docs/plan docs/features docs/acceptance-cases
           scripts/plan-coverage-selftest.sh
 
-      - name: Run clippy
-        run: cargo clippy --locked --all-targets -- -D warnings
-
-      - name: Check web WASM target
-        run: cargo check --locked -p deve_web --target wasm32-unknown-unknown
-
-      - name: Run tests
-        run: cargo test --locked
-
-  ci-acceptance-linux:
-    name: Required CI producers (Linux)
+  rust-quality:
+    name: Rust lint and Web WASM
     runs-on: ubuntu-latest
-    timeout-minutes: 180
-
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v6
-
       - name: Install Rust 1.97.0
         uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
         with:
           toolchain: "1.97.0"
+          targets: wasm32-unknown-unknown
+          components: clippy
+      - name: Cache Cargo sources
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-source-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-source-rust-1.97.0-
+      - name: Fetch complete locked Cargo sources
+        run: cargo fetch --locked
+      - name: Run clippy
+        run: cargo clippy --locked --all-targets -- -D warnings
+      - name: Check web WASM target
+        run: cargo check --locked -p deve_web --target wasm32-unknown-unknown
 
+  workspace-tests:
+    name: Workspace tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+      - name: Cache Cargo sources
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-source-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-source-rust-1.97.0-
+      - name: Fetch complete locked Cargo sources
+        run: cargo fetch --locked
+      - name: Run tests
+        run: cargo test --locked
+
+  ci-acceptance-runtime:
+    name: Required runtime CI producers (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
       - name: Install Node.js 24
         uses: actions/setup-node@v6
         with:
           node-version: 24
-
-      - name: Cache cargo registry and acceptance build
+      - name: Cache Cargo sources
         uses: actions/cache@v6
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-ci-acceptance-rust-1.97.0-debug-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'tools/baseline/**', 'apps/cli/**', 'apps/web/**', 'crates/core/**', 'scripts/**') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-ci-acceptance-rust-1.97.0-debug-
-            ${{ runner.os }}-cargo-ci-acceptance-
-            ${{ runner.os }}-cargo-check-
-            ${{ runner.os }}-cargo-
-
-      - name: Plan required Linux CI producers
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-source-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-source-rust-1.97.0-
+      - name: Fetch complete locked Cargo sources
+        run: cargo fetch --locked
+      - name: Plan required runtime CI producers
         run: >-
           cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan
           --producer ci.native-ipc-isolation
-          --producer ci.diff-projection
-          --producer ci.document-create-idempotence
           --producer ci.native-ai-provider-settings
           --producer ci.agent-bridge-process-tree-unix
           --producer ci.plugin-host-lifecycle
-          --producer ci.projection-recovery
-          --producer ci.storage-browser-boundaries
-          --producer ci.storage-repository-cases
-
-      - name: Execute required Linux CI producers
+      - name: Execute required runtime CI producers
         run: >-
           cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci
           --producer ci.native-ipc-isolation
-          --producer ci.diff-projection
-          --producer ci.document-create-idempotence
           --producer ci.native-ai-provider-settings
           --producer ci.agent-bridge-process-tree-unix
           --producer ci.plugin-host-lifecycle
+
+  ci-acceptance-storage:
+    name: Required storage CI producers (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+      - name: Cache Cargo sources
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-source-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-source-rust-1.97.0-
+      - name: Fetch complete locked Cargo sources
+        run: cargo fetch --locked
+      - name: Plan required storage CI producers
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan
+          --producer ci.storage-repository-cases
+      - name: Execute required storage CI producers
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci
+          --producer ci.storage-repository-cases
+
+  ci-acceptance-web:
+    name: Required Web and projection CI producers (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+      - name: Install Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+      - name: Cache Cargo sources
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-source-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-source-rust-1.97.0-
+      - name: Fetch complete locked Cargo sources
+        run: cargo fetch --locked
+      - name: Plan required Web and projection CI producers
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan
+          --producer ci.diff-projection
+          --producer ci.document-create-idempotence
           --producer ci.projection-recovery
           --producer ci.storage-browser-boundaries
-          --producer ci.storage-repository-cases
+      - name: Execute required Web and projection CI producers
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci
+          --producer ci.diff-projection
+          --producer ci.document-create-idempotence
+          --producer ci.projection-recovery
+          --producer ci.storage-browser-boundaries
 
   ci-acceptance-windows:
     name: Required CI producers (Windows)
     runs-on: windows-latest
     timeout-minutes: 30
-
     steps:
       - uses: actions/checkout@v6
-
       - name: Install Rust 1.97.0
         uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
         with:
           toolchain: "1.97.0"
-
-      - name: Cache cargo registry and acceptance build
+      - name: Cache Cargo sources
         uses: actions/cache@v6
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-ci-acceptance-rust-1.97.0-debug-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'tools/baseline/**', 'apps/cli/**', 'apps/web/**', 'crates/core/**', 'scripts/**') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-ci-acceptance-rust-1.97.0-debug-
-            ${{ runner.os }}-cargo-ci-acceptance-
-            ${{ runner.os }}-cargo-
-
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-source-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-source-rust-1.97.0-
+      - name: Fetch complete locked Cargo sources
+        run: cargo fetch --locked
       - name: Plan required Windows CI producers
         run: >-
           cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan
           --producer ci.agent-bridge-containment-windows
-
       - name: Execute required Windows CI producers
         run: >-
           cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci
@@ -202,45 +287,44 @@ jobs:
       fail-fast: false
       matrix:
         os: [ubuntu-latest, windows-latest]
-
     steps:
       - uses: actions/checkout@v6
-
       - name: Install Rust 1.97.0
         uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
         with:
           toolchain: "1.97.0"
-
-      - name: Cache cargo registry and watcher build
+      - name: Cache Cargo sources
         uses: actions/cache@v6
         with:
           path: |
-            ~/.cargo/registry
-            ~/.cargo/git
-            target
-          key: ${{ runner.os }}-cargo-watcher-${{ hashFiles('**/Cargo.lock') }}
-          restore-keys: |
-            ${{ runner.os }}-cargo-watcher-
-            ${{ runner.os }}-cargo-
-
+            ~/.cargo/registry/index
+            ~/.cargo/registry/cache
+            ~/.cargo/registry/src
+            ~/.cargo/git/db
+          key: ${{ runner.os }}-cargo-source-rust-1.97.0-${{ hashFiles('Cargo.lock') }}
+          restore-keys: ${{ runner.os }}-cargo-source-rust-1.97.0-
+      - name: Fetch complete locked Cargo sources
+        run: cargo fetch --locked
       - name: Run watcher platform filesystem evidence
         run: cargo test --locked -p deve_core --test watcher_platform_fs -- --nocapture --test-threads=1
-
       - name: Run watcher writeback-loop evidence
         run: cargo test --locked -p deve_core --test watcher_writeback_loop -- --nocapture --test-threads=1
-
       - name: Run watcher rename-pairing evidence
         run: cargo test --locked -p deve_core --test watcher_rename_pairing -- --nocapture --test-threads=1
 
   check:
     if: ${{ always() }}
     needs:
-      - core-checks
-      - ci-acceptance-linux
+      - contract-checks
+      - rust-quality
+      - workspace-tests
+      - ci-acceptance-runtime
+      - ci-acceptance-storage
+      - ci-acceptance-web
       - ci-acceptance-windows
       - watcher-native-fs
     runs-on: ubuntu-latest
     steps:
       - name: Fail closed unless every required CI job succeeded
-        if: ${{ needs.core-checks.result != 'success' || needs.ci-acceptance-linux.result != 'success' || needs.ci-acceptance-windows.result != 'success' || needs.watcher-native-fs.result != 'success' }}
+        if: ${{ needs.contract-checks.result != 'success' || needs.rust-quality.result != 'success' || needs.workspace-tests.result != 'success' || needs.ci-acceptance-runtime.result != 'success' || needs.ci-acceptance-storage.result != 'success' || needs.ci-acceptance-web.result != 'success' || needs.ci-acceptance-windows.result != 'success' || needs.watcher-native-fs.result != 'success' }}
         run: exit 1
