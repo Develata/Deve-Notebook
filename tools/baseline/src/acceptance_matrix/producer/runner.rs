@@ -16,6 +16,8 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
+pub(super) const FINALLY_STEP_TIMEOUT_SECONDS: u64 = 60;
+
 pub(super) fn run_producer(root: &Path, receipt_dir: &Path, plan: &ProducerPlan<'_>) -> Result<()> {
     let claims_root = receipt_dir.join("claims").join(&plan.producer.producer_id);
     let state_root = receipt_dir.join("state").join(&plan.producer.producer_id);
@@ -98,7 +100,11 @@ pub(super) fn run_static_producer(
     }
     let mut cleanup_errors = Vec::new();
     for step in &execution_spec.finally_steps {
-        match run_step(root, step, Duration::from_secs(60)) {
+        match run_step(
+            root,
+            step,
+            Duration::from_secs(FINALLY_STEP_TIMEOUT_SECONDS),
+        ) {
             Ok(status) if status.success() => {}
             Ok(_) => {
                 cleanup_errors.push(format!("cleanup step {} returned non-zero", step.program))

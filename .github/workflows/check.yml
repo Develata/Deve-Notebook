@@ -15,7 +15,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  check:
+  core-checks:
+    name: Core checks
     runs-on: ubuntu-latest
     timeout-minutes: 90
 
@@ -69,18 +70,15 @@ jobs:
         run: cargo fmt --check
 
       - name: Check Rust baseline contracts
-        run: cargo run --quiet -p deve_baseline -- all
+        run: cargo run --locked --quiet -p deve_baseline -- all
 
       - name: Check acceptance producer plan
         run: |
-          cargo run --quiet -p deve_baseline -- acceptance-run --tier ci --plan
-          cargo run --quiet -p deve_baseline -- acceptance-run --tier tag-ready --plan
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier tag-ready --plan
 
       - name: Check Android lifecycle harness contracts
         run: node --test scripts/android-lifecycle-harness.test.mjs scripts/mobile-android-emulator-journey.test.mjs
-
-      - name: Execute required CI acceptance evidence
-        run: cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci
 
       - name: Check plan coverage
         run: |
@@ -101,6 +99,100 @@ jobs:
 
       - name: Run tests
         run: cargo test --locked
+
+  ci-acceptance-linux:
+    name: Required CI producers (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+
+      - name: Install Node.js 24
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+
+      - name: Cache cargo registry and acceptance build
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-ci-acceptance-rust-1.97.0-debug-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'tools/baseline/**', 'apps/cli/**', 'apps/web/**', 'crates/core/**', 'scripts/**') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-ci-acceptance-rust-1.97.0-debug-
+            ${{ runner.os }}-cargo-ci-acceptance-
+            ${{ runner.os }}-cargo-check-
+            ${{ runner.os }}-cargo-
+
+      - name: Plan required Linux CI producers
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan
+          --producer ci.native-ipc-isolation
+          --producer ci.diff-projection
+          --producer ci.document-create-idempotence
+          --producer ci.native-ai-provider-settings
+          --producer ci.agent-bridge-process-tree-unix
+          --producer ci.plugin-host-lifecycle
+          --producer ci.projection-recovery
+          --producer ci.storage-browser-boundaries
+          --producer ci.storage-repository-cases
+
+      - name: Execute required Linux CI producers
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci
+          --producer ci.native-ipc-isolation
+          --producer ci.diff-projection
+          --producer ci.document-create-idempotence
+          --producer ci.native-ai-provider-settings
+          --producer ci.agent-bridge-process-tree-unix
+          --producer ci.plugin-host-lifecycle
+          --producer ci.projection-recovery
+          --producer ci.storage-browser-boundaries
+          --producer ci.storage-repository-cases
+
+  ci-acceptance-windows:
+    name: Required CI producers (Windows)
+    runs-on: windows-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+
+      - name: Cache cargo registry and acceptance build
+        uses: actions/cache@v6
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-ci-acceptance-rust-1.97.0-debug-${{ hashFiles('Cargo.lock', 'Cargo.toml', 'tools/baseline/**', 'apps/cli/**', 'apps/web/**', 'crates/core/**', 'scripts/**') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-ci-acceptance-rust-1.97.0-debug-
+            ${{ runner.os }}-cargo-ci-acceptance-
+            ${{ runner.os }}-cargo-
+
+      - name: Plan required Windows CI producers
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci --plan
+          --producer ci.agent-bridge-containment-windows
+
+      - name: Execute required Windows CI producers
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run --tier ci
+          --producer ci.agent-bridge-containment-windows
 
   watcher-native-fs:
     name: Watcher real filesystem (${{ matrix.os }})
@@ -139,3 +231,16 @@ jobs:
 
       - name: Run watcher rename-pairing evidence
         run: cargo test --locked -p deve_core --test watcher_rename_pairing -- --nocapture --test-threads=1
+
+  check:
+    if: ${{ always() }}
+    needs:
+      - core-checks
+      - ci-acceptance-linux
+      - ci-acceptance-windows
+      - watcher-native-fs
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fail closed unless every required CI job succeeded
+        if: ${{ needs.core-checks.result != 'success' || needs.ci-acceptance-linux.result != 'success' || needs.ci-acceptance-windows.result != 'success' || needs.watcher-native-fs.result != 'success' }}
+        run: exit 1

@@ -95,6 +95,10 @@ const PROCESS_RUNTIME_ALLOWED: &[&str] = &[
 ];
 
 const ANDROID_SELF_RETIRE_ADAPTER: &str = "apps/mobile/src/tauri_entry/backend_recovery/android.rs";
+const PREFERENCE_PROCESS_ID_OBSERVATION_ALLOWED: &[&str] = &[
+    "apps/desktop/src/native_backend.rs",
+    "apps/mobile/src/native_backend.rs",
+];
 
 pub fn run() -> Result<()> {
     let ctx = BaselineContext::new(LABEL)?;
@@ -249,6 +253,8 @@ fn check_no_windows_sys_dependency_leak(root: &Path) -> Result<()> {
     )? {
         if line.rel == "crates/core/src/utils/fs.rs"
             || line.rel == "crates/core/src/utils/fs/identity.rs"
+            || line.rel == "crates/core/src/utils/fs/atomic_replace_windows.rs"
+            || line.rel == "crates/core/src/utils/fs/owner_only.rs"
             || line.rel == "crates/core/src/utils/fs/quarantine/windows.rs"
             || line.rel == "crates/core/src/remote_import/artifact/durability.rs"
             || line.rel == "crates/core/tests/watcher_windows_overflow_support/mod.rs"
@@ -304,6 +310,11 @@ fn check_no_process_runtime_leak(root: &Path) -> Result<()> {
             continue;
         }
         if PROCESS_RUNTIME_ALLOWED.contains(&line.rel.as_str()) {
+            continue;
+        }
+        if PREFERENCE_PROCESS_ID_OBSERVATION_ALLOWED.contains(&line.rel.as_str())
+            && line.text.trim() == "std::process::id()"
+        {
             continue;
         }
         return fail(format!(

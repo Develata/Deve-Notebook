@@ -517,6 +517,13 @@
     - contract_assert: every_required_receipt_has_exactly_one_typed_producer true
     - contract_assert: every_required_ci_test_or_script_has_exactly_one_typed_producer true
     - contract_assert: ci_tier_executes_nonempty_producer_set_without_receipts true
+    - contract_assert: ci_producers_are_explicitly_partitioned_once_by_compatible_host true
+    - contract_assert: ci_producer_shards_preserve_complete_dependencies true
+    - contract_assert: ci_workflow_rejects_unfiltered_multi_host_execution true
+    - contract_assert: ci_workflow_rejects_conditional_tolerated_or_inert_producer_commands true
+    - contract_assert: ci_workflow_rejects_matrix_custom_shell_or_step_deadline true
+    - contract_assert: stable_check_fan_in_rejects_every_non_success_result true
+    - contract_assert: ci_shard_deadlines_cover_producer_cleanup_and_build_margin true
     - contract_assert: producer_shell_command_strings_forbidden true
     - contract_assert: producer_bound_environment_is_public_non_secret true
     - contract_assert: producer_timeout_failure_writes_failed_receipts true

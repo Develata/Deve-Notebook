@@ -5,7 +5,7 @@
 //!   - 18_release#artifact-identity-and-integrity
 //!   - 18_release#release-versioning
 
-mod toolchain;
+pub(crate) mod toolchain;
 mod workflow;
 
 use crate::context::BaselineContext;

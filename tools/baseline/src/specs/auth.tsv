@@ -1,7 +1,7 @@
 contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-013
 contains	docs/acceptance-cases/08_auth.md	cargo test -p deve_cli identity_key_permissions -- --nocapture
 contains	apps/cli/src/server/security.rs	enforce_owner_only_identity_key
-contains	apps/cli/src/server/security.rs	permissions.set_mode(0o600)
+contains	crates/core/src/utils/fs.rs	file.set_permissions(std::fs::Permissions::from_mode(0o600))
 contains	apps/cli/src/server/security.rs	identity_key_permissions_are_corrected_to_owner_only
 contains	apps/cli/src/server/security.rs	identity_key_permissions_fail_closed_for_non_file
 contains	crates/core/src/security/auth/config.rs	ERROR: Production mode requires AUTH_SECRET and AUTH_PASS

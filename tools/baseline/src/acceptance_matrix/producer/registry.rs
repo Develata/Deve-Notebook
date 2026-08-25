@@ -2,6 +2,7 @@
 //! plan_ref:
 //!   - 18_release#first-tag-acceptance-matrix
 
+mod ci_workflow;
 mod producer_validation;
 
 pub(super) use self::producer_validation::contract_fingerprint;
@@ -81,6 +82,7 @@ fn validate(root: &Path, rows: &[MatrixRow], registry: &ProducerRegistry) -> Res
         }
     }
     validate_dependencies(registry, &producer_ids)?;
+    ci_workflow::validate(root, registry)?;
     let missing: Vec<_> = required
         .into_iter()
         .filter(|evidence_id| !owners.contains_key(evidence_id))

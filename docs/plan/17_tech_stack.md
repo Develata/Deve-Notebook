@@ -136,10 +136,13 @@ Gate 状态：
   必须使用 `CREATE_SUSPENDED -> AssignProcessToJobObject -> ResumeThread`，不得让后端在归组前运行。该
   process-adapter 用法不得进入 workspace root、core、cli、web 或 mobile。
 - Core host filesystem authority **MAY** 在 `cfg(windows)` 下独立使用 `windows-sys`，但只限
-  `utils/fs.rs`、`utils/fs/identity.rs`、`utils/fs/quarantine/windows.rs` 与
-  `remote_import/artifact/durability.rs` 的 handle-bound identity、no-replace quarantine、reparse 防护与
-  durable rename；dependency feature 必须精确限制为 `Wdk_Storage_FileSystem`、`Win32_Foundation`、
-  `Win32_Storage_FileSystem`、`Win32_System_IO`，不得借此引入 UI、process、network 或 credential authority。
+  `utils/fs.rs`、`utils/fs/identity.rs`、`utils/fs/atomic_replace_windows.rs`、
+  `utils/fs/owner_only.rs`、`utils/fs/quarantine/windows.rs` 与
+  `remote_import/artifact/durability.rs` 的 handle-bound identity、protected owner-only DACL、
+  no-replace quarantine、reparse 防护与 durable rename；dependency feature 必须精确限制为
+  `Wdk_Storage_FileSystem`、`Win32_Foundation`、`Win32_Security`、`Win32_Security_Authorization`、
+  `Win32_Storage_FileSystem`、`Win32_System_IO`、`Win32_System_SystemServices`、
+  `Win32_System_Threading`，不得借此引入 UI、process、network 或其它 credential authority。
 - `LocalBackend` 可以让本机 service/core 获得 local full peer authority，但 native shell crate 仍不得直接写 ledger、Projection Workspace、source-control、search、`.git` 或 `.notegit`。
 - 默认 release、target-host package、Android/iOS package execution 不得被解释为 store/physical-device release ready；native 本地后端可用性只表示 LocalBackend peer 语义通过对应 smoke，不代表签名/商店/物理设备发布就绪。
 

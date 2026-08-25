@@ -6,9 +6,10 @@ use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::Path;
 
-const EXACT_TOOLCHAIN: &str = "1.97.0";
+pub(crate) const EXACT_TOOLCHAIN: &str = "1.97.0";
 const WORKSPACE_MSRV: &str = "1.97";
-const RUST_ACTION_REF: &str = "dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88";
+pub(crate) const RUST_ACTION_REF: &str =
+    "dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88";
 const CARGO_AUDIT_VERSION_PROBE: &str =
     r#"run: test "$(cargo-audit --version)" = "cargo-audit 0.22.2""#;
 const WORKFLOWS: [&str; 7] = [

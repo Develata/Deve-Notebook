@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-08-12`
+- `Last Review`: `2026-08-25`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `rust-toolchain.toml`, `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -444,6 +444,17 @@ test 仍保持独立 authority，CI evidence producer 不得用一个笼统的�
 尚未绑定的 case evidence。Cargo test step 必须显式选择 `--lib`、`--bin <name>` 或
 `--test <name>`，禁止为一个函数 selector 反复枚举无关 integration target。若受控 baseline script
 已经执行完整 selector group，producer 必须以该 script 作为唯一命令入口，不得先逐条执行再重复运行 script。
+当 `ci` producer 跨越多个 `host_os` 时，`check.yml` 必须把执行命令拆到宿主兼容的并行 job，且每条
+执行命令必须用显式 `--producer` filter 绑定完整依赖闭包；不得在单一宿主上无过滤执行整个 `ci` tier。
+当前 registry 中每个 `ci` producer 必须恰好投影到一个兼容 job；未知 producer、漏投影、重复投影、
+宿主不匹配或依赖被拆断都必须由结构 gate fail-closed。各 job 可以并行，但 workflow 的最终状态仍是
+稳定 `check` context 的唯一 fan-in；任一 shard 的 skipped、not-run 或 failure 都不得被其它 shard 的
+成功掩盖。结构 gate 必须解析 workflow YAML，只承认无条件、不可 `continue-on-error`、符合受限 argv
+语法的真实 `run` scalar；step name、comment、env 或复合 shell 文本不得冒充执行。producer job 不得
+通过 matrix 重复展开，也不得以 job defaults、自定义 shell、step deadline 或可覆盖执行语义的环境注入
+绕开 canonical command。每个 shard 的 workflow deadline 必须覆盖串行 producer deadlines 之和；若未来
+runner 改为有证据绑定的并行 DAG，则必须覆盖最长依赖路径，并继续包含 finally cleanup 与固定构建余量，
+不能由 Actions 先行强杀合法 producer。
 `full` 增加 Docker/browser
 业务闭环，`target-host` 选择当前宿主的 native/mobile producers，`tag-ready` 用于候选证据生产
 与跨平台缺口预检，不能把单一宿主误报为覆盖所有平台。
