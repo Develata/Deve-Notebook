@@ -595,6 +595,7 @@
     - receipt: receipts/smoke.remote-import.manage.json from producer `docker.remote-import-browser`
   assertions:
     - cli_assert: remote_import_refresh_uses_sealed_blobs_only true
+    - api_assert: concurrent_identical_remote_import_refreshes_share_one_exact_candidate_revision true
     - cli_assert: remote_import_discard_and_repair_are_explicit true
     - cli_assert: remote_import_repair_defaults_to_dry_run true
     - api_assert: cleanup_pending_is_never_auto_pruned true

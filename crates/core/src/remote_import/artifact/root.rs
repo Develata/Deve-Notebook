@@ -189,9 +189,10 @@ impl RemoteImportArtifactRoot {
         for entry in std::fs::read_dir(&self.path)? {
             let entry = entry?;
             let name = entry.file_name().to_string_lossy().into_owned();
-            let file_type = entry.file_type()?;
-            let metadata = std::fs::symlink_metadata(entry.path())?;
-            if !file_type.is_dir() || file_type.is_symlink() || is_reparse(&metadata) {
+            let Some(metadata) = metadata_if_present(&entry.path())? else {
+                continue;
+            };
+            if !metadata.is_dir() || metadata.file_type().is_symlink() || is_reparse(&metadata) {
                 entries.push(ArtifactEntry::Unknown(name));
                 continue;
             }
@@ -221,7 +222,9 @@ impl RemoteImportArtifactRoot {
         for entry in std::fs::read_dir(&candidates)? {
             let entry = entry?;
             let name = entry.file_name().to_string_lossy().into_owned();
-            let metadata = std::fs::symlink_metadata(entry.path())?;
+            let Some(metadata) = metadata_if_present(&entry.path())? else {
+                continue;
+            };
             if !metadata.is_file() || metadata.file_type().is_symlink() || is_reparse(&metadata) {
                 entries.push(CandidateArtifactEntry::Unknown(name));
                 continue;
@@ -253,7 +256,9 @@ impl RemoteImportArtifactRoot {
         for entry in std::fs::read_dir(&session)? {
             let entry = entry?;
             let name = entry.file_name().to_string_lossy().into_owned();
-            let metadata = std::fs::symlink_metadata(entry.path())?;
+            let Some(metadata) = metadata_if_present(&entry.path())? else {
+                continue;
+            };
             let ordinary_file =
                 metadata.is_file() && !metadata.file_type().is_symlink() && !is_reparse(&metadata);
             let ordinary_dir =
@@ -264,7 +269,9 @@ impl RemoteImportArtifactRoot {
                     for blob in std::fs::read_dir(entry.path())? {
                         let blob = blob?;
                         let blob_name = blob.file_name().to_string_lossy().into_owned();
-                        let blob_metadata = std::fs::symlink_metadata(blob.path())?;
+                        let Some(blob_metadata) = metadata_if_present(&blob.path())? else {
+                            continue;
+                        };
                         if blob_metadata.is_file()
                             && !blob_metadata.file_type().is_symlink()
                             && !is_reparse(&blob_metadata)
@@ -322,12 +329,38 @@ fn validate_optional_directory(path: &Path) -> RemoteImportResult<bool> {
     }
 }
 
+fn metadata_if_present(path: &Path) -> RemoteImportResult<Option<std::fs::Metadata>> {
+    match std::fs::symlink_metadata(path) {
+        Ok(metadata) => Ok(Some(metadata)),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => Ok(None),
+        Err(error) => Err(error.into()),
+    }
+}
+
 fn validate_tree(path: &Path) -> RemoteImportResult<()> {
     let mut visited = 0usize;
     validate_tree_inner(path, 0, &mut visited)
 }
 
 fn validate_tree_inner(path: &Path, depth: usize, visited: &mut usize) -> RemoteImportResult<()> {
+    admit_tree_node(path, depth, visited)?;
+    let metadata = std::fs::symlink_metadata(path)?;
+    validate_tree_metadata(path, metadata, depth, visited)
+}
+
+fn validate_tree_child(path: &Path, depth: usize, visited: &mut usize) -> RemoteImportResult<()> {
+    admit_tree_node(path, depth, visited)?;
+    // Directory enumeration is a point-in-time observation. A child may be
+    // atomically published or cleaned before its metadata is read; an absent
+    // object cannot introduce a symlink/reparse escape. Exact authority files
+    // are still opened and identity-checked by their dedicated readers.
+    let Some(metadata) = metadata_if_present(path)? else {
+        return Ok(());
+    };
+    validate_tree_metadata(path, metadata, depth, visited)
+}
+
+fn admit_tree_node(path: &Path, depth: usize, visited: &mut usize) -> RemoteImportResult<()> {
     *visited = visited.saturating_add(1);
     if *visited > MAX_ARTIFACT_TREE_NODES || depth > MAX_ARTIFACT_TREE_DEPTH {
         return Err(RemoteImportError::UnsafeArtifactRoot(format!(
@@ -335,7 +368,15 @@ fn validate_tree_inner(path: &Path, depth: usize, visited: &mut usize) -> Remote
             path
         )));
     }
-    let metadata = std::fs::symlink_metadata(path)?;
+    Ok(())
+}
+
+fn validate_tree_metadata(
+    path: &Path,
+    metadata: std::fs::Metadata,
+    depth: usize,
+    visited: &mut usize,
+) -> RemoteImportResult<()> {
     if metadata.file_type().is_symlink() || is_reparse(&metadata) {
         return Err(RemoteImportError::UnsafeArtifactRoot(format!(
             "symlink/reparse object is forbidden in artifact tree: {:?}",
@@ -344,7 +385,7 @@ fn validate_tree_inner(path: &Path, depth: usize, visited: &mut usize) -> Remote
     }
     if metadata.is_dir() {
         for entry in std::fs::read_dir(path)? {
-            validate_tree_inner(&entry?.path(), depth + 1, visited)?;
+            validate_tree_child(&entry?.path(), depth + 1, visited)?;
         }
     } else if !metadata.is_file() {
         return Err(RemoteImportError::UnsafeArtifactRoot(format!(
@@ -382,4 +423,25 @@ fn is_reparse(metadata: &std::fs::Metadata) -> bool {
 #[cfg(not(windows))]
 fn is_reparse(_metadata: &std::fs::Metadata) -> bool {
     false
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn tree_validation_tolerates_child_removed_after_directory_enumeration() {
+        let directory = tempfile::tempdir().expect("artifact directory");
+        let child = directory.path().join(".2.preparing-test");
+        std::fs::write(&child, b"candidate").expect("temporary candidate");
+        std::fs::remove_file(&child).expect("publish temporary candidate");
+        let mut visited = 0;
+
+        validate_tree_child(&child, 1, &mut visited)
+            .expect("a vanished enumerated child is absent, not an unsafe artifact");
+        let error = validate_tree(&child).expect_err("the exact tree root must still exist");
+        assert!(
+            matches!(error, RemoteImportError::Io(ref error) if error.kind() == std::io::ErrorKind::NotFound)
+        );
+    }
 }
