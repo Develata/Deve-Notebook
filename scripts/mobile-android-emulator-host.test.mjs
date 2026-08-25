@@ -14,6 +14,15 @@ const nativeTargetHostWorkflow = read("../.github/workflows/native-target-host.y
 const emulatorHostPreparation = read("./prepare-android-emulator-host.sh");
 const producerRegistry = JSON.parse(read("../docs/registry/acceptance-producers.json"));
 
+const workflowJob = (workflow, jobId) => {
+  const marker = `  ${jobId}:`;
+  const start = workflow.indexOf(marker);
+  assert.notEqual(start, -1, `workflow must define ${jobId}`);
+  const remainder = workflow.slice(start);
+  const nextJob = remainder.slice(marker.length).search(/\n  [a-z0-9-]+:\n/);
+  return nextJob === -1 ? remainder : remainder.slice(0, marker.length + nextJob);
+};
+
 test("emulator gate pins the exact stable emulator build fail-closed", () => {
   assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_VERSION="36\.6\.11\.0"/);
   assert.match(emulatorPin, /ANDROID_EMULATOR_PIN_BUILD_ID="15507667"/);
@@ -48,15 +57,20 @@ test("emulator gate pins the exact stable emulator build fail-closed", () => {
 });
 
 test("Android target-host workflows share the pinned emulator host preparation", () => {
-  const mobileAndroidJob = releaseNativeWorkflow.slice(releaseNativeWorkflow.indexOf("  mobile-android:"));
-  const nativeAndroidJob = nativeTargetHostWorkflow.slice(
-    nativeTargetHostWorkflow.indexOf("  mobile-android:"),
-    nativeTargetHostWorkflow.indexOf("\n  mobile-ios:"),
+  for (const jobId of ["mobile-android-local-journey", "mobile-android-remote-journey"]) {
+    assert.match(
+      workflowJob(releaseNativeWorkflow, jobId),
+      /run: bash scripts\/prepare-android-emulator-host\.sh/,
+    );
+  }
+  assert.match(
+    workflowJob(nativeTargetHostWorkflow, "mobile-android-journey"),
+    /run: bash scripts\/prepare-android-emulator-host\.sh/,
   );
-  assert.ok(mobileAndroidJob.startsWith("  mobile-android:"));
-  assert.ok(nativeAndroidJob.startsWith("  mobile-android:"));
-  assert.match(mobileAndroidJob, /run: bash scripts\/prepare-android-emulator-host\.sh/);
-  assert.match(nativeAndroidJob, /if: \$\{\{ inputs\.run_mobile_android_package_build && inputs\.run_mobile_android_install_startup_smoke \}\}\n        run: bash scripts\/prepare-android-emulator-host\.sh/);
+  assert.match(
+    workflowJob(nativeTargetHostWorkflow, "mobile-android"),
+    /if: \$\{\{ inputs\.run_mobile_android_package_build && inputs\.run_mobile_android_install_startup_smoke \}\}\n        run: bash scripts\/prepare-android-emulator-host\.sh/,
+  );
   assert.match(emulatorHostPreparation, /set -euo pipefail/);
   assert.match(emulatorHostPreparation, /sudo apt-get update/);
   assert.match(emulatorHostPreparation, /sudo apt-get install -y --no-install-recommends libpulse0/);
