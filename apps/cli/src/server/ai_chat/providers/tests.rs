@@ -146,4 +146,46 @@ fn openai_responses_completion_requires_validated_response_output() {
         ),
         Ok(ParsedSseEvent::Finished(reason)) if reason == "completed"
     ));
+    assert!(
+        openai_responses::parse(
+            r#"{"type":"response.completed","response":{"status":"completed","output":[{"type":"message","content":[{"type":"output_text"}]}]}}"#
+        )
+        .is_err()
+    );
+    assert!(
+        openai_responses::parse(
+            r#"{"type":"response.completed","response":{"status":"completed","output":[{"type":"message","content":[{"type":"output_text","text":42}]}]}}"#
+        )
+        .is_err()
+    );
+    assert!(
+        openai_responses::parse(
+            r#"{"type":"response.completed","response":{"status":"completed","output":[]}}"#
+        )
+        .is_err()
+    );
+    assert!(
+        openai_responses::parse(
+            r#"{"type":"response.completed","response":{"status":"completed","output":[{"type":"message","content":[]}]}}"#
+        )
+        .is_err()
+    );
+    assert!(
+        openai_responses::parse(
+            r#"{"type":"response.completed","response":{"status":"completed","output":[{"type":"function_call"}]}}"#
+        )
+        .is_err()
+    );
+    assert!(
+        openai_responses::parse(
+            r#"{"type":"response.completed","response":{"status":"completed","output":[{"type":"function_call"},{"type":"message","content":[{"type":"output_text","text":"done"}]}]}}"#
+        )
+        .is_err()
+    );
+    assert!(
+        openai_responses::parse(
+            r#"{"type":"response.content_part.added","part":{"type":"output_text"}}"#
+        )
+        .is_err()
+    );
 }

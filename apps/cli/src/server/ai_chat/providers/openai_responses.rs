@@ -112,7 +112,16 @@ fn classify_content_part(part: Option<&Value>) -> Result<ParsedSseEvent, String>
         .and_then(|part| part.get("type"))
         .and_then(Value::as_str)
     {
-        Some("output_text") => Ok(ParsedSseEvent::Empty),
+        Some("output_text") => {
+            if part
+                .and_then(|part| part.get("text"))
+                .is_some_and(Value::is_string)
+            {
+                Ok(ParsedSseEvent::Empty)
+            } else {
+                Err("OpenAI Responses output_text is missing string text".to_string())
+            }
+        }
         Some("refusal") => Err("OpenAI Responses refusal is unsupported".to_string()),
         Some(_) | None => Err("OpenAI Responses content part type is unsupported".to_string()),
     }
@@ -130,17 +139,34 @@ fn validate_completed_response(event: &Value) -> Result<(), String> {
         .get("output")
         .and_then(Value::as_array)
         .ok_or_else(|| "OpenAI Responses completion output is missing".to_string())?;
+    let mut saw_message = false;
+    let mut saw_output_text = false;
     for item in output {
-        classify_output_item(Some(item))?;
+        if !matches!(classify_output_item(Some(item))?, ParsedSseEvent::Empty) {
+            return Err("OpenAI Responses completion contains unsupported output item".to_string());
+        }
         if item.get("type").and_then(Value::as_str) == Some("message") {
+            saw_message = true;
             let content = item
                 .get("content")
                 .and_then(Value::as_array)
                 .ok_or_else(|| "OpenAI Responses message content is missing".to_string())?;
+            if content.is_empty() {
+                return Err("OpenAI Responses message content is empty".to_string());
+            }
             for part in content {
                 classify_content_part(Some(part))?;
+                if part.get("type").and_then(Value::as_str) == Some("output_text") {
+                    saw_output_text = true;
+                }
             }
         }
+    }
+    if !saw_message {
+        return Err("OpenAI Responses completion is missing message output".to_string());
+    }
+    if !saw_output_text {
+        return Err("OpenAI Responses completion is missing output_text".to_string());
     }
     Ok(())
 }

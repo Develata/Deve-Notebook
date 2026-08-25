@@ -102,7 +102,12 @@ async fn handle_text(
             broadcast_filter.sync_from_session(session);
         }
         Err(e) => {
-            tracing::warn!("Failed to parse client message: {}", text);
+            let diagnostic = malformed_text_diagnostic(&e, text.len());
+            tracing::warn!(
+                error_category = diagnostic.error_category,
+                frame_bytes = diagnostic.frame_bytes,
+                "Failed to parse client message"
+            );
             ch.send_protocol_error_with_scope_nonce(
                 invalid_frame_message(&e, "Invalid JSON client message"),
                 browser_scope_nonce(session),
@@ -142,6 +147,23 @@ fn browser_scope_nonce(session: &WsSession) -> Option<u64> {
 
 fn invalid_client_message(detail: impl Into<String>) -> ServerError {
     ServerError::with_detail(ServerErrorCode::RequestFailed, detail)
+}
+
+#[derive(Debug, PartialEq, Eq)]
+struct WsParseDiagnostic {
+    error_category: &'static str,
+    frame_bytes: usize,
+}
+
+fn malformed_text_diagnostic(error: &ProtocolFrameError, frame_bytes: usize) -> WsParseDiagnostic {
+    let error_category = match error {
+        ProtocolFrameError::UnsupportedVersion { .. } => "unsupported_version",
+        ProtocolFrameError::Decode(_) => "decode",
+    };
+    WsParseDiagnostic {
+        error_category,
+        frame_bytes,
+    }
 }
 
 fn invalid_frame_message(error: &ProtocolFrameError, fallback: &'static str) -> ServerError {

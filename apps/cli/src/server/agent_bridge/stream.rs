@@ -3,9 +3,21 @@
 //!
 use crate::server::channel::DualChannel;
 use deve_core::protocol::ServerMessage;
+use std::io;
 use std::time::Duration;
+use tokio::io::{AsyncBufRead, AsyncBufReadExt};
+use tokio::process::{Child, ChildStdout};
+use tokio::time::Instant;
 
 const MAX_AGENT_OUTPUT_BYTES: usize = 64 * 1024;
+const CHILD_CLEANUP_TIMEOUT: Duration = Duration::from_secs(1);
+
+#[derive(Debug, PartialEq, Eq)]
+enum BoundedLine {
+    Eof,
+    Line(usize),
+    OutputLimit,
+}
 
 pub(super) async fn spawn_and_stream(
     cli_path: &str,
@@ -15,7 +27,6 @@ pub(super) async fn spawn_and_stream(
     req_id: &str,
 ) -> anyhow::Result<()> {
     use std::process::Stdio;
-    use tokio::io::AsyncBufReadExt;
 
     let mut child = tokio::process::Command::new(cli_path)
         .env_clear()
@@ -36,29 +47,55 @@ pub(super) async fn spawn_and_stream(
         .stdout
         .take()
         .ok_or_else(|| anyhow::anyhow!("Failed to capture stdout"))?;
+    stream_child(child, stdout, timeout_ms, ch, req_id).await
+}
+
+async fn stream_child(
+    mut child: Child,
+    stdout: ChildStdout,
+    timeout_ms: u64,
+    ch: &DualChannel,
+    req_id: &str,
+) -> anyhow::Result<()> {
     let mut reader = tokio::io::BufReader::new(stdout);
-    let mut line = String::new();
-    let deadline = tokio::time::sleep(Duration::from_millis(timeout_ms.max(1)));
+    let mut line = Vec::with_capacity(MAX_AGENT_OUTPUT_BYTES);
+    let deadline_at = Instant::now() + Duration::from_millis(timeout_ms.max(1));
+    let deadline = tokio::time::sleep_until(deadline_at);
     tokio::pin!(deadline);
     let mut output_bytes = 0usize;
 
     loop {
-        line.clear();
         tokio::select! {
             _ = &mut deadline => {
-                let _ = child.kill().await;
+                terminate_child(&mut child).await;
                 return Err(anyhow::anyhow!("Agent CLI timeout"));
             }
-            read = reader.read_line(&mut line) => {
+            read = read_line_bounded(&mut reader, &mut line) => {
                 match read {
-                    Ok(0) => break,
-                    Ok(_) => {
-                        let clean = strip_ansi(&line);
-                        output_bytes = output_bytes.saturating_add(clean.len());
-                        if output_bytes > MAX_AGENT_OUTPUT_BYTES {
-                            let _ = child.kill().await;
+                    Ok(BoundedLine::Eof) => break,
+                    Ok(BoundedLine::OutputLimit) => {
+                        terminate_child(&mut child).await;
+                        return Err(anyhow::anyhow!("Agent CLI output limit exceeded"));
+                    }
+                    Ok(BoundedLine::Line(raw_bytes)) => {
+                        if output_bytes
+                            .checked_add(raw_bytes)
+                            .is_none_or(|total| total > MAX_AGENT_OUTPUT_BYTES)
+                        {
+                            terminate_child(&mut child).await;
                             return Err(anyhow::anyhow!("Agent CLI output limit exceeded"));
                         }
+                        output_bytes += raw_bytes;
+                        let text = match std::str::from_utf8(&line) {
+                            Ok(text) => text,
+                            Err(err) => {
+                                let primary =
+                                    anyhow::anyhow!("Agent CLI stdout read error: {}", err);
+                                terminate_child(&mut child).await;
+                                return Err(primary);
+                            }
+                        };
+                        let clean = strip_ansi(text);
                         if !clean.trim().is_empty() {
                             ch.unicast(ServerMessage::ChatChunk {
                                 req_id: req_id.to_string(),
@@ -68,15 +105,27 @@ pub(super) async fn spawn_and_stream(
                         }
                     }
                     Err(err) => {
-                        tracing::warn!("Agent stdout read error: {:?}", err);
-                        break;
+                        let primary = anyhow::anyhow!("Agent CLI stdout read error: {}", err);
+                        terminate_child(&mut child).await;
+                        return Err(primary);
                     }
                 }
             }
         }
     }
 
-    let status = child.wait().await?;
+    let status = match tokio::time::timeout_at(deadline_at, child.wait()).await {
+        Ok(Ok(status)) => status,
+        Ok(Err(err)) => {
+            let primary = anyhow::anyhow!("Agent CLI wait error: {}", err);
+            terminate_child(&mut child).await;
+            return Err(primary);
+        }
+        Err(_) => {
+            terminate_child(&mut child).await;
+            return Err(anyhow::anyhow!("Agent CLI timeout"));
+        }
+    };
     if !status.success() {
         return Err(anyhow::anyhow!("Agent CLI exited with status: {}", status));
     }
@@ -87,6 +136,54 @@ pub(super) async fn spawn_and_stream(
         finish_reason: Some("stop".to_string()),
     });
     Ok(())
+}
+
+async fn read_line_bounded<R>(reader: &mut R, line: &mut Vec<u8>) -> io::Result<BoundedLine>
+where
+    R: AsyncBufRead + Unpin,
+{
+    line.clear();
+    loop {
+        let (take, terminated) = {
+            let buffer = reader.fill_buf().await?;
+            if buffer.is_empty() {
+                return Ok(if line.is_empty() {
+                    BoundedLine::Eof
+                } else {
+                    BoundedLine::Line(line.len())
+                });
+            }
+
+            let newline = buffer.iter().position(|byte| *byte == b'\n');
+            let take = newline.map_or(buffer.len(), |index| index + 1);
+            let Some(new_len) = line.len().checked_add(take) else {
+                return Ok(BoundedLine::OutputLimit);
+            };
+            if new_len > MAX_AGENT_OUTPUT_BYTES {
+                return Ok(BoundedLine::OutputLimit);
+            }
+            line.extend_from_slice(&buffer[..take]);
+            (take, newline.is_some())
+        };
+        reader.consume(take);
+        if terminated {
+            return Ok(BoundedLine::Line(line.len()));
+        }
+    }
+}
+
+async fn terminate_child(child: &mut Child) {
+    match tokio::time::timeout(CHILD_CLEANUP_TIMEOUT, child.kill()).await {
+        Ok(Ok(())) => {}
+        Ok(Err(err)) => tracing::warn!("Agent CLI cleanup kill failed: {}", err),
+        Err(_) => tracing::warn!("Agent CLI cleanup kill timed out"),
+    }
+
+    match tokio::time::timeout(CHILD_CLEANUP_TIMEOUT, child.wait()).await {
+        Ok(Ok(_)) => {}
+        Ok(Err(err)) => tracing::warn!("Agent CLI cleanup wait failed: {}", err),
+        Err(_) => tracing::warn!("Agent CLI cleanup wait timed out"),
+    }
 }
 
 fn strip_ansi(input: &str) -> String {
@@ -105,3 +202,7 @@ fn strip_ansi(input: &str) -> String {
     }
     out
 }
+
+#[cfg(test)]
+#[path = "stream_tests.rs"]
+mod tests;

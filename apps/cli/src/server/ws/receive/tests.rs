@@ -3,7 +3,10 @@
 //!
 //! WebSocket inbound message validation regression coverage.
 
-use super::{SocketFlow, browser_scope_nonce, handle_incoming_message, invalid_client_message};
+use super::{
+    SocketFlow, WsParseDiagnostic, browser_scope_nonce, handle_incoming_message,
+    invalid_client_message, malformed_text_diagnostic,
+};
 use crate::server::channel::DualChannel;
 use crate::server::security;
 use crate::server::tree_state::RepoTreeRegistry;
@@ -13,6 +16,7 @@ use axum::extract::ws::Message;
 use deve_core::config::SyncMode;
 use deve_core::ledger::RepoManager;
 use deve_core::models::PeerId;
+use deve_core::protocol::frame::ProtocolFrameError;
 use deve_core::protocol::{ServerErrorCode, ServerMessage};
 use deve_core::sync::repo_scoped::RepoScopedSyncEngine;
 use std::sync::Arc;
@@ -27,6 +31,24 @@ fn invalid_client_messages_use_structured_request_failed() {
     let error = invalid_client_message("Invalid JSON client message");
     assert_eq!(error.code, ServerErrorCode::RequestFailed);
     assert_eq!(error.detail.as_deref(), Some("Invalid JSON client message"));
+}
+
+#[test]
+fn malformed_text_diagnostic_excludes_payload_and_keeps_byte_length() {
+    let secret_payload = r#"{"api_key":"do-not-log","content":"private note"}"#;
+    let diagnostic = malformed_text_diagnostic(
+        &ProtocolFrameError::Decode("serde detail must not be logged".to_string()),
+        secret_payload.len(),
+    );
+
+    assert_eq!(
+        diagnostic,
+        WsParseDiagnostic {
+            error_category: "decode",
+            frame_bytes: secret_payload.len(),
+        }
+    );
+    assert!(!format!("{diagnostic:?}").contains(secret_payload));
 }
 
 #[test]
