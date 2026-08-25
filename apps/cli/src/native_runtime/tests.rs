@@ -109,3 +109,16 @@ fn native_loopback_listener_exact_rejects_occupied_port() {
 
     assert_eq!(error.kind(), std::io::ErrorKind::AddrInUse);
 }
+
+#[test]
+fn native_high_level_loopback_shutdown_reuses_transport_deadline() {
+    let source = include_str!("../native_runtime.rs")
+        .split("#[cfg(test)]")
+        .next()
+        .expect("native runtime source");
+
+    assert!(source.contains("RuntimeShutdownDeadline::default()"));
+    assert!(source.contains("serve_with_shutdown_deadline"));
+    assert!(source.contains("shutdown_until"));
+    assert!(!source.contains("runtime.shutdown(Duration::from_secs(5))"));
+}

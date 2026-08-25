@@ -9,12 +9,12 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 
 #[derive(Clone, Default)]
-pub(super) struct RuntimeShutdownDeadline {
+pub(crate) struct RuntimeShutdownDeadline {
     deadline: Arc<Mutex<Option<tokio::time::Instant>>>,
 }
 
 impl RuntimeShutdownDeadline {
-    pub(super) fn begin(&self, timeout: Duration) -> tokio::time::Instant {
+    pub(crate) fn begin(&self, timeout: Duration) -> tokio::time::Instant {
         self.begin_at(tokio::time::Instant::now(), timeout)
     }
 

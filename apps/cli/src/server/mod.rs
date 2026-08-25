@@ -49,7 +49,10 @@ pub use launch::ServerLaunchOptions;
 pub(crate) use runtime::repo_lifecycle_job_runtime::{
     RemovalRepairToken, RepoLifecycleJobError, RepoRemovalRepairInspection,
 };
-pub(crate) use start::{EmbeddedServerRuntime, ServerTransportRuntime, ServerTransportServeError};
+pub(crate) use start::{
+    EmbeddedServerRuntime, RuntimeShutdownDeadline, SERVER_RUNTIME_SHUTDOWN_TIMEOUT,
+    ServerTransportRuntime, ServerTransportServeError,
+};
 #[allow(unused_imports)]
 pub use start::{start_plugin_host_only, start_server_with_bound_listener};
 pub use state::AppState;

@@ -21,12 +21,12 @@ use std::time::Duration;
 mod shutdown_signal;
 mod transport_shutdown;
 
+pub(crate) use transport_shutdown::RuntimeShutdownDeadline;
 use transport_shutdown::{
-    RuntimeShutdownDeadline, deadline_after, remaining_shutdown_budget,
-    serve_router_until_shutdown_with_deadline,
+    deadline_after, remaining_shutdown_budget, serve_router_until_shutdown_with_deadline,
 };
 
-const SERVER_RUNTIME_SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
+pub(crate) const SERVER_RUNTIME_SHUTDOWN_TIMEOUT: Duration = Duration::from_secs(5);
 
 #[derive(Clone)]
 pub(crate) struct ServerTransportRuntime {
@@ -184,7 +184,10 @@ impl EmbeddedServerRuntime {
         self.shutdown_until(deadline_after(timeout)).await
     }
 
-    async fn shutdown_until(mut self, deadline: tokio::time::Instant) -> anyhow::Result<()> {
+    pub(crate) async fn shutdown_until(
+        mut self,
+        deadline: tokio::time::Instant,
+    ) -> anyhow::Result<()> {
         let background_result = match self.background_tasks.take() {
             Some(tasks) => {
                 tasks
@@ -251,25 +254,7 @@ fn combine_runtime_shutdown_results(
 }
 
 impl ServerTransportRuntime {
-    pub(crate) async fn serve<F>(
-        &self,
-        listener: tokio::net::TcpListener,
-        launch: ServerLaunchOptions,
-        shutdown: F,
-    ) -> Result<(), ServerTransportServeError>
-    where
-        F: Future<Output = ()> + Send + 'static,
-    {
-        self.serve_with_shutdown_deadline(
-            listener,
-            launch,
-            shutdown,
-            RuntimeShutdownDeadline::default(),
-        )
-        .await
-    }
-
-    async fn serve_with_shutdown_deadline<F>(
+    pub(crate) async fn serve_with_shutdown_deadline<F>(
         &self,
         listener: tokio::net::TcpListener,
         launch: ServerLaunchOptions,

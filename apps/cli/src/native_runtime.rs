@@ -6,7 +6,8 @@
 //! Native local backend assembly shared by Desktop and Mobile shells.
 
 use crate::server::{
-    EmbeddedServerRuntime, NativeLoopbackAuthMaterial, ServerLaunchOptions, ServerTransportRuntime,
+    EmbeddedServerRuntime, NativeLoopbackAuthMaterial, RuntimeShutdownDeadline,
+    SERVER_RUNTIME_SHUTDOWN_TIMEOUT, ServerLaunchOptions, ServerTransportRuntime,
     ServerTransportServeError,
 };
 use anyhow::Context;
@@ -208,10 +209,13 @@ where
     options.port = listener.port();
     let runtime = NativeEmbeddedServerRuntime::initialize(&options).await?;
     let transport = runtime.transport();
+    let shutdown_deadline = RuntimeShutdownDeadline::default();
     let serve_result = transport
-        .serve_with_listener_until_shutdown(options, listener, shutdown)
+        .serve_with_shutdown_deadline(options, listener, shutdown, shutdown_deadline.clone())
         .await;
-    let shutdown_result = runtime.shutdown(Duration::from_secs(5)).await;
+    let shutdown_result = runtime
+        .shutdown_until(shutdown_deadline.begin(SERVER_RUNTIME_SHUTDOWN_TIMEOUT))
+        .await;
     match (serve_result, shutdown_result) {
         (Ok(()), Ok(())) => Ok(()),
         (Err(error), Ok(())) => Err(error.into()),
@@ -267,14 +271,40 @@ impl NativeEmbeddedServerRuntime {
         };
         runtime.shutdown(timeout).await
     }
+
+    async fn shutdown_until(mut self, deadline: tokio::time::Instant) -> anyhow::Result<()> {
+        let Some(runtime) = self.runtime.take() else {
+            return Ok(());
+        };
+        runtime.shutdown_until(deadline).await
+    }
 }
 
 impl NativeEmbeddedTransportRuntime {
     pub async fn serve_with_listener_until_shutdown<F>(
         &self,
+        options: NativeLocalBackendOptions,
+        listener: NativeLoopbackListener,
+        shutdown: F,
+    ) -> Result<(), NativeEmbeddedTransportError>
+    where
+        F: std::future::Future<Output = ()> + Send + 'static,
+    {
+        self.serve_with_shutdown_deadline(
+            options,
+            listener,
+            shutdown,
+            RuntimeShutdownDeadline::default(),
+        )
+        .await
+    }
+
+    async fn serve_with_shutdown_deadline<F>(
+        &self,
         mut options: NativeLocalBackendOptions,
         listener: NativeLoopbackListener,
         shutdown: F,
+        shutdown_deadline: RuntimeShutdownDeadline,
     ) -> Result<(), NativeEmbeddedTransportError>
     where
         F: std::future::Future<Output = ()> + Send + 'static,
@@ -285,7 +315,12 @@ impl NativeEmbeddedTransportRuntime {
             .context("Failed to prepare native loopback listener")
             .map_err(NativeEmbeddedTransportError::before_serve)?;
         self.transport
-            .serve(listener, native_server_launch_options(&options), shutdown)
+            .serve_with_shutdown_deadline(
+                listener,
+                native_server_launch_options(&options),
+                shutdown,
+                shutdown_deadline,
+            )
             .await
             .map_err(NativeEmbeddedTransportError::from)
     }
