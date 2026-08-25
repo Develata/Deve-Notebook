@@ -1,8 +1,9 @@
 {
-  "schema": 2,
+  "schema": 3,
   "producers": [
     {
       "producer_id": "ci.native-ipc-isolation",
+      "candidate_required": false,
       "evidence_ids": [
         "smoke.auth-native-ipc-isolation"
       ],
@@ -42,6 +43,7 @@
     },
     {
       "producer_id": "ci.diff-projection",
+      "candidate_required": false,
       "evidence_ids": [
         "test.core.diff-projection",
         "test.web.diff-projection"
@@ -106,6 +108,7 @@
     },
     {
       "producer_id": "network.ws-f4-v6",
+      "candidate_required": true,
       "evidence_ids": [
         "smoke.network.ws-f4-v6"
       ],
@@ -208,6 +211,7 @@
     },
     {
       "producer_id": "ci.document-create-idempotence",
+      "candidate_required": false,
       "evidence_ids": [
         "test.core.document-create",
         "test.cli.document-create",
@@ -287,6 +291,7 @@
     },
     {
       "producer_id": "ci.native-ai-provider-settings",
+      "candidate_required": false,
       "evidence_ids": [
         "test.ai-011",
         "test.set-009"
@@ -335,6 +340,7 @@
     },
     {
       "producer_id": "ci.agent-bridge-process-tree-unix",
+      "candidate_required": false,
       "evidence_ids": [
         "test.ai-012-unix"
       ],
@@ -365,6 +371,7 @@
     },
     {
       "producer_id": "ci.agent-bridge-containment-windows",
+      "candidate_required": false,
       "evidence_ids": [
         "test.ai-012-windows"
       ],
@@ -394,6 +401,7 @@
     },
     {
       "producer_id": "ci.plugin-host-lifecycle",
+      "candidate_required": false,
       "evidence_ids": [
         "test.plug-004"
       ],
@@ -425,6 +433,7 @@
     },
     {
       "producer_id": "ci.projection-recovery",
+      "candidate_required": false,
       "evidence_ids": [
         "test.cli.critical-delivery-order",
         "test.cli.repo-mutation-publication",
@@ -489,6 +498,7 @@
     },
     {
       "producer_id": "ci.storage-browser-boundaries",
+      "candidate_required": false,
       "evidence_ids": [
         "script.browser-prefs-boundary",
         "test.core.materialize-projection",
@@ -608,6 +618,7 @@
     },
     {
       "producer_id": "ci.storage-repository-cases",
+      "candidate_required": false,
       "evidence_ids": [
         "script.storage-repo-baseline",
         "test.case.store-002",
@@ -641,6 +652,7 @@
     },
     {
       "producer_id": "cli.repo-alias-transfer",
+      "candidate_required": true,
       "evidence_ids": [
         "smoke.cli.repo-alias-transfer"
       ],
@@ -690,6 +702,7 @@
     },
     {
       "producer_id": "web.repo-alias-set",
+      "candidate_required": true,
       "evidence_ids": [
         "smoke.web.repo-alias-set"
       ],
@@ -807,6 +820,7 @@
     },
     {
       "producer_id": "desktop.macos-target-host",
+      "candidate_required": true,
       "evidence_ids": [
         "smoke.desktop.macos-target-host"
       ],
@@ -851,6 +865,7 @@
     },
     {
       "producer_id": "ios.simulator-lifecycle",
+      "candidate_required": false,
       "evidence_ids": [
         "smoke.ios.simulator-lifecycle"
       ],
@@ -888,6 +903,7 @@
     },
     {
       "producer_id": "android.local-backend",
+      "candidate_required": true,
       "evidence_ids": [
         "smoke.android.local-backend"
       ],
@@ -1027,6 +1043,7 @@
     },
     {
       "producer_id": "android.remote-browser",
+      "candidate_required": true,
       "evidence_ids": [
         "smoke.android.remote-browser"
       ],
@@ -1177,6 +1194,7 @@
     },
     {
       "producer_id": "desktop.local-backend",
+      "candidate_required": true,
       "evidence_ids": [
         "smoke.desktop.local-backend",
         "smoke.desktop.notegit"
@@ -1232,6 +1250,7 @@
     },
     {
       "producer_id": "desktop.remote-browser",
+      "candidate_required": true,
       "evidence_ids": [
         "smoke.desktop.remote-browser"
       ],
@@ -1325,6 +1344,7 @@
     },
     {
       "producer_id": "repo-lifecycle.process-linux",
+      "candidate_required": true,
       "evidence_ids": [
         "smoke.repo-lifecycle.process-linux",
         "smoke.watcher.convergence-linux"
@@ -1432,6 +1452,7 @@
     },
     {
       "producer_id": "repo-lifecycle.process-windows",
+      "candidate_required": true,
       "evidence_ids": [
         "smoke.repo-lifecycle.process-windows",
         "smoke.watcher.convergence-windows"
@@ -1539,6 +1560,7 @@
     },
     {
       "producer_id": "docker.remote-import-browser",
+      "candidate_required": true,
       "evidence_ids": [
         "smoke.remote-import.prepare",
         "smoke.remote-import.review",
@@ -1669,6 +1691,7 @@
     },
     {
       "producer_id": "docker.multiclient-product",
+      "candidate_required": true,
       "evidence_ids": [
         "smoke.web.auth-session",
         "smoke.web.repo-lifecycle",
@@ -1741,6 +1764,7 @@
     },
     {
       "producer_id": "docker.p2p-gap-recovery",
+      "candidate_required": true,
       "evidence_ids": [
         "smoke.docker.p2p-gap-recovery"
       ],
@@ -1804,6 +1828,7 @@
     },
     {
       "producer_id": "release.candidate-bundle",
+      "candidate_required": true,
       "evidence_ids": [
         "release.candidate-artifacts",
         "release.sbom",
@@ -1869,6 +1894,7 @@
     },
     {
       "producer_id": "github.pvr-enabled",
+      "candidate_required": true,
       "evidence_ids": [
         "github.pvr.enabled"
       ],
@@ -1907,6 +1933,7 @@
     },
     {
       "producer_id": "security.tag-ready-audit",
+      "candidate_required": true,
       "evidence_ids": [
         "audit.security.tag-ready"
       ],

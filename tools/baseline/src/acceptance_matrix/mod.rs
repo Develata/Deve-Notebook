@@ -7,6 +7,7 @@ use anyhow::{Result, bail};
 use std::path::Path;
 
 mod execution_group;
+mod impact;
 mod model;
 mod parse;
 mod producer;
@@ -21,7 +22,8 @@ pub(crate) fn run(args: &[String]) -> Result<()> {
     let ctx = BaselineContext::new("acceptance-matrix")?;
     let rows = parse::read_matrix(ctx.root())?;
     validate::validate(ctx.root(), &rows)?;
-    producer::validate_registry(ctx.root(), &rows)?;
+    let producer_catalog = producer::validate_registry(ctx.root(), &rows)?;
+    impact::validate(ctx.root(), &producer_catalog.producer_ids)?;
     match args {
         [] => render::check_drift(ctx.root(), &rows)?,
         [action] if action == "--render" => render::write(ctx.root(), &rows)?,
@@ -48,6 +50,14 @@ pub(crate) fn run_receipt(args: &[String]) -> Result<()> {
 
 pub(crate) fn run_producers(args: &[String]) -> Result<()> {
     producer::run(args)
+}
+
+pub(crate) fn run_impact(args: &[String]) -> Result<()> {
+    let ctx = BaselineContext::new("acceptance-impact")?;
+    let rows = parse::read_matrix(ctx.root())?;
+    validate::validate(ctx.root(), &rows)?;
+    let producer_catalog = producer::validate_registry(ctx.root(), &rows)?;
+    impact::run(ctx.root(), args, &producer_catalog, &rows)
 }
 
 pub(crate) fn collect_receipts(args: &[String]) -> Result<()> {

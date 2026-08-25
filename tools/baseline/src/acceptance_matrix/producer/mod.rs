@@ -17,7 +17,8 @@ use crate::context::BaselineContext;
 use anyhow::{Context, Result, bail};
 use plan::{RunArgs, build_plan, preflight_execution, print_plan};
 use runner::{run_producer, run_static_producer, staging_directory};
-use std::collections::BTreeMap;
+use sha2::{Digest, Sha256};
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 
@@ -28,6 +29,12 @@ pub(in crate::acceptance_matrix) struct ReceiptProducerBinding {
     pub(in crate::acceptance_matrix) evidence_ids: Vec<String>,
     pub(in crate::acceptance_matrix) artifacts: Vec<String>,
     pub(in crate::acceptance_matrix) bound_env: Vec<String>,
+}
+
+pub(super) struct ProducerCatalog {
+    pub(super) registry_fingerprint: String,
+    pub(super) producer_ids: BTreeSet<String>,
+    pub(super) evidence_by_producer: BTreeMap<String, Vec<String>>,
 }
 
 pub(crate) fn run(args: &[String]) -> Result<()> {
@@ -137,8 +144,26 @@ pub(crate) fn run(args: &[String]) -> Result<()> {
     Ok(())
 }
 
-pub(super) fn validate_registry(root: &Path, rows: &[MatrixRow]) -> Result<()> {
-    registry::read_and_validate(root, rows).map(|_| ())
+pub(super) fn validate_registry(root: &Path, rows: &[MatrixRow]) -> Result<ProducerCatalog> {
+    let content = fs::read(root.join(model::PRODUCER_REGISTRY_PATH)).with_context(|| {
+        format!(
+            "acceptance producers: failed to fingerprint {}",
+            model::PRODUCER_REGISTRY_PATH
+        )
+    })?;
+    registry::read_and_validate(root, rows).map(|registry| ProducerCatalog {
+        registry_fingerprint: format!("sha256:{:x}", Sha256::digest(&content)),
+        producer_ids: registry
+            .producers
+            .iter()
+            .map(|producer| producer.producer_id.clone())
+            .collect(),
+        evidence_by_producer: registry
+            .producers
+            .into_iter()
+            .map(|producer| (producer.producer_id, producer.evidence_ids))
+            .collect(),
+    })
 }
 
 pub(in crate::acceptance_matrix) fn receipt_bindings(

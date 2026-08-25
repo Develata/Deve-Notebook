@@ -4,6 +4,7 @@
 
 mod ci_workflow;
 mod producer_validation;
+mod release_workflow;
 
 pub(super) use self::producer_validation::contract_fingerprint;
 use self::producer_validation::validate_producer;
@@ -30,7 +31,7 @@ pub(super) fn read_and_validate(root: &Path, rows: &[MatrixRow]) -> Result<Produ
 }
 
 fn validate(root: &Path, rows: &[MatrixRow], registry: &ProducerRegistry) -> Result<()> {
-    if registry.schema != 2 {
+    if registry.schema != 3 {
         bail!(
             "acceptance producers: unsupported schema {}",
             registry.schema
@@ -83,6 +84,7 @@ fn validate(root: &Path, rows: &[MatrixRow], registry: &ProducerRegistry) -> Res
     }
     validate_dependencies(registry, &producer_ids)?;
     ci_workflow::validate(root, registry)?;
+    release_workflow::validate(root, rows, registry)?;
     let missing: Vec<_> = required
         .into_iter()
         .filter(|evidence_id| !owners.contains_key(evidence_id))

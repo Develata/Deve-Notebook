@@ -500,12 +500,15 @@
   preconditions:
     - `docs/registry/acceptance-matrix.tsv` 可读
     - `docs/registry/acceptance-producers.json` 可读
+    - `docs/registry/acceptance-impact.json` 可读
     - Rust 1.97.0 toolchain 可用
   steps:
     - run: cargo run --locked -p deve_baseline -- acceptance-matrix
     - run: cargo run --locked -p deve_baseline -- acceptance-run --tier ci --plan
     - run: cargo run --locked -p deve_baseline -- acceptance-run --tier ci
     - run: cargo run --locked -p deve_baseline -- acceptance-run --tier tag-ready --plan
+    - run: cargo run --locked -p deve_baseline -- acceptance-impact --profile pr-selective --changed-file apps/web/src/lib.rs
+    - run: cargo run --locked -p deve_baseline -- acceptance-impact --profile candidate-full-release
     - run: cargo test --locked -p deve_baseline acceptance_matrix -- --nocapture
     - run: receipt_root="$(mktemp -d)" && ! cargo run --locked -p deve_baseline -- acceptance-matrix --tag-ready "$receipt_root"
   assertions:
@@ -519,6 +522,24 @@
     - contract_assert: receipt_producer_contract_and_execution_group_bound true
     - contract_assert: every_required_receipt_has_exactly_one_typed_producer true
     - contract_assert: every_required_ci_test_or_script_has_exactly_one_typed_producer true
+    - contract_assert: candidate_required_producers_match_candidate_workflows_exactly_once true
+    - contract_assert: candidate_workflow_covers_network_cli_and_web_alias_receipts true
+    - contract_assert: candidate_producer_steps_use_dedicated_canonical_argv true
+    - contract_assert: candidate_reusable_native_call_is_unique_unconditional_and_exactly_bound true
+    - contract_assert: candidate_receipt_upload_and_download_are_strict_non_tolerated_execution_edges true
+    - contract_assert: candidate_receipt_artifact_names_and_roots_form_one_exact_cross_workflow_set true
+    - contract_assert: candidate_job_timeout_exceeds_producer_deadline_sum_with_margin true
+    - contract_assert: impact_registry_classifies_every_tracked_path_exactly_once true
+    - contract_assert: impact_registry_rejects_unknown_dependency_shard_producer_or_artifact true
+    - contract_assert: impact_required_topology_rejects_deleted_consumer_edge_or_shard true
+    - contract_assert: impact_selection_expands_reverse_consumers_and_profile_always_shards true
+    - contract_assert: unknown_or_full_trigger_impact_falls_back_to_full_system true
+    - contract_assert: main_profile_equals_all_source_shards_and_nightly_candidate_equal_all_shards true
+    - contract_assert: impact_output_is_shadow_only_and_never_pass_evidence true
+    - contract_assert: impact_output_declares_source_or_system_scope true
+    - contract_assert: application_shards_require_state_port_database_identity_fixture_and_log_isolation true
+    - contract_assert: isolation_policy_values_are_typed_per_resource_dimension true
+    - contract_assert: impact_plan_binds_impact_producer_and_matrix_fingerprints true
     - contract_assert: ci_tier_executes_nonempty_producer_set_without_receipts true
     - contract_assert: ci_producers_are_explicitly_partitioned_once_by_compatible_host true
     - contract_assert: ci_producer_shards_preserve_complete_dependencies true

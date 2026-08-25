@@ -165,21 +165,17 @@ jobs:
           Write-Output "::add-mask::$($credentials.username)"
           Write-Output "::add-mask::$($credentials.password)"
           if ($credentials.auth_secret) { Write-Output "::add-mask::$($credentials.auth_secret)" }
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN=$($fixture.https_origin)" -Encoding utf8
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "DEVE_DESKTOP_REMOTE_USERNAME=$($credentials.username)" -Encoding utf8
+          Add-Content -LiteralPath $env:GITHUB_ENV -Value "DEVE_DESKTOP_REMOTE_PASSWORD=$($credentials.password)" -Encoding utf8
 
       - name: Run exact installed RemoteBrowser and native recovery producer
         shell: pwsh
-        run: |
-          $stateRoot = Join-Path $env:RUNNER_TEMP 'deve-desktop-remote-fixture'
-          $fixture = Get-Content -Raw -LiteralPath (Join-Path $stateRoot 'fixture-env.json') | ConvertFrom-Json
-          $credentials = Get-Content -Raw -LiteralPath $fixture.credentials_file | ConvertFrom-Json
-          $env:DEVE_DESKTOP_REMOTE_HTTPS_ORIGIN = $fixture.https_origin
-          $env:DEVE_DESKTOP_REMOTE_USERNAME = $credentials.username
-          $env:DEVE_DESKTOP_REMOTE_PASSWORD = $credentials.password
-          cargo run --locked -p deve_baseline -- acceptance-run `
-            --tier target-host `
-            --producer desktop.remote-browser `
-            --receipt-dir "${{ runner.temp }}/deve-acceptance-desktop-remote"
-          if ($LASTEXITCODE -ne 0) { throw 'Desktop RemoteBrowser producer failed' }
+        run: >-
+          cargo run --locked -p deve_baseline -- acceptance-run
+          --tier target-host
+          --producer desktop.remote-browser
+          --receipt-dir "${{ runner.temp }}/deve-acceptance-desktop-remote"
 
       - name: Stop fixture and uninstall isolated candidate
         if: ${{ always() }}
@@ -237,7 +233,7 @@ jobs:
 
   desktop-macos:
     runs-on: macos-latest
-    timeout-minutes: 120
+    timeout-minutes: 150
     steps:
       - name: Checkout exact candidate
         uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
@@ -406,25 +402,27 @@ jobs:
             --backend-head-file "$head_file" \
             --password-hasher "$GITHUB_WORKSPACE/target/debug/deve_baseline" \
             --password-hasher-arg remote-fixture-password-hash >/dev/null
+          fixture="$RUNNER_TEMP/deve-android-remote-fixture/fixture-env.json"
+          credentials_file="$(jq -r .credentials_file "$fixture")"
+          origin="$(jq -r .https_origin "$fixture")"
+          username="$(jq -r .username "$credentials_file")"
+          password="$(jq -r .password "$credentials_file")"
+          echo "::add-mask::$username"
+          echo "::add-mask::$password"
+          printf 'DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN=%s\n' "$origin" >>"$GITHUB_ENV"
+          printf 'DEVE_MOBILE_ANDROID_REMOTE_USERNAME=%s\n' "$username" >>"$GITHUB_ENV"
+          printf 'DEVE_MOBILE_ANDROID_REMOTE_PASSWORD=%s\n' "$password" >>"$GITHUB_ENV"
 
       - name: Run RemoteBrowser writable lifecycle and native local recovery
         env:
           DEVE_MOBILE_ANDROID_EMULATOR_API_LEVEL: "37.0"
           DEVE_MOBILE_ANDROID_EMULATOR_SYSTEM_TARGET: google_apis
           DEVE_MOBILE_ANDROID_PACKAGE_TARGET: x86_64
-        run: |
-          set -euo pipefail
-          fixture="$RUNNER_TEMP/deve-android-remote-fixture/fixture-env.json"
-          credentials_file="$(jq -r .credentials_file "$fixture")"
-          export DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN="$(jq -r .https_origin "$fixture")"
-          export DEVE_MOBILE_ANDROID_REMOTE_USERNAME="$(jq -r .username "$credentials_file")"
-          export DEVE_MOBILE_ANDROID_REMOTE_PASSWORD="$(jq -r .password "$credentials_file")"
-          echo "::add-mask::$DEVE_MOBILE_ANDROID_REMOTE_USERNAME"
-          echo "::add-mask::$DEVE_MOBILE_ANDROID_REMOTE_PASSWORD"
-          cargo run --locked -p deve_baseline -- acceptance-run \
-            --tier target-host \
-            --producer android.remote-browser \
-            --receipt-dir "$RUNNER_TEMP/deve-acceptance-android-remote"
+        run: >-
+          cargo run --locked -p deve_baseline -- acceptance-run
+          --tier target-host
+          --producer android.remote-browser
+          --receipt-dir "$RUNNER_TEMP/deve-acceptance-android-remote"
 
       - name: Stop Android fixture and emulator
         if: ${{ always() }}

@@ -12,6 +12,7 @@ use std::path::Path;
 fn producer() -> Producer {
     Producer {
         producer_id: "test.producer".into(),
+        candidate_required: false,
         evidence_ids: vec!["test.evidence".into()],
         dependencies: Vec::new(),
         tiers: vec!["ci".into()],
@@ -164,7 +165,7 @@ fn producer_dependencies_reject_cycles() {
     two.producer_id = "test.two".into();
     two.dependencies = vec!["test.one".into()];
     let registry = ProducerRegistry {
-        schema: 2,
+        schema: 3,
         producers: vec![one, two],
     };
     let ids = BTreeSet::from(["test.one", "test.two"]);

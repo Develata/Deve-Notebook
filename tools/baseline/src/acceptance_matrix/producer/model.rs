@@ -18,6 +18,7 @@ pub(super) struct ProducerRegistry {
 #[serde(deny_unknown_fields)]
 pub(super) struct Producer {
     pub(super) producer_id: String,
+    pub(super) candidate_required: bool,
     pub(super) evidence_ids: Vec<String>,
     #[serde(default)]
     pub(super) dependencies: Vec<String>,

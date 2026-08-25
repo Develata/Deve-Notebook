@@ -180,6 +180,7 @@ jobs:
 fn producer(producer_id: &str, host_os: &[&str], dependencies: &[&str], program: &str) -> Producer {
     Producer {
         producer_id: producer_id.to_owned(),
+        candidate_required: false,
         evidence_ids: vec![format!("{producer_id}.evidence")],
         dependencies: dependencies
             .iter()

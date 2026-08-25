@@ -1,0 +1,282 @@
+{
+  "schema": 1,
+  "mode": "shadow-only",
+  "artifacts": [
+    { "artifact_id": "source", "identity": "exact-head" },
+    { "artifact_id": "web-dist", "identity": "content-digest" },
+    { "artifact_id": "docker-image", "identity": "image-id-and-archive-digest" },
+    { "artifact_id": "windows-package", "identity": "candidate-file-digest" },
+    { "artifact_id": "macos-package", "identity": "candidate-file-digest" },
+    { "artifact_id": "android-x86-apk", "identity": "apk-digest" },
+    { "artifact_id": "android-arm64-apk", "identity": "apk-digest-and-signer" },
+    { "artifact_id": "remote-fixture", "identity": "script-and-config-digest" },
+    { "artifact_id": "receipt-bundle", "identity": "producer-contract-and-head" }
+  ],
+  "profiles": [
+    {
+      "profile_id": "diagnostic-module",
+      "selection": "selective",
+      "always_shards": ["contract-static", "workspace-build"],
+      "shards": [
+        "contract-static", "workspace-build", "core-ci", "protocol-ci",
+        "diff-ci", "web-ci", "native-ci", "ai-plugin-ci"
+      ]
+    },
+    {
+      "profile_id": "pr-selective",
+      "selection": "selective",
+      "always_shards": ["contract-static", "workspace-build"],
+      "shards": [
+        "contract-static", "workspace-build", "core-ci", "protocol-ci",
+        "diff-ci", "web-ci", "native-ci", "ai-plugin-ci"
+      ]
+    },
+    {
+      "profile_id": "main-full-source",
+      "selection": "full",
+      "always_shards": [],
+      "shards": [
+        "contract-static", "workspace-build", "core-ci", "protocol-ci",
+        "diff-ci", "web-ci", "native-ci", "ai-plugin-ci", "source-tag-contracts"
+      ]
+    },
+    {
+      "profile_id": "nightly-full-system",
+      "selection": "full",
+      "always_shards": [],
+      "shards": [
+        "contract-static", "workspace-build", "core-ci", "protocol-ci", "diff-ci",
+        "web-ci", "native-ci", "ai-plugin-ci", "source-tag-contracts", "repo-process",
+        "docker-runtime", "desktop-runtime", "mobile-runtime", "release-supply"
+      ]
+    },
+    {
+      "profile_id": "candidate-full-release",
+      "selection": "full",
+      "always_shards": [],
+      "shards": [
+        "contract-static", "workspace-build", "core-ci", "protocol-ci", "diff-ci",
+        "web-ci", "native-ci", "ai-plugin-ci", "source-tag-contracts", "repo-process",
+        "docker-runtime", "desktop-runtime", "mobile-runtime", "release-supply"
+      ]
+    }
+  ],
+  "modules": [
+    {
+      "module_id": "governance-contracts",
+      "dependencies": [],
+      "full_trigger": true,
+      "exact_paths": [
+        ".gitattributes", ".gitignore", "AGENTS.md", "CHANGELOG.md", "CLAUDE.md",
+        "LICENSE", "README.md", "README.zh.md", "SECURITY.md", "apps/AGENTS.md",
+        "crates/AGENTS.md", "plugins/AGENTS.md"
+      ],
+      "path_prefixes": [".codegraph/", ".github/", ".specify/", "docs/", "scripts/", "tools/"],
+      "shards": ["contract-static", "release-supply"]
+    },
+    {
+      "module_id": "workspace-toolchain",
+      "dependencies": [],
+      "full_trigger": true,
+      "exact_paths": ["Cargo.lock", "Cargo.toml", "rust-toolchain.toml"],
+      "path_prefixes": [],
+      "shards": ["workspace-build"]
+    },
+    {
+      "module_id": "delivery-config",
+      "dependencies": ["cli-runtime", "web-shell"],
+      "full_trigger": true,
+      "exact_paths": [
+        ".dockerignore", ".env.example", "config.example.toml", "Dockerfile",
+        "docker-compose.dev.yml", "docker-compose.mesh.yml", "docker-compose.multiclient.yml",
+        "docker-compose.remote-import.yml", "docker-compose.yml"
+      ],
+      "path_prefixes": [],
+      "shards": ["web-ci", "docker-runtime", "release-supply"]
+    },
+    {
+      "module_id": "core-authority",
+      "dependencies": [],
+      "full_trigger": false,
+      "exact_paths": [],
+      "path_prefixes": ["crates/core/"],
+      "shards": ["core-ci", "protocol-ci", "diff-ci"]
+    },
+    {
+      "module_id": "cli-runtime",
+      "dependencies": ["core-authority"],
+      "full_trigger": false,
+      "exact_paths": [],
+      "path_prefixes": ["apps/cli/"],
+      "shards": ["protocol-ci", "diff-ci", "source-tag-contracts", "repo-process"]
+    },
+    {
+      "module_id": "web-shell",
+      "dependencies": ["core-authority"],
+      "full_trigger": false,
+      "exact_paths": [],
+      "path_prefixes": ["apps/web/"],
+      "shards": ["web-ci", "protocol-ci", "diff-ci", "source-tag-contracts"]
+    },
+    {
+      "module_id": "desktop-adapter",
+      "dependencies": ["core-authority", "cli-runtime", "web-shell"],
+      "full_trigger": false,
+      "exact_paths": [],
+      "path_prefixes": ["apps/desktop/"],
+      "shards": ["native-ci", "desktop-runtime"]
+    },
+    {
+      "module_id": "mobile-adapter",
+      "dependencies": ["core-authority", "cli-runtime", "web-shell"],
+      "full_trigger": false,
+      "exact_paths": [],
+      "path_prefixes": ["apps/mobile/"],
+      "shards": ["protocol-ci", "native-ci", "mobile-runtime"]
+    },
+    {
+      "module_id": "plugin-runtime",
+      "dependencies": ["core-authority", "cli-runtime"],
+      "full_trigger": false,
+      "exact_paths": [],
+      "path_prefixes": ["plugins/"],
+      "shards": ["ai-plugin-ci"]
+    },
+    {
+      "module_id": "integration-harness",
+      "dependencies": ["plugin-runtime"],
+      "full_trigger": false,
+      "exact_paths": [],
+      "path_prefixes": ["tests/"],
+      "shards": ["ai-plugin-ci"]
+    }
+  ],
+  "shards": [
+    {
+      "shard_id": "contract-static",
+      "layer": "source",
+      "execution_kind": "static",
+      "producer_ids": [],
+      "checks": ["baseline.contracts", "plan.coverage", "release.workflow"],
+      "artifact_inputs": ["source"],
+      "isolation": { "state": "per-execution", "ports": "not-applicable", "database": "not-applicable", "identity": "not-applicable", "fixture": "content-addressed", "logs": "per-execution" }
+    },
+    {
+      "shard_id": "workspace-build",
+      "layer": "source",
+      "execution_kind": "static",
+      "producer_ids": [],
+      "checks": ["cargo.fmt", "cargo.clippy", "cargo.workspace-test", "cargo.wasm-check"],
+      "artifact_inputs": ["source"],
+      "isolation": { "state": "per-execution", "ports": "not-applicable", "database": "per-execution", "identity": "per-execution", "fixture": "content-addressed", "logs": "per-execution" }
+    },
+    {
+      "shard_id": "core-ci",
+      "layer": "source",
+      "execution_kind": "static",
+      "producer_ids": ["ci.storage-repository-cases"],
+      "checks": ["cargo.core-test"],
+      "artifact_inputs": ["source"],
+      "isolation": { "state": "per-execution", "ports": "not-applicable", "database": "per-execution", "identity": "per-execution", "fixture": "content-addressed", "logs": "per-execution" }
+    },
+    {
+      "shard_id": "protocol-ci",
+      "layer": "source",
+      "execution_kind": "process",
+      "producer_ids": ["ci.document-create-idempotence", "ci.projection-recovery"],
+      "checks": ["cargo.protocol-test"],
+      "artifact_inputs": ["source"],
+      "isolation": { "state": "per-execution", "ports": "allocated", "database": "per-execution", "identity": "per-execution", "fixture": "content-addressed", "logs": "per-execution" }
+    },
+    {
+      "shard_id": "diff-ci",
+      "layer": "source",
+      "execution_kind": "static",
+      "producer_ids": ["ci.diff-projection"],
+      "checks": ["cargo.diff-import-test"],
+      "artifact_inputs": ["source"],
+      "isolation": { "state": "per-execution", "ports": "not-applicable", "database": "per-execution", "identity": "per-execution", "fixture": "content-addressed", "logs": "per-execution" }
+    },
+    {
+      "shard_id": "web-ci",
+      "layer": "source",
+      "execution_kind": "static",
+      "producer_ids": ["ci.storage-browser-boundaries"],
+      "checks": ["cargo.web-test", "cargo.wasm-check"],
+      "artifact_inputs": ["source"],
+      "isolation": { "state": "per-execution", "ports": "not-applicable", "database": "per-execution", "identity": "per-execution", "fixture": "content-addressed", "logs": "per-execution" }
+    },
+    {
+      "shard_id": "native-ci",
+      "layer": "source",
+      "execution_kind": "process",
+      "producer_ids": ["ci.native-ipc-isolation"],
+      "checks": ["cargo.native-adapter-test"],
+      "artifact_inputs": ["source"],
+      "isolation": { "state": "per-execution", "ports": "not-applicable", "database": "per-execution", "identity": "per-execution", "fixture": "content-addressed", "logs": "per-execution" }
+    },
+    {
+      "shard_id": "ai-plugin-ci",
+      "layer": "source",
+      "execution_kind": "process",
+      "producer_ids": ["ci.native-ai-provider-settings", "ci.plugin-host-lifecycle", "ci.agent-bridge-process-tree-unix", "ci.agent-bridge-containment-windows"],
+      "checks": ["cargo.ai-plugin-test"],
+      "artifact_inputs": ["source"],
+      "isolation": { "state": "per-execution", "ports": "allocated", "database": "per-execution", "identity": "per-execution", "fixture": "content-addressed", "logs": "per-execution" }
+    },
+    {
+      "shard_id": "source-tag-contracts",
+      "layer": "source",
+      "execution_kind": "process",
+      "producer_ids": ["network.ws-f4-v6", "cli.repo-alias-transfer", "web.repo-alias-set"],
+      "checks": ["receipt.source-contracts"],
+      "artifact_inputs": ["source"],
+      "isolation": { "state": "per-execution", "ports": "allocated", "database": "per-execution", "identity": "per-execution", "fixture": "content-addressed", "logs": "per-execution" }
+    },
+    {
+      "shard_id": "repo-process",
+      "layer": "runtime",
+      "execution_kind": "process",
+      "producer_ids": ["repo-lifecycle.process-linux", "repo-lifecycle.process-windows"],
+      "checks": ["smoke.repo-lifecycle"],
+      "artifact_inputs": ["source"],
+      "isolation": { "state": "per-job", "ports": "allocated", "database": "per-job", "identity": "per-job", "fixture": "content-addressed", "logs": "per-job" }
+    },
+    {
+      "shard_id": "docker-runtime",
+      "layer": "runtime",
+      "execution_kind": "application",
+      "producer_ids": ["docker.remote-import-browser", "docker.multiclient-product", "docker.p2p-gap-recovery"],
+      "checks": ["smoke.docker"],
+      "artifact_inputs": ["source", "web-dist", "docker-image", "remote-fixture"],
+      "isolation": { "state": "per-job", "ports": "allocated", "database": "per-job", "identity": "per-job", "fixture": "content-addressed", "logs": "per-job" }
+    },
+    {
+      "shard_id": "desktop-runtime",
+      "layer": "runtime",
+      "execution_kind": "application",
+      "producer_ids": ["desktop.macos-target-host", "desktop.local-backend", "desktop.remote-browser"],
+      "checks": ["smoke.desktop"],
+      "artifact_inputs": ["source", "web-dist", "windows-package", "macos-package", "remote-fixture"],
+      "isolation": { "state": "per-job", "ports": "allocated", "database": "per-job", "identity": "per-job", "fixture": "content-addressed", "logs": "per-job" }
+    },
+    {
+      "shard_id": "mobile-runtime",
+      "layer": "runtime",
+      "execution_kind": "application",
+      "producer_ids": ["ios.simulator-lifecycle", "android.local-backend", "android.remote-browser"],
+      "checks": ["smoke.android", "smoke.ios"],
+      "artifact_inputs": ["source", "web-dist", "android-x86-apk", "android-arm64-apk", "remote-fixture"],
+      "isolation": { "state": "per-job", "ports": "allocated", "database": "per-job", "identity": "per-job", "fixture": "content-addressed", "logs": "per-job" }
+    },
+    {
+      "shard_id": "release-supply",
+      "layer": "runtime",
+      "execution_kind": "process",
+      "producer_ids": ["release.candidate-bundle", "github.pvr-enabled", "security.tag-ready-audit"],
+      "checks": ["release.freeze", "release.artifact-verify", "release.tag-ready"],
+      "artifact_inputs": ["source", "docker-image", "windows-package", "macos-package", "android-arm64-apk", "receipt-bundle"],
+      "isolation": { "state": "per-job", "ports": "allocated", "database": "per-job", "identity": "per-job", "fixture": "content-addressed", "logs": "per-job" }
+    }
+  ]
+}

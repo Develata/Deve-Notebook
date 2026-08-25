@@ -4,7 +4,7 @@
 
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
-- `Version`: `0.1.0`
+- `Version`: `0.2.0`
 - `Last Review`: `2026-08-25`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
@@ -436,9 +436,22 @@ claims 输出变量、可公开且非凭据的 bound environment、受控 artifa
 不得在 JSON 中拼接凭据，也不得把普通文档/source reference 冒充可执行 producer。矩阵中每个
 `tag-ready/required/receipt` evidence，以及每个 `ci/required/test|script` evidence，必须恰好由一个
 producer 覆盖；producer 不得引用矩阵之外的 evidence，也不得在同一个 producer 中混合
-静态 `test|script` evidence 与 runtime `receipt` evidence。registry schema v2 还必须显式登记
+静态 `test|script` evidence 与 runtime `receipt` evidence。registry schema v3 必须显式登记
 producer dependencies；runner 以稳定拓扑顺序执行，拒绝未知 dependency、cycle 或依赖被 filter
 切掉的 partial plan。
+schema v3 还必须为每个 producer 显式登记 `candidate_required`。所有
+`tag-ready/required/receipt` owner 都必须是 candidate-required；macOS 等虽然不满足 tag-ready、
+但属于 frozen candidate target-host 构建/验收面的 producer 也必须显式登记。Rust checker 必须解析
+`release-candidate.yml` 与其唯一受控 reusable `release-native.yml` 中真实、无条件的
+`acceptance-run --producer` 调用，并证明实际调用集合与 `candidate_required=true` 集合逐项相等：
+未知、缺失、重复或多余调用全部 fail-closed。workflow name、comment、env 或非执行文本不得冒充
+producer 调用。这样矩阵新增 tag-ready receipt 时，不能只登记 producer 而遗漏 candidate 接线。
+两份 workflow 的 receipt upload artifact name 与 receipt root path 必须构成固定、无重复的完整集合，
+且每个上传都使用 pinned action、`always()`、`if-no-files-found=error` 与不可容错语义；assemble 的
+pattern download 只能读取当前 run，禁止
+`run-id`、`repository` 或 `github-token` 重绑定。artifact name 漂移必须在运行 candidate 前失败。
+包含 producer 的 job，其 timeout 必须不小于串行 producer deadline 总和再加固定准备/上传余量；
+checker 从 registry 与真实调用推导下界，禁止外层 job 在合法 producer deadline 前强杀。
 `required_tools` 是 producer 对 workflow toolchain 的显式需求；当前受控值只有 `node`。直接调用
 Node 或经 shell wrapper 间接调用 Node 的 producer 都必须声明它，CI shard validator 只能依据该
 metadata 要求固定 Node 24，不得通过递归猜测脚本文本推导隐藏工具依赖。
@@ -479,6 +492,43 @@ runner 改为有证据绑定的并行 DAG，则必须覆盖最长依赖路径，
 `full` 增加 Docker/browser
 业务闭环，`target-host` 选择当前宿主的 native/mobile producers，`tag-ready` 用于候选证据生产
 与跨平台缺口预检，不能把单一宿主误报为覆盖所有平台。
+
+`docs/registry/acceptance-impact.json` 是 CI 影响分析的唯一人工维护注册表，与 producer registry
+分工而不复制命令：它登记 coarse capability module、模块依赖、verification shard、profile、
+artifact input、受控 artifact identity、shard layer/execution kind 和每类实例的
+state/port/database/identity/fixture/log isolation 要求。模块依赖方向
+固定为 consumer -> dependency；选择器从 changed module 沿反向依赖闭包扩展消费者，再并入 profile
+的 always shard。每个当前 tracked path 必须恰好归属一个模块；exact path rule 优先于 prefix rule，
+重复 exact/prefix、未知 module/shard/producer/artifact、空 shard、dependency cycle、未归类 tracked path
+或 module 无 shard 都必须令结构 gate fail-closed。首个 shadow schema 还固定 coarse capability module、
+required consumer edge 与 required module->shard 集合；删除依赖边或必要 shard 必须 fail-closed，不能把
+人工注册表的“字段仍合法”误当成依赖完整。`application` shard 必须声明六维隔离；`process`
+shard 只允许把确实不使用的 port 标为 not-applicable，其它资源仍必须隔离。各维隔离值有独立
+受控词汇：port 只允许 `not-applicable|allocated`，fixture 只允许
+`not-applicable|per-execution|per-job|content-addressed`，其余维度只允许
+`not-applicable|per-execution|per-job`，禁止跨维复用一个全局枚举。新变更路径若在运行期
+无法分类，选择结果必须退化为 full-system，而不是猜测窄分片。
+
+固定 profile 为 `diagnostic-module`、`pr-selective`、`main-full-source`、
+`nightly-full-system` 与 `candidate-full-release`。前两者允许 selective 规划；后三者始终 full。
+shard 的 layer 只能是 source/runtime；`main-full-source` 必须精确枚举全部 source shard，nightly 与
+candidate 必须精确枚举全部 shard。任何尚未覆盖全部 runtime shard 的 profile 命中未知路径或
+`full_trigger` 时提升到
+full-system，不得只输出 profile 内 eligible shard 却声称 full；machine-readable plan 必须另带
+`scope=source|system` 消除“profile 内全量”和“系统全量”的歧义。
+公共 plan/contract/registry、workspace dependency/toolchain、CI/验收规则、release/deployment/restore
+边界由 `full_trigger` module 承载，命中即强制 full。`nightly-full-system` 当前只是保留的 profile，
+不重新引入 `nightly.yml`；正式 candidate 也绝不因 impact selection 跳过任何 required gate。
+
+`deve_baseline acceptance-impact --profile <id> [--base <rev> --head <rev> |
+--changed-file <path>...]` 只生成确定性 machine-readable shadow plan，至少包含三份输入 fingerprint、
+profile、base/head、changed paths、选择原因、scope、module/reverse-consumer closure、shard、producer、evidence/case、check、
+artifact input 与 isolation。其中 impact registry、producer registry 与 acceptance matrix 必须分别
+输出 SHA-256 fingerprint，避免 evidence/case 派生输入变化却复用同一审计身份。输出状态固定为
+`shadow-only`，不得出现 passed，不得改变 `check.yml`、
+candidate 或 receipt 判定，也不得把 skipped/not-run/planned 解释为成功。选择性执行只能在后续阶段
+经过一段 full baseline 对照、误选审计和明确批准后接入普通 PR；main/nightly/release/deploy/recovery
+仍保留 full baseline。
 
 Rust runner 独占以下 infra：参数/registry 校验、HEAD/dirty 前后快照、单调超时、子进程终止、
 失败 receipt、producer claims 读取、命令指纹、execution group 与 receipt 发布。命令超时后

@@ -389,9 +389,10 @@ mod tests {
         let args = ["--tier", "full", "--plan", "--evidence-id", "smoke.one"].map(str::to_string);
         let args = RunArgs::parse(&args).unwrap();
         let registry = ProducerRegistry {
-            schema: 2,
+            schema: 3,
             producers: vec![Producer {
                 producer_id: "smoke.group".into(),
+                candidate_required: false,
                 evidence_ids: vec!["smoke.one".into(), "smoke.two".into()],
                 dependencies: Vec::new(),
                 tiers: vec!["full".into()],
@@ -443,6 +444,7 @@ mod tests {
         let args = RunArgs::parse(&args).unwrap();
         let producer = |producer_id: &str, evidence_id: &str, dependencies: Vec<String>| Producer {
             producer_id: producer_id.into(),
+            candidate_required: false,
             evidence_ids: vec![evidence_id.into()],
             dependencies,
             tiers: vec!["ci".into()],
@@ -459,7 +461,7 @@ mod tests {
             note: "fixture".into(),
         };
         let registry = ProducerRegistry {
-            schema: 2,
+            schema: 3,
             producers: vec![
                 producer("ci.parent", "test.parent", Vec::new()),
                 producer("ci.child", "test.child", vec!["ci.parent".into()]),

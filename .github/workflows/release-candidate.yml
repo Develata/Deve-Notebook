@@ -247,6 +247,50 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
+  contract-receipts:
+    needs: validate
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    steps:
+      - name: Checkout exact candidate
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+
+      - name: Verify immutable exact checkout
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_RUN_ATTEMPT" == 1 ]] || {
+            echo 'release candidate contract receipts are immutable; dispatch a fresh run instead of rerunning' >&2
+            exit 1
+          }
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          test -z "$(git status --porcelain --untracked-files=all)"
+
+      - name: Install Rust 1.97.0
+        uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
+        with:
+          toolchain: "1.97.0"
+
+      - name: Generate protocol and repo-alias contract receipts
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run
+          --tier tag-ready
+          --producer network.ws-f4-v6
+          --producer cli.repo-alias-transfer
+          --producer web.repo-alias-set
+          --receipt-dir "$RUNNER_TEMP/deve-acceptance-contracts"
+
+      - name: Upload contract receipts
+        if: ${{ always() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: deve-acceptance-receipts-contracts-${{ github.sha }}
+          path: ${{ runner.temp }}/deve-acceptance-contracts
+          if-no-files-found: error
+          retention-days: 14
+
   native:
     needs: validate
     uses: ./.github/workflows/release-native.yml
@@ -260,7 +304,7 @@ jobs:
       ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
 
   assemble:
-    needs: [validate, docker-linux-amd64, native]
+    needs: [validate, contract-receipts, docker-linux-amd64, native]
     runs-on: ubuntu-latest
     timeout-minutes: 90
     permissions:
@@ -438,6 +482,25 @@ jobs:
           target/debug/deve_baseline release-candidate assemble "${args[@]}"
           target/debug/deve_baseline release-candidate verify "${args[@]}"
 
+      - name: Bind release candidate receipt environment
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          [[ -z "$(git status --porcelain --untracked-files=all)" ]]
+          printf 'DEVE_RELEASE_CANDIDATE_IMAGE_ID=%s\n' "$(<"$INCOMING_DIR/docker-image-id.txt")" >>"$GITHUB_ENV"
+          printf 'DEVE_RELEASE_ANDROID_SIGNER_SHA256=%s\n' "$(<"$INCOMING_DIR/android-signer-sha256.txt")" >>"$GITHUB_ENV"
+          printf 'DEVE_RELEASE_WINDOWS_MSI=artifacts/windows/deve-notebook-%s-windows-x64.msi\n' "$VERSION" >>"$GITHUB_ENV"
+          printf 'DEVE_RELEASE_WINDOWS_NSIS=artifacts/windows/deve-notebook-%s-windows-x64-setup.exe\n' "$VERSION" >>"$GITHUB_ENV"
+          printf 'DEVE_RELEASE_MACOS_DMG=%s\n' "$(<"$INCOMING_DIR/macos-relative.txt")" >>"$GITHUB_ENV"
+          printf 'DEVE_RELEASE_ANDROID_APK=artifacts/android/deve-notebook-%s-android-arm64.apk\n' "$VERSION" >>"$GITHUB_ENV"
+          printf 'DEVE_RELEASE_DOCKER_ARCHIVE=artifacts/docker/deve-notebook-%s-linux-amd64.tar\n' "$VERSION" >>"$GITHUB_ENV"
+          printf '%s\n' \
+            'DEVE_RELEASE_SOURCE_SBOM=sbom/source.spdx.json' \
+            'DEVE_RELEASE_IMAGE_SBOM=sbom/docker-image.spdx.json' \
+            'DEVE_RELEASE_PROVENANCE_BUNDLE=attestations/provenance.bundle' \
+            'DEVE_RELEASE_DOCKER_SBOM_BUNDLE=attestations/docker-sbom.bundle' >>"$GITHUB_ENV"
+
       - name: Generate atomic release candidate receipts
         env:
           GH_TOKEN: ${{ github.token }}
@@ -449,24 +512,11 @@ jobs:
           DEVE_RELEASE_CANDIDATE_WORKFLOW_PATH: .github/workflows/release-candidate.yml
           DEVE_RELEASE_CANDIDATE_RUN_ID: ${{ github.run_id }}
           DEVE_RELEASE_CANDIDATE_RUN_ATTEMPT: ${{ github.run_attempt }}
-        run: |
-          set -euo pipefail
-          [[ -z "$(git status --porcelain --untracked-files=all)" ]]
-          export DEVE_RELEASE_CANDIDATE_IMAGE_ID="$(<"$INCOMING_DIR/docker-image-id.txt")"
-          export DEVE_RELEASE_ANDROID_SIGNER_SHA256="$(<"$INCOMING_DIR/android-signer-sha256.txt")"
-          export DEVE_RELEASE_WINDOWS_MSI="artifacts/windows/deve-notebook-${VERSION}-windows-x64.msi"
-          export DEVE_RELEASE_WINDOWS_NSIS="artifacts/windows/deve-notebook-${VERSION}-windows-x64-setup.exe"
-          export DEVE_RELEASE_MACOS_DMG="$(<"$INCOMING_DIR/macos-relative.txt")"
-          export DEVE_RELEASE_ANDROID_APK="artifacts/android/deve-notebook-${VERSION}-android-arm64.apk"
-          export DEVE_RELEASE_DOCKER_ARCHIVE="artifacts/docker/deve-notebook-${VERSION}-linux-amd64.tar"
-          export DEVE_RELEASE_SOURCE_SBOM=sbom/source.spdx.json
-          export DEVE_RELEASE_IMAGE_SBOM=sbom/docker-image.spdx.json
-          export DEVE_RELEASE_PROVENANCE_BUNDLE=attestations/provenance.bundle
-          export DEVE_RELEASE_DOCKER_SBOM_BUNDLE=attestations/docker-sbom.bundle
-          cargo run --locked --quiet -p deve_baseline -- acceptance-run \
-            --tier tag-ready \
-            --producer release.candidate-bundle \
-            --receipt-dir "$RUNNER_TEMP/deve-acceptance-release-candidate"
+        run: >-
+          cargo run --locked --quiet -p deve_baseline -- acceptance-run
+          --tier tag-ready
+          --producer release.candidate-bundle
+          --receipt-dir "$RUNNER_TEMP/deve-acceptance-release-candidate"
 
       - name: Upload sealed exact-HEAD candidate
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
