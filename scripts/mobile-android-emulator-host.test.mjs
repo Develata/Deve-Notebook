@@ -81,6 +81,38 @@ test("Android target-host workflows share the pinned emulator host preparation",
   assert.ok(android.every(({ artifacts }) => artifacts.includes("scripts/prepare-android-emulator-host.sh")));
 });
 
+test("targeted Android repeats each selected journey twice against one manifest-bound APK set", () => {
+  const webProducer = workflowJob(nativeTargetHostWorkflow, "mobile-android-web-dist-producer");
+  const apkProducer = workflowJob(nativeTargetHostWorkflow, "mobile-android-apk-producer");
+  const harnessProducer = workflowJob(nativeTargetHostWorkflow, "mobile-android-harness-producer");
+  const journey = workflowJob(nativeTargetHostWorkflow, "mobile-android-journey");
+  const summary = workflowJob(nativeTargetHostWorkflow, "mobile-android-parallel-summary");
+
+  assert.match(webProducer, /test "\$GITHUB_RUN_ATTEMPT" = 1/);
+  assert.match(webProducer, /web-dist-artifact\.mjs seal/);
+  assert.match(webProducer, /target\/release-input\/web-dist\.json/);
+  assert.match(webProducer, /include-hidden-files: true/);
+  for (const consumer of [apkProducer, harnessProducer]) {
+    assert.match(consumer, /web-dist-artifact\.mjs verify/);
+    assert.match(consumer, /--expected-head "\$GITHUB_SHA"/);
+  }
+
+  assert.match(journey, /repetition: \[1, 2\]/);
+  assert.match(journey, /group: native-target-host-android-\$\{\{ github\.run_id \}\}-\$\{\{ matrix\.journey \}\}/);
+  assert.match(journey, /cancel-in-progress: false/);
+  assert.match(journey, /deve-mobile-android-targeted-receipt-\$\{\{ matrix\.journey \}\}-\$\{\{ matrix\.repetition \}\}/);
+  assert.match(summary, /pattern: deve-mobile-android-targeted-receipt-\*-1/);
+  assert.match(summary, /pattern: deve-mobile-android-targeted-receipt-\*-2/);
+  assert.match(summary, /deve-acceptance-android-collected/);
+  assert.match(summary, /deve-acceptance-android-repeat-collected/);
+  assert.match(summary, /android_prebuilt_apk_manifest_verify/);
+  assert.match(summary, /repetitions_per_journey=2/);
+  assert.match(
+    summary,
+    /name: deve-mobile-android-targeted-summary[\s\S]*path: \|[\s\S]*deve-acceptance-android-collected[\s\S]*deve-acceptance-android-repeat-collected[\s\S]*deve-android-targeted-stability/,
+  );
+});
+
 test("emulator orchestrator launches only the resolved pinned binary", () => {
   assert.match(orchestrator, /source "\$ROOT_DIR\/scripts\/lib\/android-emulator-pin\.sh"/);
   assert.match(orchestrator, /PINNED_EMULATOR_BIN="\$\(android_resolve_pinned_emulator\)"/);

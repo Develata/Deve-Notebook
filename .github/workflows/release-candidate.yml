@@ -124,6 +124,7 @@ jobs:
             apps/web/dist
             target/release-input/web-dist.json
           if-no-files-found: error
+          include-hidden-files: true
           retention-days: 14
 
   rust-quality:

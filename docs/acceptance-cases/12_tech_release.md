@@ -199,7 +199,7 @@
     - platform evidence 只声明 target-host package、startup、install 与 native runtime smoke
     - platform evidence 不声明 signed release、store distribution、physical-device readiness 或 native authority writes
     - process runtime evidence 只表达默认 no-Tauri closed、Desktop LocalBackend controlled child-process 与 Mobile child-process closed
-    - Android targeted smoke 拆为单一 exact-HEAD Web-dist producer、并行的 immutable APK/Rust harness producer、独立 LocalBackend/RemoteBrowser consumer 与 fail-closed summary；APK/harness 下载同一 Web dist 且不得各自重建，两个 journey consumer 校验同一 APK SHA-256 清单且不得 rebuild
+    - Android targeted smoke 拆为单一 manifest-bound exact-HEAD Web-dist producer、并行的 immutable APK/Rust harness producer、LocalBackend/RemoteBrowser 各两个隔离 repeat consumer 与 fail-closed summary；两条 journey lane 可并行，同一 lane 的 repeat 不得重叠；APK/harness 复核同一 Web dist 且不得各自重建，四个 journey sample 校验同一 APK SHA-256 清单且不得 rebuild
   steps:
     - run: scripts/check-release-baseline.sh
     - run: cargo run -p deve_baseline -- release
@@ -244,7 +244,11 @@
     - exit_code_eq: 0
     - contract_assert: android_targeted_shared_web_dist_feeds_parallel_apk_and_harness_producers true
     - contract_assert: android_targeted_journeys_use_isolated_runners_and_same_prebuilt_apk_manifest true
+    - contract_assert: android_targeted_each_journey_has_two_same_apk_repeat_samples true
+    - contract_assert: android_targeted_same_journey_repeats_do_not_overlap true
+    - contract_assert: android_targeted_repeat_receipts_are_collected_in_separate_roots true
     - contract_assert: android_targeted_summary_does_not_upgrade_receipt_authority true
+    - contract_assert: web_dist_artifact_preserves_every_manifest_entry_including_hidden_files true
     - stdout_contains: "release-baseline-check: ok"
     - release_assert: embedded_frontend_single_binary_boundary true
     - release_assert: trunk_dev_index_not_served_as_release_frontend true

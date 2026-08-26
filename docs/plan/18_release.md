@@ -238,15 +238,20 @@ compile-time context 会立即验证 `frontendDist`；preflight 不得隐式依�
 旧 dist、空目录或占位文件，也不得让 clean-worktree candidate / target-host receipt 在进入
 真实 package build 前失败。
 
-Android 定向验收先由单一 Web-dist producer 从 clean exact HEAD 构建一次 embedded frontend 并发布
-immutable artifact；下游 APK producer 与 harness producer 必须下载该同一 artifact，且不得各自重建
+Android 定向验收先由单一 Web-dist producer 从 clean exact HEAD 构建一次 embedded frontend，以
+逐文件/tree SHA-256 manifest 绑定 HEAD，并发布保留 manifest 中全部文件（包括隐藏文件）的 immutable
+artifact；下游 APK producer 与 harness producer 必须下载、复核该同一 artifact，且不得各自重建
 Web dist。两个下游 producer 在 Web dist 封存后并行：APK producer 只构建 minified release 与 debug
 journey APK，并发布带相对路径 SHA-256 清单的只读 artifact；harness producer 只编译 Rust
 `deve_baseline` 与内部 RemoteBrowser fixture backend，并执行 host-only contract tests。三者完成后，
-LocalBackend 与 RemoteBrowser consumer 必须在不同 runner 上各自启动独占 emulator，
-下载并校验同一 APK 清单，且必须以 prebuilt 模式禁止 Tauri/Gradle rebuild。每个 consumer 独立生成原有
-typed producer receipt；汇总 job 只检查 producer/job 结果、execution group 完整性与 artifact digest，
-不得把两个 journey 合并成一个虚构 receipt，也不得将 targeted evidence 冒充正式 candidate receipt。
+LocalBackend 与 RemoteBrowser consumer 必须在不同 runner 上各自启动独占 emulator；每个 journey
+固定执行两个相互隔离且不重叠的 repeat sample，LocalBackend 与 RemoteBrowser 两条 lane 仍可并行，
+同一 lane 的 repeat 必须串行以免外部 RemoteBrowser override 共享账号/仓库时发生并发写。全部 sample
+下载并校验同一 APK 清单，且必须以 prebuilt 模式禁止
+Tauri/Gradle rebuild。每个 sample 独立生成原有 typed producer receipt；因 repeat sample 会具有相同
+`evidence_id`，汇总 job 必须按 repeat 分别调用 Rust collector 校验 execution group，禁止把重复 evidence
+合并进同一 receipt root。汇总只检查 producer/job 结果、两组 collector 结果与 artifact digest，不得把
+两个 journey 或两个 repeat 合并成虚构 receipt，也不得将 targeted evidence 冒充正式 candidate receipt。
 同一物理 Android 设备不允许并发 consumer，因为 package data、Activity、IME 与 WebView/CDP target
 属于共享宿主状态。正式 candidate 只有在该定向拓扑对同一 APK 连续稳定后才可采用相同 producer /
 consumer 分层；在此之前不得为了提速改写 candidate sealing、ARM64 signer 或 artifact identity 合同。
@@ -604,6 +609,7 @@ job 阻塞所有平台。identity/version、静态合同、Rust quality、worksp
 Web projection 是相互独立的 producer；只有真实输入依赖才可形成 `needs`。Web projection 必须由
 一个 exact-HEAD producer 构建一次，拒绝 symlink、非规范路径、空树以及超出文件/字节预算的输入，
 并用包含 HEAD、排序文件路径、大小、逐文件 SHA-256 与 tree SHA-256 的 canonical manifest 封存。
+artifact 传输必须显式保留 manifest 枚举的隐藏文件，不能让上传器的默认过滤规则改变被封存树。
 Docker、Windows、macOS 与 Android package producer 下载并复核该 manifest 后才可构建；不得各自
 运行 Trunk 产生第二套 embedded frontend。Docker formal candidate 使用只消费该 dist 的专用
 Dockerfile，普通开发/Compose Dockerfile 仍可保持 source build 路径，两者的 runtime image 合同必须一致。

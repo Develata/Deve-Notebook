@@ -561,6 +561,12 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
+      - name: Verify exact targeted identity
+        run: |
+          set -euo pipefail
+          test "$GITHUB_RUN_ATTEMPT" = 1
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+
       - name: Install Rust 1.97.0
         uses: dtolnay/rust-toolchain@fa04a1451ff1842e2626ccb99004d0195b455a88
         with:
@@ -581,12 +587,22 @@ jobs:
       - name: Build exact-HEAD web dist once
         run: scripts/build-web-dist-ci.sh
 
+      - name: Seal exact-HEAD targeted Web dist manifest
+        run: >-
+          node scripts/web-dist-artifact.mjs seal
+          --root apps/web/dist
+          --manifest target/release-input/web-dist.json
+          --head "$GITHUB_SHA"
+
       - name: Upload immutable Android targeted Web dist
         uses: actions/upload-artifact@v7
         with:
           name: deve-mobile-android-targeted-web-dist
-          path: apps/web/dist
+          path: |
+            apps/web/dist
+            target/release-input/web-dist.json
           if-no-files-found: error
+          include-hidden-files: true
 
   mobile-android-apk-producer:
     if: ${{ (inputs.target == 'all' || inputs.target == 'mobile-android') && inputs.run_mobile_android_package_build && inputs.run_mobile_android_install_startup_smoke }}
@@ -635,7 +651,14 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: deve-mobile-android-targeted-web-dist
-          path: apps/web/dist
+          path: .
+
+      - name: Verify exact-HEAD Web dist input
+        run: >-
+          node scripts/web-dist-artifact.mjs verify
+          --root apps/web/dist
+          --manifest target/release-input/web-dist.json
+          --expected-head "$GITHUB_SHA"
 
       - name: Build minified release and debug journey APKs
         env:
@@ -688,7 +711,14 @@ jobs:
         uses: actions/download-artifact@v8
         with:
           name: deve-mobile-android-targeted-web-dist
-          path: apps/web/dist
+          path: .
+
+      - name: Verify exact-HEAD Web dist input
+        run: >-
+          node scripts/web-dist-artifact.mjs verify
+          --root apps/web/dist
+          --manifest target/release-input/web-dist.json
+          --expected-head "$GITHUB_SHA"
 
       - name: Install Mobile Linux native-packaging test dependencies
         run: |
@@ -733,6 +763,10 @@ jobs:
       fail-fast: false
       matrix:
         journey: ${{ fromJSON(inputs.run_mobile_android_remote_browser_smoke && '["local","remote"]' || '["local"]') }}
+        repetition: [1, 2]
+    concurrency:
+      group: native-target-host-android-${{ github.run_id }}-${{ matrix.journey }}
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 120
     steps:
@@ -849,10 +883,10 @@ jobs:
             export DEVE_MOBILE_ANDROID_REMOTE_USERNAME="$(jq -r .username "$credentials_file")"
             export DEVE_MOBILE_ANDROID_REMOTE_PASSWORD="$(jq -r .password "$credentials_file")"
             "$baseline" acceptance-run --tier target-host --producer android.remote-browser \
-              --receipt-dir "$RUNNER_TEMP/deve-acceptance-android-remote"
+              --receipt-dir "$RUNNER_TEMP/deve-acceptance-android-remote-${{ matrix.repetition }}"
           else
             "$baseline" acceptance-run --tier target-host --producer android.local-backend \
-              --receipt-dir "$RUNNER_TEMP/deve-acceptance-android-local"
+              --receipt-dir "$RUNNER_TEMP/deve-acceptance-android-local-${{ matrix.repetition }}"
           fi
 
       - name: Stop Android RemoteBrowser HTTPS fixture
@@ -867,15 +901,15 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: deve-mobile-android-targeted-receipt-${{ matrix.journey }}
-          path: ${{ runner.temp }}/deve-acceptance-android-${{ matrix.journey }}
+          name: deve-mobile-android-targeted-receipt-${{ matrix.journey }}-${{ matrix.repetition }}
+          path: ${{ runner.temp }}/deve-acceptance-android-${{ matrix.journey }}-${{ matrix.repetition }}
           if-no-files-found: error
 
       - name: Upload isolated Android journey diagnostics
         if: always()
         uses: actions/upload-artifact@v7
         with:
-          name: deve-mobile-android-targeted-diagnostics-${{ matrix.journey }}
+          name: deve-mobile-android-targeted-diagnostics-${{ matrix.journey }}-${{ matrix.repetition }}
           path: target/mobile-android-emulator-smoke/**
           if-no-files-found: warn
 
@@ -904,20 +938,64 @@ jobs:
           name: deve-mobile-android-targeted-harness
           path: target/android-targeted-harness
 
-      - name: Download isolated Android journey receipts
+      - name: Download immutable Android targeted APK input
         uses: actions/download-artifact@v8
         with:
-          pattern: deve-mobile-android-targeted-receipt-*
+          name: deve-mobile-android-packages
+          path: target/android-targeted-summary-packages
+
+      - name: Download first isolated Android repeat receipts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: deve-mobile-android-targeted-receipt-*-1
           path: target/android-targeted-input
           merge-multiple: false
 
-      - name: Collect typed Android receipts without upgrading authority
+      - name: Download second isolated Android repeat receipts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: deve-mobile-android-targeted-receipt-*-2
+          path: target/android-targeted-repeat-input
+          merge-multiple: false
+
+      - name: Verify same APK set and collect repeat receipts separately
+        env:
+          REMOTE_REQUIRED: ${{ inputs.run_mobile_android_remote_browser_smoke }}
         run: |
           set -euo pipefail
           chmod +x target/android-targeted-harness/debug/deve_baseline
-          target/android-targeted-harness/debug/deve_baseline acceptance-collect \
+          package_root="$GITHUB_WORKSPACE/target/android-targeted-summary-packages"
+          manifest="$package_root/target/android-apk-input.sha256"
+          source scripts/lib/android-prebuilt-apk.sh
+          android_prebuilt_apk_manifest_verify \
+            "$package_root" \
+            "$manifest" \
+            apps/mobile/gen/android/app/build/outputs/apk/universal/release/app-universal-release-unsigned.apk \
+            apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
+
+          journeys=(local)
+          if [[ "$REMOTE_REQUIRED" == true ]]; then journeys+=(remote); fi
+          for journey in "${journeys[@]}"; do
+            test -d "target/android-targeted-input/deve-mobile-android-targeted-receipt-${journey}-1"
+            test -d "target/android-targeted-repeat-input/deve-mobile-android-targeted-receipt-${journey}-2"
+          done
+          test "$(find target/android-targeted-input -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq "${#journeys[@]}"
+          test "$(find target/android-targeted-repeat-input -mindepth 1 -maxdepth 1 -type d | wc -l)" -eq "${#journeys[@]}"
+
+          baseline=target/android-targeted-harness/debug/deve_baseline
+          "$baseline" acceptance-collect \
             --output "${RUNNER_TEMP}/deve-acceptance-android-collected" \
             target/android-targeted-input/*
+          "$baseline" acceptance-collect \
+            --output "${RUNNER_TEMP}/deve-acceptance-android-repeat-collected" \
+            target/android-targeted-repeat-input/*
+
+          stability="$RUNNER_TEMP/deve-android-targeted-stability"
+          mkdir -p "$stability"
+          cp -- "$manifest" "$stability/android-apk-input.sha256"
+          manifest_sha256="$(sha256sum "$manifest" | cut -d ' ' -f 1)"
+          printf 'sha256:%s\n' "$manifest_sha256" >"$stability/android-apk-manifest-digest.txt"
+          printf 'DEVE_ANDROID_TARGETED_APK_MANIFEST_SHA256=sha256:%s\n' "$manifest_sha256" >>"$GITHUB_ENV"
 
       - name: Write parallel Mobile Android target-host evidence
         env:
@@ -926,16 +1004,18 @@ jobs:
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMANDS: |
             single immutable Web-dist producer
             parallel immutable APK producer + immutable Rust harness producer
-            isolated LocalBackend/RemoteBrowser consumers
-            Rust acceptance-collect summary
+            two isolated same-APK samples per selected journey
+            separate Rust acceptance-collect roots for repeat 1 and repeat 2
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_COMMAND_RESULTS: |
             web_dist_producer=${{ needs.mobile-android-web-dist-producer.result }}
             apk_producer=${{ needs.mobile-android-apk-producer.result }}
             harness_producer=${{ needs.mobile-android-harness-producer.result }}
             journeys=${{ needs.mobile-android-journey.result }}
-          DEVE_NATIVE_TARGET_HOST_EVIDENCE_ARTIFACTS: deve-mobile-android-packages with target/android-apk-input.sha256
-          DEVE_NATIVE_TARGET_HOST_EVIDENCE_INSTALL_RESULT: success - inspect separate typed LocalBackend/RemoteBrowser receipts
-          DEVE_NATIVE_TARGET_HOST_EVIDENCE_STARTUP_RESULT: success - each journey used an isolated runner/emulator
+            repetitions_per_journey=2
+            apk_manifest=${{ env.DEVE_ANDROID_TARGETED_APK_MANIFEST_SHA256 }}
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_ARTIFACTS: deve-mobile-android-packages with exact-HEAD Web manifest and target/android-apk-input.sha256
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_INSTALL_RESULT: success - inspect separate typed repeat-1 and repeat-2 receipt roots
+          DEVE_NATIVE_TARGET_HOST_EVIDENCE_STARTUP_RESULT: success - every journey repeat used an isolated runner/emulator and the same APK manifest
           DEVE_NATIVE_TARGET_HOST_EVIDENCE_CONCLUSION: targeted diagnostic passed; evidence does not replace the formal release candidate receipt
         run: scripts/write-native-target-host-evidence.sh
 
@@ -943,7 +1023,10 @@ jobs:
         uses: actions/upload-artifact@v7
         with:
           name: deve-mobile-android-targeted-summary
-          path: ${{ runner.temp }}/deve-acceptance-android-collected
+          path: |
+            ${{ runner.temp }}/deve-acceptance-android-collected
+            ${{ runner.temp }}/deve-acceptance-android-repeat-collected
+            ${{ runner.temp }}/deve-android-targeted-stability
           if-no-files-found: error
 
       - name: Upload Mobile Android target-host evidence
@@ -953,6 +1036,8 @@ jobs:
           path: |
             ${{ runner.temp }}/deve-native-target-host-evidence/mobile-android.md
             ${{ runner.temp }}/deve-acceptance-android-collected/**
+            ${{ runner.temp }}/deve-acceptance-android-repeat-collected/**
+            ${{ runner.temp }}/deve-android-targeted-stability/**
           if-no-files-found: error
 
   mobile-android:

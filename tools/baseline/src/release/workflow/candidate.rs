@@ -70,6 +70,7 @@ pub(super) fn check(root: &Path) -> Result<()> {
             "scripts/build-web-dist-ci.sh",
             "web-dist-artifact.mjs seal",
             "deve-candidate-web-dist-${{ github.sha }}",
+            "include-hidden-files: true",
         ],
         "release-candidate.yml Web dist job",
     )?;

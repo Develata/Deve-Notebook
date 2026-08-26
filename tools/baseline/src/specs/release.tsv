@@ -1304,14 +1304,21 @@ contains	.github/workflows/native-target-host.yml	mobile-android-journey:
 contains	.github/workflows/native-target-host.yml	mobile-android-parallel-summary:
 contains	.github/workflows/native-target-host.yml	deve-mobile-android-targeted-web-dist
 contains	.github/workflows/native-target-host.yml	needs: mobile-android-web-dist-producer
+contains	.github/workflows/native-target-host.yml	web-dist-artifact.mjs seal
+contains	.github/workflows/native-target-host.yml	web-dist-artifact.mjs verify
+contains	.github/workflows/native-target-host.yml	repetition: [1, 2]
+contains	.github/workflows/native-target-host.yml	group: native-target-host-android-${{ github.run_id }}-${{ matrix.journey }}
+contains	.github/workflows/native-target-host.yml	pattern: deve-mobile-android-targeted-receipt-*-1
+contains	.github/workflows/native-target-host.yml	pattern: deve-mobile-android-targeted-receipt-*-2
+contains	.github/workflows/native-target-host.yml	--output "${RUNNER_TEMP}/deve-acceptance-android-repeat-collected"
 absent	.github/workflows/native-target-host.yml	Build exact-HEAD web dist for harness compilation
-contains	docs/plan/18_release.md	下游 APK producer 与 harness producer 必须下载该同一 artifact
+contains	docs/plan/18_release.md	下游 APK producer 与 harness producer 必须下载、复核该同一 artifact
 case_contains	docs/acceptance-cases/12_tech_release.md	REL-005	contract_assert: android_targeted_shared_web_dist_feeds_parallel_apk_and_harness_producers true
 contains	.github/workflows/native-target-host.yml	pattern: deve-mobile-android-targeted-receipt-*
 contains	.github/workflows/native-target-host.yml	acceptance-collect
 contains	.github/workflows/native-target-host.yml	--output "${RUNNER_TEMP}/deve-acceptance-android-collected"
 contains	.github/workflows/native-target-host.yml	target/android-targeted-input/*
-contains	.github/workflows/native-target-host.yml	path: ${{ runner.temp }}/deve-acceptance-android-collected
+contains	.github/workflows/native-target-host.yml	${{ runner.temp }}/deve-acceptance-android-collected
 contains	.github/workflows/native-target-host.yml	DEVE_NATIVE_TARGET_HOST_EVIDENCE_OUT: ${{ runner.temp }}/deve-native-target-host-evidence/mobile-android.md
 absent	.github/workflows/native-target-host.yml	--output target/android-targeted-collected
 absent	scripts/check-mobile-android-emulator-install-startup-smoke.sh	assert_positive_integer()
