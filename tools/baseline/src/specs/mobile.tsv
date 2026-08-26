@@ -53,6 +53,7 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: zero_repo
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: app_activation_bands_begin_inside_system_gesture_insets true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_swipe_point_is_hit_tested_outside_action_controls true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_adb_swipe_waits_for_stable_current_webview_input_focus true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_native_input_requires_exact_current_window_resumed_activity_and_webview_focus true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_input_focus_settlement_restarts_after_document_replacement true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: node --test scripts/android-webview-input-focus.test.mjs
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: node --test scripts/android-native-back-observation.test.mjs
@@ -233,6 +234,17 @@ contains	scripts/mobile-android-presentation.test.mjs	native presentation is re-
 contains	scripts/android-webview-input-focus.test.mjs	Android WebView native input waits for continuous visible current focus
 contains	scripts/android-webview-input-focus.test.mjs	Android WebView input focus settlement restarts after document replacement
 contains	scripts/android-webview-input-focus.test.mjs	Android WebView input focus settlement restarts after a redacted sample failure
+contains	scripts/android-webview-input-focus.test.mjs	Android current window classifier admits only the exact focused app component
+contains	scripts/android-webview-input-focus.test.mjs	Android native input classifier requires resumed Activity and exact current window
+contains	scripts/android-webview-input-focus.test.mjs	Android native input gate samples resumed Activity and current window together
+contains	scripts/android-webview-input-focus.test.mjs	Android native input gate rejects a missing ADB probe with a fixed category
+contains	scripts/android-webview-input-focus.test.mjs	Android native input target resets settlement until Activity and window are current
+contains	scripts/android-webview-input-focus.test.mjs	Android native input target redacts platform probe failures
+contains	scripts/lib/android-webview-input-focus.mjs	createAndroidWebViewInputTargetGate
+contains	scripts/lib/android-webview-input-focus.mjs	classifyAndroidWindowFocused
+contains	scripts/lib/android-webview-input-focus.mjs	adbOutput("shell", "dumpsys", "window")
+contains	scripts/smoke-mobile-android-lifecycle.mjs	waitForInputFocus: waitForNativeInputTarget
+contains	scripts/smoke-mobile-android-remote-browser.mjs	waitForInputFocus: waitForNativeInputTarget
 contains	scripts/mobile-android-presentation.test.mjs	native presentation requires a settled system-bar safe area around mobile chrome
 contains	scripts/lib/android-presentation-proof.mjs	androidSafeAreaStateMatches
 contains	scripts/lib/android-presentation-proof.mjs	data-deve-native-safe-area
@@ -1010,6 +1022,7 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	run: cargo test -p deve_
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	browser_assert: android_remote_browser_has_no_ipc_localhost_request_or_csp_error true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_document_create_uses_one_pointer_intent_and_exact_doc_id_editor_admission true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_document_create_native_touch_waits_for_stable_current_webview_input_focus true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_document_create_native_touch_requires_exact_current_window_input_target true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_document_lookup_reopens_explorer_and_requires_stable_writer_action_admission true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_remote_browser_requires_exact_native_mode_and_runtime_ownership_markers true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-022	cli_assert: android_remote_recovery_admits_fresh_bundled_local_target_without_trusting_stale_debug_target_lifetime true

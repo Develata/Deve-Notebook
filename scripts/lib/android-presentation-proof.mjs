@@ -375,6 +375,7 @@ export async function proveAndroidWorkEditDrawerGestures(page, {
   adbOutput,
   appId,
   waitUntil,
+  waitForInputFocus = waitForCurrentWebViewInputFocus,
 }) {
   const presentation = await waitForAcceptedAndroidPresentation(page, waitUntil);
   const before = await waitUntil(
@@ -390,15 +391,19 @@ export async function proveAndroidWorkEditDrawerGestures(page, {
 
   const left = await openDrawerWithObservedNativeSwipe(page, {
     adbCommand, side: "left", startPx, distancePx, density: presentation.density,
-    waitUntil, requiredClosestSelector,
+    waitUntil, requiredClosestSelector, testing: { waitForCurrentWebViewInputFocus: waitForInputFocus },
   });
-  await closeDrawerWithFocusedPlatformBack(page, { adbCommand, side: "left", waitUntil });
+  await closeDrawerWithFocusedPlatformBack(page, {
+    adbCommand, side: "left", waitUntil, waitForInputFocus,
+  });
 
   const right = await openDrawerWithObservedNativeSwipe(page, {
     adbCommand, side: "right", startPx, distancePx, density: presentation.density,
-    waitUntil, requiredClosestSelector,
+    waitUntil, requiredClosestSelector, testing: { waitForCurrentWebViewInputFocus: waitForInputFocus },
   });
-  await closeDrawerWithFocusedPlatformBack(page, { adbCommand, side: "right", waitUntil });
+  await closeDrawerWithFocusedPlatformBack(page, {
+    adbCommand, side: "right", waitUntil, waitForInputFocus,
+  });
 
   const after = await readWorkEditSwipeState(page);
   assert.ok(after, "Work Edit swipe surface must remain mounted after drawer gestures");
@@ -425,6 +430,7 @@ export async function proveAndroidDrawerGesturesAfterReload(page, {
   adbOutput,
   appId,
   waitUntil,
+  waitForInputFocus = waitForCurrentWebViewInputFocus,
 }) {
   const presentation = await waitForAcceptedAndroidPresentation(page, waitUntil);
   const pidBefore = adbOutput("shell", "pidof", appId).trim();
@@ -440,14 +446,20 @@ export async function proveAndroidDrawerGesturesAfterReload(page, {
   const left = await openDrawerWithObservedNativeSwipe(page, {
     adbCommand, side: "left", startPx: leftStartPx, distancePx,
     density: presentation.density, waitUntil,
+    testing: { waitForCurrentWebViewInputFocus: waitForInputFocus },
   });
-  await closeDrawerWithFocusedPlatformBack(page, { adbCommand, side: "left", waitUntil });
+  await closeDrawerWithFocusedPlatformBack(page, {
+    adbCommand, side: "left", waitUntil, waitForInputFocus,
+  });
 
   const right = await openDrawerWithObservedNativeSwipe(page, {
     adbCommand, side: "right", startPx: rightStartPx, distancePx,
     density: presentation.density, waitUntil,
+    testing: { waitForCurrentWebViewInputFocus: waitForInputFocus },
   });
-  await closeDrawerWithFocusedPlatformBack(page, { adbCommand, side: "right", waitUntil });
+  await closeDrawerWithFocusedPlatformBack(page, {
+    adbCommand, side: "right", waitUntil, waitForInputFocus,
+  });
 
   const pidAfter = adbOutput("shell", "pidof", appId).trim();
   assert.equal(pidAfter, pidBefore, "native drawer gestures must keep the app PID stable");

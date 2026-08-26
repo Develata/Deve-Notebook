@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { waitForCurrentWebViewInputFocus } from "./lib/android-webview-input-focus.mjs";
+import {
+  classifyAndroidNativeInputTarget,
+  classifyAndroidWindowFocused,
+  createAndroidWebViewInputTargetGate,
+  waitForCurrentAndroidWebViewInputTarget,
+  waitForCurrentWebViewInputFocus,
+} from "./lib/android-webview-input-focus.mjs";
 
 async function runInputFocusSamples(samples) {
   const originalNow = Date.now;
@@ -97,4 +103,149 @@ test("Android WebView input focus timeout keeps the fixed label and caller budge
   );
   assert.equal(observedLabel, "current Android WebView input focus settlement");
   assert.equal(observedTimeout, 1234);
+});
+
+test("Android current window classifier admits only the exact focused app component", () => {
+  const appId = "dev.deve.notebook.mobile";
+  assert.equal(classifyAndroidWindowFocused(
+    "  mCurrentFocus=Window{b6877d0 u0 dev.deve.notebook.mobile/dev.deve.notebook.mobile.MainActivity}",
+    appId,
+  ), "focused");
+  assert.equal(classifyAndroidWindowFocused(
+    "  mCurrentFocus=Window{b6877d0 u0 com.android.systemui/.statusbar.StatusBar}",
+    appId,
+  ), "not-focused");
+  assert.equal(classifyAndroidWindowFocused("  mCurrentFocus=null", appId), "unavailable");
+  assert.equal(classifyAndroidWindowFocused(
+    "  mCurrentFocus=Window{b6877d0 u0 dev.deve.notebook.mobile.preview/.MainActivity}",
+    appId,
+  ), "unavailable");
+  assert.equal(classifyAndroidWindowFocused([
+    "mCurrentFocus=Window{a u0 dev.deve.notebook.mobile/.MainActivity}",
+    "mCurrentFocus=Window{b u0 com.android.systemui/.statusbar.StatusBar}",
+  ].join("\n"), appId), "unavailable");
+});
+
+test("Android native input classifier requires resumed Activity and exact current window", () => {
+  const appId = "dev.deve.notebook.mobile";
+  const resumed =
+    "topResumedActivity=ActivityRecord{8ea2038 u0 dev.deve.notebook.mobile/.MainActivity t7061}";
+  const focused =
+    "mCurrentFocus=Window{b6877d0 u0 dev.deve.notebook.mobile/dev.deve.notebook.mobile.MainActivity}";
+  assert.equal(classifyAndroidNativeInputTarget(resumed, focused, appId), "ready");
+  assert.equal(classifyAndroidNativeInputTarget(
+    resumed,
+    "mCurrentFocus=Window{b6877d0 u0 com.android.systemui/.statusbar.StatusBar}",
+    appId,
+  ), "not-ready");
+  assert.equal(classifyAndroidNativeInputTarget(resumed, "mCurrentFocus=null", appId), "unavailable");
+});
+
+test("Android native input gate samples resumed Activity and current window together", async () => {
+  const originalNow = Date.now;
+  let now = 0;
+  Date.now = () => now;
+  const appId = "dev.deve.notebook.mobile";
+  const adbCalls = [];
+  const adbOutput = (...args) => {
+    adbCalls.push(args);
+    if (args.join(" ") === "shell dumpsys activity activities") {
+      return `topResumedActivity=ActivityRecord{8ea2038 u0 ${appId}/.MainActivity t7061}`;
+    }
+    if (args.join(" ") === "shell dumpsys window") {
+      return `mCurrentFocus=Window{b6877d0 u0 ${appId}/${appId}.MainActivity}`;
+    }
+    throw new Error("unexpected ADB probe");
+  };
+  const page = {
+    async call() {
+      return { documentTimeOrigin: 1, visible: true, focused: true, mobile: true };
+    },
+  };
+  const waitUntil = async (label, predicate) => {
+    assert.equal(label, "current Android native input target settlement");
+    for (let index = 0; index < 4; index += 1) {
+      if (await predicate()) return true;
+      now += 125;
+    }
+    throw new Error("synthetic native input target timeout");
+  };
+  try {
+    await createAndroidWebViewInputTargetGate(adbOutput, appId)(page, waitUntil);
+    assert.equal(adbCalls.length, 6);
+    assert.deepEqual(adbCalls.slice(0, 2), [
+      ["shell", "dumpsys", "activity", "activities"],
+      ["shell", "dumpsys", "window"],
+    ]);
+  } finally {
+    Date.now = originalNow;
+  }
+});
+
+test("Android native input gate rejects a missing ADB probe with a fixed category", () => {
+  assert.throws(
+    () => createAndroidWebViewInputTargetGate(null, "dev.deve.notebook.mobile"),
+    /android_native_input_target_adb_probe_missing/,
+  );
+});
+
+test("Android native input target resets settlement until Activity and window are current", async () => {
+  const originalNow = Date.now;
+  let now = 0;
+  let nativeTargetSamples = 0;
+  Date.now = () => now;
+  const nativeTargetStates = ["not-ready", "ready", "ready", "ready"];
+  const page = {
+    calls: 0,
+    async call() {
+      this.calls += 1;
+      return { documentTimeOrigin: 1, visible: true, focused: true, mobile: true };
+    },
+  };
+  const waitUntil = async (label, predicate) => {
+    assert.equal(label, "current Android native input target settlement");
+    for (let index = 0; index < 8; index += 1) {
+      if (await predicate()) return true;
+      now += 125;
+    }
+    throw new Error("synthetic native input target timeout");
+  };
+  try {
+    await waitForCurrentAndroidWebViewInputTarget(page, waitUntil, async () => {
+      const state = nativeTargetStates[
+        Math.min(nativeTargetSamples, nativeTargetStates.length - 1)
+      ];
+      nativeTargetSamples += 1;
+      return state;
+    });
+    assert.equal(page.calls, 4);
+    assert.equal(nativeTargetSamples, 4);
+  } finally {
+    Date.now = originalNow;
+  }
+});
+
+test("Android native input target redacts platform probe failures", async () => {
+  const page = {
+    async call() {
+      return { documentTimeOrigin: 1, visible: true, focused: true, mobile: true };
+    },
+  };
+  const observed = [];
+  const waitUntil = async (_label, predicate) => {
+    try {
+      await predicate();
+    } catch (error) {
+      observed.push(error.message);
+    }
+    throw new Error("synthetic native input target timeout");
+  };
+  await assert.rejects(
+    waitForCurrentAndroidWebViewInputTarget(page, waitUntil, () => {
+      throw new Error("secret=/private/window/path");
+    }),
+    /synthetic native input target timeout/,
+  );
+  assert.deepEqual(observed, ["android_native_input_target_sample_failed"]);
+  assert.doesNotMatch(JSON.stringify(observed), /secret|private|window\/path/);
 });

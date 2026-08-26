@@ -95,7 +95,7 @@ MobileColdStart
 *   Android 正式支持与可写 evidence baseline 是 Android 10 / API 29+ 且当前 WebView provider major 137+。该版本基线只决定 support/receipt 资格，不得替代真实 capability probe，也不得在前端解析 UA 或硬编码 OS gate。
 *   Android 可写 target-host gate 必须在业务步骤前记录 API level、WebView provider package/version、AVD/system-image 或真实设备标识，并执行真实的 `crypto.subtle.generateKey({ name: "Ed25519" }, false, ["sign", "verify"])` 探测。只有版本基线与 probe 同时满足才可生成 writable receipt；不满足时必须输出结构化 blocker、证明编辑器保持只读并停止可写业务步骤。
 *   Android emulator gate 必须先构建目标 APK、释放构建 daemon，再以 low-RAM 模式、有界 RAM 和 `2048..8192 MiB` 的受控 writable data partition request（默认 `4096 MiB`）启动本次进程持有的专用 serial 与匹配 AVD，并以目标镜像实际发布的 boot-complete property 为准：接受 `sys.boot_completed=1` 或 `dev.bootcomplete=1` 后，仍须在同一 boot deadline 内通过短时有界、只读 probe 确认 package manager 返回包含且仅包含规范 `package:<name>` 行（其中恰有一个 `package:android`），且 `settings get global device_provisioned` 返回规范 `0` / `1`，并要求两项 guest service 在至少 `10s` 的连续稳定窗口内保持 ready，再在安装前 fail-closed 解析 `/data` 容量，证明总容量不低于 request 的四分之三且可用空间至少 `1024 MiB`。稳定窗口内任一已准入的 package/settings bootstrap 暂态必须清零连续窗口并重新计时；未知错误、混合输出、timeout、中断或 process guard failure 必须立即传播，不得被后续成功 probe 覆盖；owned-emulator process guard 必须在最终准入前再次通过。APK install 若命中已准入的 package-service bootstrap/race signature，下一次 install attempt 前必须在同一 absolute install deadline 内重新完成同一连续稳定准入；每个带 timeout kill grace 的 probe 必须从剩余 deadline 预留该 grace，只有 bootstrap 恢复链中的精确 provider-race signature 可进入下一轮重新准入，首次出现、混合输出、未知错误或超时仍立即 fail-closed。缺失 `settings` service、system provider 尚未安装、非规范输出、单次 probe 超时或总 deadline 到期都不得准入 APK 安装；不得增加 install attempt 或用固定 sleep 代替 condition-based readiness。不得选择其他已运行 emulator、不得清理非本 gate 所有的实例、不得因某个镜像只发布其中一项而永久等待，也不得仅凭 adb online 提前执行 package smoke。
-*   Android target-host 的首次文档 Create 证据必须把 quiet window 准入得到的精确 `repo_id + scope_nonce` 作为不可变期望值贯穿到 arm，并只在精确 path、唯一稳定 target 与 `ready + 非空 repo_id + 正整数 scope_nonce` 完全匹配时派发一次完整 native touch。紧邻 target/identity 准入之后、arm 与接触之前还必须重新等待当代主文档 `visibilityState = visible`、`document.hasFocus() = true` 连续稳定至少 `250ms`；CDP 可连接、搜索结果可见或 writer scope ready 不能替代真实输入焦点，采样失败或 document replacement 必须在接触前 fail-closed。该 touch 必须在同一触点保持固定 `50ms` 的有界非零接触时间后才发送 `touchEnd`，不得把相邻的零接触时长命令冒充真实 tap。`touchEnd` 命令完成不等价于浏览器已同步合成 `click`；harness 必须绑定本次 arm token，在不重发 Create 的前提下以固定 `2000ms` deadline 有界等待同一 click settlement，并以最终原子读取与 observer 清理的结果作结算。页面 observation 只记录固定、无敏感信息的 `touchstart / touchend / pointerdown / pointerup / click` 阶段布尔值，不得记录路径、文档内容、session、endpoint 或 credential；阶段只用于定位 transport/gesture/click 边界，不能替代精确 target、writer scope 或 click 成功条件。arm 时先安装页面侧 touch-transport lease，`touchEnd` 返回后再切换为 click-settlement deadline；二者到期都必须自行 expiry/seal，使宿主 finalize 在执行前断连时仍能阻断迟到 click。该 Create lane 在本次 document lifecycle 中是 single-use：成功后结束；错误 target、writer scope 变化、missing observation、driver error、cleanup error 或 settlement timeout 一旦进入 committed-unknown，必须封存并阻断后续迟到 click，只有新的页面 generation 才能重新准入，不得用第二次 Create 掩盖 committed-unknown。
+*   Android target-host 的首次文档 Create 证据必须把 quiet window 准入得到的精确 `repo_id + scope_nonce` 作为不可变期望值贯穿到 arm，并只在精确 path、唯一稳定 target 与 `ready + 非空 repo_id + 正整数 scope_nonce` 完全匹配时派发一次完整 native touch。紧邻 target/identity 准入之后、arm 与接触之前还必须重新等待当代主文档 `visibilityState = visible`、`document.hasFocus() = true` 与精确应用 Activity `resumed` 同时连续稳定至少 `250ms`；CDP 可连接、搜索结果可见、writer scope ready 或仅有页面焦点不能替代 Android 当前输入目标，Activity 状态采样失败、非规范/冲突记录或 document replacement 必须在接触前 fail-closed。该 touch 必须在同一触点保持固定 `50ms` 的有界非零接触时间后才发送 `touchEnd`，不得把相邻的零接触时长命令冒充真实 tap。`touchEnd` 命令完成不等价于浏览器已同步合成 `click`；harness 必须绑定本次 arm token，在不重发 Create 的前提下以固定 `2000ms` deadline 有界等待同一 click settlement，并以最终原子读取与 observer 清理的结果作结算。页面 observation 只记录固定、无敏感信息的 `touchstart / touchend / pointerdown / pointerup / click` 阶段布尔值，不得记录路径、文档内容、session、endpoint 或 credential；阶段只用于定位 transport/gesture/click 边界，不能替代精确 target、writer scope 或 click 成功条件。arm 时先安装页面侧 touch-transport lease，`touchEnd` 返回后再切换为 click-settlement deadline；二者到期都必须自行 expiry/seal，使宿主 finalize 在执行前断连时仍能阻断迟到 click。该 Create lane 在本次 document lifecycle 中是 single-use：成功后结束；错误 target、writer scope 变化、missing observation、driver error、cleanup error 或 settlement timeout 一旦进入 committed-unknown，必须封存并阻断后续迟到 click，只有新的页面 generation 才能重新准入，不得用第二次 Create 掩盖 committed-unknown。
 *   Android emulator binary identity probe 必须有独立的单调时间与输出字节上限，只接受 canonical
     `Android emulator version <version> (build_id <id>)` banner 的逐字段匹配；单独出现 version/build
     token、空输出、超时或超限输出都必须 fail-closed。若 emulator wrapper 在输出完整 canonical banner
@@ -439,13 +439,16 @@ Task 按钮必须发送 `10_rendering.md` 定义的 `InsertTaskItem` 语义 inte
     该 observer 与前述 adapter 独占的 WebView IME passthrough listener 是两个不同职责，不得覆盖或替代 source slot，
     也不得用永久轮询代替 document 生命周期。
 *   **Target-host Input Admission**: Android target-host 通过 ADB 注入 Drawer 手势前，必须等待当代主文档
-    同时满足 `visibilityState = visible` 与 `document.hasFocus() = true`，并连续稳定至少 `250ms`；CDP 已连接、
-    presentation hint 已 ready 或 Activity 进程仍存活都不能单独证明 WebView 已获得系统输入焦点。稳定窗口
+    同时满足 `visibilityState = visible` 与 `document.hasFocus() = true`，精确应用 Activity 是唯一规范的
+    `resumed` Activity，且 WindowManager 的规范 `mCurrentFocus` 精确指向同一应用窗口，并连续稳定至少
+    `250ms`；CDP 已连接、presentation hint 已 ready、Activity 进程仍存活或仅有 resumed Activity 都不能
+    单独证明 WebView 已获得系统输入焦点。稳定窗口
     必须绑定当代 Document 身份（target-host 使用有限的 `performance.timeOrigin`）；Document 替换、身份异常或
     采样 execution-context 失败都必须清空候选并从零重新累计。每次真实 swipe（包括最多两次允许的
     missing/cancelled retry）都必须重新通过该准入，再安装页面触摸探针并注入输入。三个 attempt
     必须绑定既有固定 hit-test 候选线的数量并按其顺序选择；可用候选少于 attempt 数时只能复用最后一条
-    已验证的 non-interactive 候选线，不得随机坐标、扩大输入区域或形成无界重试。准入超时必须
+    已验证的 non-interactive 候选线；不得用仅有 `document.hasFocus()` 的页面状态、仅有 resumed Activity
+    或 package 前缀匹配替代精确当前窗口。不得随机坐标、扩大输入区域或形成无界重试。准入超时必须
     fail-closed；不得通过重新创建业务 surface 掩盖焦点缺失，或把没有完整
     `touchstart + touchend` 的 ADB 命令计为 Drawer 成功。reload 后每侧首次 swipe 还必须从稳定 closed
     presentation 开始；若固定 DOM/a11y/hit-test 字段证明 Drawer 语义上确实 open，target-host 只可让一次
@@ -570,6 +573,10 @@ view-local lifecycle，但不得直接复制桌面横向 tabstrip。
     `topResumedActivity` / `ResumedActivity` 规范记录，并按精确 package component 分类；不存在任何已批准 key、
     已批准 key 无法解析唯一规范 component、多个 key 的 component 冲突、package 前缀碰撞或输出异常时必须返回
     unavailable 并阻断证据，不能把未知格式当作已退后台，也不能从冲突样本中任选一个状态。
+*   target-host 对 ADB 输入窗口的读取只接受 WindowManager 规范 `mCurrentFocus`，并按精确 package component
+    分类；`null`、缺失、不可解析、多个 component 冲突、package 前缀碰撞或输出异常必须返回 unavailable 并
+    阻断输入。Activity resumed 与 current focused window 必须在同一采样窗口同时成立，任一变化都从零重新累计
+    `250ms`，不得把页面焦点、Activity 状态或窗口焦点中的任意单项冒充完整输入目标准入。
 
 ## 7. Performance & Size
 *   **Target**: 首屏渲染 < 1s，输入延迟 < 16ms。

@@ -23,6 +23,7 @@ import {
   waitForAcceptedAndroidPresentation,
 } from "./lib/android-presentation-proof.mjs";
 import { createAndroidLifecycleHarness } from "./lib/android-lifecycle-harness.mjs";
+import { createAndroidWebViewInputTargetGate } from "./lib/android-webview-input-focus.mjs";
 import {
   commitAndroidChange,
   createFirstAndroidRepoFromBootstrapUnbound,
@@ -58,6 +59,7 @@ const {
   waitForAndroidRootReentry,
   readAndroidUiBackSurfaceObservation,
 } = createAndroidLifecycleHarness({ timeoutMs, adb, serial });
+const waitForNativeInputTarget = createAndroidWebViewInputTargetGate(adbOutput, appId);
 async function inputAndroidEditorText(content, _point, page, expectedDocId = null) {
   return typeAndroidEditorText(page, content, {
     delay,
@@ -221,6 +223,7 @@ async function createDocument(page, path, content) {
   return createAndroidDocument(page, path, content, {
     waitUntil,
     inputEditorText: inputAndroidEditorText,
+    waitForInputFocus: waitForNativeInputTarget,
   });
 }
 
@@ -240,6 +243,7 @@ async function main() {
     adbOutput,
     appId,
     waitUntil,
+    waitForInputFocus: waitForNativeInputTarget,
   });
   const nativePresentation = drawerGestureProof.presentation;
   console.log(
@@ -296,7 +300,9 @@ async function main() {
   await waitUntil("committed document projection restored", () => page.call((expected) =>
     window.getEditorContent?.()?.includes(expected) ?? false,
   initial));
-  Object.assign(drawerGestureProof, await proveAndroidWorkEditDrawerGestures(page, { adbCommand, adbOutput, appId, waitUntil }));
+  Object.assign(drawerGestureProof, await proveAndroidWorkEditDrawerGestures(page, {
+    adbCommand, adbOutput, appId, waitUntil, waitForInputFocus: waitForNativeInputTarget,
+  }));
   const serviceBeforeSuspend = await nativeInvoke(page, "native_backend_get_service_state");
   assert.equal(serviceBeforeSuspend?.backend_running, true, "embedded transport must be running");
 

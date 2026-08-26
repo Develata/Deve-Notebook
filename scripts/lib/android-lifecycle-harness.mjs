@@ -1,4 +1,7 @@
 import { execFileSync } from "node:child_process";
+import { classifyAndroidActivityResumed } from "./android-webview-input-focus.mjs";
+
+export { classifyAndroidActivityResumed } from "./android-webview-input-focus.mjs";
 
 const ROOT_REENTRY_SAMPLE_TIMEOUT_MS = 5_000;
 
@@ -43,38 +46,6 @@ export function requireAndroidRootBackStablePid(pidBefore, pidAfter) {
     throw new Error("android_root_back_pid_unstable");
   }
   return true;
-}
-
-export function classifyAndroidActivityResumed(output, appId) {
-  if (typeof output !== "string"
-    || typeof appId !== "string"
-    || !/^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/.test(appId)) {
-    return "unavailable";
-  }
-  const records = output.replaceAll("\r", "").split("\n").filter((line) => {
-    const normalized = line.trim();
-    return /^(?:mResumedActivity|topResumedActivity)\s*[:=]/.test(normalized)
-      || /^ResumedActivity\s*:/.test(normalized);
-  });
-  if (records.length === 0) return "unavailable";
-  const components = records.map((line) => {
-    const activityRecords = [...line.matchAll(/ActivityRecord\{([^{}]+)\}/g)];
-    if (activityRecords.length !== 1) return null;
-    const matches = [...activityRecords[0][1].matchAll(
-      /(?:^|[\s{])([A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+)\/([A-Za-z0-9_.$]+)(?=[\s}])/g,
-    )];
-    return matches.length === 1 ? `${matches[0][1]}/${matches[0][2]}` : null;
-  });
-  if (components.some((component) => component === null)) return "unavailable";
-  const uniqueComponents = new Set(components);
-  if (uniqueComponents.size !== 1) return "unavailable";
-  const [component] = uniqueComponents;
-  const packageName = component.slice(0, component.indexOf("/"));
-  if (packageName === appId) return "resumed";
-  if (packageName.startsWith(`${appId}.`) || appId.startsWith(`${packageName}.`)) {
-    return "unavailable";
-  }
-  return "not-resumed";
 }
 
 export function createAndroidLifecycleHarness({

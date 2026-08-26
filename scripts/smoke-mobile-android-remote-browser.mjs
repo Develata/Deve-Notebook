@@ -35,6 +35,7 @@ import {
 } from "./lib/android-native-mode-evidence.mjs";
 import { typeAndroidEditorText } from "./lib/mobile-webview-interaction.mjs";
 import { waitForAcceptedAndroidPresentation } from "./lib/android-presentation-proof.mjs";
+import { createAndroidWebViewInputTargetGate } from "./lib/android-webview-input-focus.mjs";
 
 const timeoutMs = Number(process.env.DEVE_MOBILE_ANDROID_REMOTE_TIMEOUT_MS ?? "120000");
 const cdpEndpoint = process.env.DEVE_MOBILE_ANDROID_CDP_ENDPOINT;
@@ -69,6 +70,8 @@ function adbOutput(...args) {
     timeout: remainingMs(),
   }).replaceAll("\r", "");
 }
+
+const waitForNativeInputTarget = createAndroidWebViewInputTargetGate(adbOutput, appId);
 
 function appPid(probeTimeoutMs = remainingMs()) {
   return probeAndroidAppProcess({
@@ -269,6 +272,7 @@ async function main() {
     {
       waitUntil,
       inputEditorText: inputAndroidEditorText,
+      waitForInputFocus: waitForNativeInputTarget,
     },
   );
   await commitAndroidChange(page, `android remote smoke ${stamp}`, { waitUntil, delay });

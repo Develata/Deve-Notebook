@@ -152,6 +152,10 @@ test("native presentation is re-admitted after same-WebView reload before drawer
   assert.match(writableEvidence, /nativeDrawerGesturesAfterReload:/);
   assert.match(writableEvidence, /drawerGestureProof\.workEditSelectionStable/);
   assert.match(remoteJourney, /nativeSystemGestureInsetsAcceptedAfterReload: true/);
+  assert.match(localJourney, /createAndroidWebViewInputTargetGate/);
+  assert.match(localJourney, /waitForInputFocus: waitForNativeInputTarget/);
+  assert.match(remoteJourney, /createAndroidWebViewInputTargetGate/);
+  assert.match(remoteJourney, /waitForInputFocus: waitForNativeInputTarget/);
 });
 
 test("native presentation requires a settled system-bar safe area around mobile chrome", () => {

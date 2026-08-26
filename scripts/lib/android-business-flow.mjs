@@ -130,13 +130,14 @@ export async function createAndroidDocument(
   page,
   path,
   content,
-  { waitUntil, inputEditorText },
+  { waitUntil, inputEditorText, waitForInputFocus },
 ) {
   const expectedWriterScope = await waitForCurrentStableAndroidRepoScope(page, waitUntil);
   const selected = await createAndSelectAndroidDocument(page, path, {
     waitUntil,
     click: clickVisible,
     fill: fillVisible,
+    waitForInputFocus,
     expectedWriterScope,
   });
   await waitForWritableEditor(page, waitUntil, 30000, selected.docId);
