@@ -5,6 +5,8 @@ contains	apps/desktop/src/lib.rs	mod service_bootstrap;
 contains	apps/desktop/src/lib.rs	mod service_entrypoint;
 contains	apps/desktop/src/lib.rs	mod tauri_bootstrap;
 contains	apps/desktop/src/process_runtime.rs	DesktopLocalServiceRuntime
+contains	apps/desktop/src/process_runtime/core.rs	const MAX_RUNTIME_EVENTS: usize = 64;
+contains	apps/desktop/src/process_runtime_test/lifecycle/start_stop.rs	fn desktop_process_runtime_event_history_is_bounded()
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	native_assert: desktop_windows_local_backend_child_exits_with_parent true
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	native_assert: desktop_windows_local_backend_child_exits_after_main_window_close true
 case_contains	docs/acceptance-cases/05_ui.md	UI-DESK-005	native_assert: desktop_native_session_smoke_stops_local_service_after_probe true

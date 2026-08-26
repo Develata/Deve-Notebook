@@ -93,7 +93,7 @@ fn commit_diff_fails_closed_on_missing_structure_targets() {
 }
 
 #[test]
-fn commit_diff_fails_closed_when_doc_has_multiple_live_nodes() {
+fn commit_diff_fails_closed_when_file_node_identity_is_corrupt() {
     let (_dir, repo) = new_repo();
     let doc_id = DocId::new();
     common::append_unvalidated_local_op(
@@ -135,10 +135,10 @@ fn commit_diff_fails_closed_when_doc_has_multiple_live_nodes() {
 
     let err = repo
         .diff_commits(None, &commit.id)
-        .expect_err("duplicate live doc paths must fail closed");
+        .expect_err("corrupt file node identity must fail closed");
 
     assert!(
-        err.to_string().contains("multiple live paths"),
+        err.to_string().contains("does not match doc"),
         "unexpected error: {}",
         err
     );

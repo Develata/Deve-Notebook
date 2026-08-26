@@ -2,7 +2,7 @@
 //!   - 10_rendering#large-document-runtime
 
 use anyhow::Result;
-use deve_core::ledger::RepoManager;
+use deve_core::ledger::{RepoManager, ops};
 use deve_core::models::DocId;
 use deve_core::state;
 use deve_core::sync::snapshot_policy::SnapshotPolicy;
@@ -91,7 +91,7 @@ fn score_repo_docs(repo: &RepoManager, repo_name: &str) -> Result<Vec<(DocId, u6
     let docs = repo.list_local_docs(Some(repo_name))?;
     let mut scored = Vec::new();
     for (doc_id, _) in docs {
-        let count = repo.get_local_ops_in_local_repo(repo_name, doc_id)?.len() as u64;
+        let count = repo.run_on_local_repo(repo_name, |db| ops::count_ops_from_db(db, doc_id))?;
         if count > 0 {
             scored.push((doc_id, count));
         }
@@ -107,8 +107,7 @@ fn prewarm_doc(
 ) -> Result<()> {
     let snapshot = repo.load_latest_snapshot_in_local_repo(repo_name, doc_id)?;
     let base_seq = snapshot.as_ref().map(|(seq, _)| *seq).unwrap_or(0);
-    let entries = repo.get_local_ops_in_local_repo(repo_name, doc_id)?;
-    let max_seq = entries.last().map(|(seq, _)| *seq).unwrap_or(0);
+    let max_seq = repo.run_on_local_repo(repo_name, |db| ops::max_seq_from_db(db, doc_id))?;
     let delta = max_seq.saturating_sub(base_seq);
     let doc_len = snapshot
         .as_ref()
@@ -120,8 +119,9 @@ fn prewarm_doc(
         return Ok(());
     }
 
-    if snapshot.is_none() || policy.should_snapshot(doc_len, delta, 0) {
-        let ops: Vec<_> = entries.iter().map(|(_, e)| e.clone()).collect();
+    if snapshot_rebuild_required(snapshot.is_some(), doc_len, delta, max_seq, policy) {
+        let entries = repo.get_local_ops_in_local_repo(repo_name, doc_id)?;
+        let ops: Vec<_> = entries.into_iter().map(|(_, entry)| entry).collect();
         let Some(content) =
             state::reconstruct_content_until(&ops, || cancelled.load(Ordering::Acquire))
         else {
@@ -133,4 +133,48 @@ fn prewarm_doc(
         repo.save_snapshot_in_local_repo(repo_name, doc_id, max_seq, &content)?;
     }
     Ok(())
+}
+
+fn snapshot_rebuild_required(
+    has_snapshot: bool,
+    doc_len: usize,
+    delta: u64,
+    max_seq: u64,
+    policy: SnapshotPolicy,
+) -> bool {
+    max_seq > 0 && (!has_snapshot || policy.should_snapshot(doc_len, delta, 0))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn prewarm_up_to_date_snapshot_skips_history_rebuild() {
+        assert!(!snapshot_rebuild_required(
+            true,
+            128,
+            0,
+            42,
+            SnapshotPolicy::default(),
+        ));
+    }
+
+    #[test]
+    fn prewarm_missing_snapshot_requires_history_rebuild() {
+        assert!(snapshot_rebuild_required(
+            false,
+            0,
+            0,
+            42,
+            SnapshotPolicy::default(),
+        ));
+        assert!(!snapshot_rebuild_required(
+            false,
+            0,
+            0,
+            0,
+            SnapshotPolicy::default(),
+        ));
+    }
 }

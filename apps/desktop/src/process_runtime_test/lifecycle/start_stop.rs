@@ -132,3 +132,24 @@ fn desktop_local_service_runtime_stop_failure_still_releases_controlled_handle()
         ]
     );
 }
+
+#[test]
+fn desktop_process_runtime_event_history_is_bounded() {
+    let launcher = RecordingLauncher::default();
+    let mut runtime = DesktopLocalServiceRuntime::with_launcher(enabled_policy(), 1, launcher);
+
+    for timestamp in 0..100 {
+        runtime.record_health_probe_failure(timestamp);
+    }
+
+    assert_eq!(runtime.events().len(), 64);
+    assert_eq!(
+        runtime.events().first().expect("oldest").timestamp_unix_ms,
+        36
+    );
+    assert_eq!(
+        runtime.events().last().expect("newest").timestamp_unix_ms,
+        99
+    );
+    assert_eq!(runtime.snapshot().state, NativeProcessRuntimeState::Offline);
+}

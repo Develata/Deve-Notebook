@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-08-14`
+- `Last Review`: `2026-08-26`
 - `Parent`: `03_storage/index`
 - `Primary Code Areas`: `crates/core/src/sync/watcher/`, `crates/core/src/watcher_ignore.rs`, `crates/core/src/writeback/suppressor.rs`, `apps/cli/src/watcher_runtime.rs`, `apps/cli/src/server/runtime/watcher_runtime.rs`
 
@@ -101,6 +101,10 @@ Starting(generation)
 - projection/persist_doc/commit apply 写盘前必须向 repo-local `WriteSuppressor` 注册写回指纹。
 - watcher 在匹配窗口内必须丢弃自写事件；若 suppressor 无法证明事件属于自写，必须按外部变化处理或置 reconcile latch，不得静默丢弃。
 - suppressor 状态必须 repo-local，禁止全局共享。
+- suppressor 的共享状态锁不得覆盖文件读取、存在性检查或内容 hash；验证必须使用带 generation 的短锁 claim，
+  文件系统 I/O 在锁外执行，settlement 只能消费仍与该 generation 相同的登记，不能误删并发的新登记。
+- 过期登记一旦被同 path claim、同 repo insert 或周期 GC 识别，必须退休；显式 clear 或最后一次命中移除
+  path 后，空 repo bucket 必须同步退休。suppressor 不得因历史 repo/path 数量无界保留空状态。
 
 ### 8.5 Level-Triggered Reconcile
 

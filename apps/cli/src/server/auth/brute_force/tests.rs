@@ -56,3 +56,25 @@ fn poisoned_lock_blocks_ip_fail_closed() {
     }));
     assert!(guard.is_blocked(&ip(5)));
 }
+
+#[test]
+fn expired_ban_resets_failure_count_before_new_attempt() {
+    let guard = BruteForceGuard::new();
+    let ip = ip(6);
+    record_failures(&guard, &ip, MAX_FAILURES);
+    {
+        let mut records = guard.records.lock().expect("lock records");
+        let record = records.get_mut(&ip).expect("blocked record");
+        record.last_failure = Instant::now()
+            .checked_sub(BAN_DURATION + Duration::from_secs(1))
+            .expect("representable expired instant");
+    }
+
+    assert!(!guard.is_blocked(&ip));
+    guard.record_failure(&ip);
+
+    let records = guard.records.lock().expect("lock records");
+    assert_eq!(records[&ip].failures, 1);
+    drop(records);
+    assert!(!guard.is_blocked(&ip));
+}

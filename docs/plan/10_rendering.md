@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-08-14`
+- `Last Review`: `2026-08-26`
 - `Counterpart Feature`: `docs/features/03_rendering.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/03_rendering.md`
 - `Primary Code Areas`: `apps/web/src/editor/`, `apps/web/js/extensions/`, `apps/web/src/components/outline_render/`, `apps/cli/src/server/handlers/document/`
@@ -370,6 +370,9 @@ Markdown 文档正文使用内容字体栈，不与应用壳层按钮/菜单字�
 
 - “未完全预加载前禁用全文搜索”是 runtime gate，不是 view 层提示文字而已。
 - snapshot-first / replay 策略必须与 `09_web_thin_client_ledger.md` 保持一致。
+- backend snapshot prewarm 对候选文档评分必须只读取 `DOC_OPS` 二级索引 count；选中文档是否需要重建必须先读取
+  max waterline，不得为评分或已是最新 snapshot 的文档解码并物化全部 `LedgerEntry`。只有被选中且确实需要重建
+  snapshot 的文档才允许加载正文 ops，且重建输入不得再克隆一份完整历史。
 
 补充：
 

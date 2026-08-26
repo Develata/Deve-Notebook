@@ -4,6 +4,8 @@ contains	docs/acceptance-cases/05_ui.md	run: cargo test -p deve_web dashboard_me
 contains	docs/acceptance-cases/05_ui.md	ui_assert: system_health_refreshed true
 contains	docs/acceptance-cases/05_ui.md	ui_assert: sync_status_updates_via_ws true
 contains	apps/cli/src/server/metrics.rs	std::time::Duration::from_secs(5)
+contains	apps/cli/src/server/metrics.rs	tokio::task::spawn_blocking
+contains	apps/cli/src/server/metrics.rs	count_local_docs
 contains	apps/cli/src/server/start.rs	runtime::spawn_background_runtime_tasks(p2p, app_state.clone(), repo, prewarm_enabled);
 contains	apps/cli/src/server/runtime/peripheral_runtime.rs	pub(crate) struct BackgroundRuntimeTasks
 contains	apps/cli/src/server/runtime/peripheral_runtime.rs	tasks.push(metrics::spawn_broadcaster(

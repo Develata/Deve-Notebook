@@ -112,6 +112,7 @@ contains	apps/cli/src/server/auth/handlers/login.rs	Login blocked (brute force)
 contains	apps/cli/src/server/auth/brute_force.rs	BruteForceGuard lock poisoned; failing closed
 contains	apps/cli/src/server/auth/brute_force/tests.rs	fn test_blocked_after_max_failures()
 contains	apps/cli/src/server/auth/brute_force/tests.rs	fn poisoned_lock_blocks_ip_fail_closed()
+contains	apps/cli/src/server/auth/brute_force/tests.rs	fn expired_ban_resets_failure_count_before_new_attempt()
 contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-010
 contains	apps/cli/src/server/ws/mod.rs	Json(AuthErrorResponse::new(code))
 contains	apps/cli/src/server/ws/mod.rs	StatusCode::UNAUTHORIZED

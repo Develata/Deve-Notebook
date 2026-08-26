@@ -51,6 +51,18 @@ pub(crate) enum CommitDiffError {
     RenameMissingNode { node_id: NodeId },
     #[error("Commit diff structure move references missing node {node_id}")]
     MoveMissingNode { node_id: NodeId },
+    #[error("Commit diff structure contains duplicate live node {node_id}")]
+    DuplicateStructureNode { node_id: NodeId },
+    #[error("Commit diff structure file node {node_id} does not match doc {doc_id}")]
+    FileNodeDocMismatch { node_id: NodeId, doc_id: DocId },
+    #[error("Commit diff structure parent {parent_id} of node {node_id} is not a directory")]
+    StructureParentNotDirectory { node_id: NodeId, parent_id: NodeId },
+    #[error("Commit diff structure path collision at {path} between {existing} and {node_id}")]
+    StructurePathCollision {
+        path: String,
+        existing: NodeId,
+        node_id: NodeId,
+    },
     #[error("Commit diff structure contains cycle at node {node_id}")]
     StructureCycle { node_id: NodeId },
     #[error("Commit diff structure references missing node {node_id}")]

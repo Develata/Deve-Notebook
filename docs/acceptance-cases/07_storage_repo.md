@@ -99,6 +99,8 @@
     - run: cargo test -p deve_core --lib cleanup_panic_becomes_typed_shutdown_failure -- --nocapture
     - run: cargo test -p deve_core --lib repo_watcher_bounded_shutdown_returns_without_drop_join -- --nocapture
     - run: cargo test -p deve_core --lib terminal_failure_is_visible_before_cleanup_completes -- --nocapture
+    - run: cargo test -p deve_core write_suppressor_stale_claim_does_not_consume_new_registration -- --nocapture
+    - run: cargo test -p deve_core write_suppressor_retires_empty_repo_buckets -- --nocapture
     - run: cargo test -p deve_core watcher_drop_is_a_synchronous_cleanup_safety_net -- --nocapture
     - run: cargo test -p deve_core --test watcher_platform_fs watcher_directory_removal_rescans_tracked_descendants -- --nocapture
     - run: cargo test -p deve_core --test watcher_platform_fs watcher_stop_prevents_post_stop_delivery -- --nocapture
@@ -147,6 +149,9 @@
     - cli_assert: standalone_watch_terminal_failure_closes_handles_in_reverse_and_exits_nonzero true
     - api_assert: watcher_refresh_adapter_maps_all_domain_fields true
     - api_assert: server_shutdown_preserves_background_primary_and_watcher_failure true
+    - api_assert: write_suppressor_file_io_runs_outside_shared_state_lock true
+    - api_assert: write_suppressor_generation_settlement_preserves_newer_registration true
+    - api_assert: write_suppressor_empty_repo_buckets_are_retired true
     - release_assert: linux_and_windows_non_overflow_watcher_receipts_bind_same_candidate_head true
     - release_assert: browser_repo_lifecycle_receipt_completes_w10_dynamic_lifecycle_surface true
     - evidence_boundary: STORE-007 non-overflow seal does not satisfy STORE-016 Windows overflow receipt

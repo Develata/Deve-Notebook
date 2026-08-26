@@ -4,6 +4,9 @@ contains	docs/acceptance-cases/04_diff.md	cargo test -p deve_web large_doc_searc
 contains	docs/acceptance-cases/03_rendering.md	case_id: RENDER-LARGE-001
 contains	docs/acceptance-cases/03_rendering.md	scripts/check-large-doc-baseline.sh
 contains	docs/acceptance-cases/03_rendering.md	cargo test -p deve_web large_doc_search_gate -- --nocapture
+contains	docs/acceptance-cases/03_rendering.md	cargo test -p deve_cli prewarm -- --nocapture
+contains	apps/cli/src/server/prewarm.rs	ops::count_ops_from_db
+contains	apps/cli/src/server/prewarm.rs	ops::max_seq_from_db
 contains	docs/acceptance-cases/03_rendering.md	snapshot_first true
 contains	docs/acceptance-cases/03_rendering.md	progressive_replay_enabled true
 contains	docs/acceptance-cases/03_rendering.md	search_disabled_until_prefetch_complete true

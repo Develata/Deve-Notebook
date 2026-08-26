@@ -83,3 +83,7 @@ contains	tools/baseline/src/main.rs	mod reliability_observability;
 contains	tools/baseline/src/main.rs	"reliability-observability" => reliability_observability::run()
 contains	tools/baseline/src/main.rs	reliability_observability::run_text()?
 contains	tools/baseline/src/main.rs	reliability_observability::run()?
+contains	docs/plan/22_reliability_observability.md	周期性 host filesystem / Redb 指标采集必须在 async reactor 之外执行
+contains	apps/cli/src/server/metrics.rs	tokio::task::spawn_blocking
+contains	crates/core/src/ledger/node_meta/migrate.rs	pub fn count_file_docs
+cargo_test_lib	deve_core	count_file_docs_streams_file_rows_without_materializing_paths

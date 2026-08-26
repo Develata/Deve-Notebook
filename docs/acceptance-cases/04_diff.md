@@ -168,6 +168,10 @@
     - run: cargo test -p deve_cli ngit_push_public_error_does_not_expose_internal_detail -- --nocapture
     - run: cargo test -p deve_core commit_diff_reconstructs_only_through_requested_waterline -- --nocapture
     - run: cargo test -p deve_core commit_diff_structure_delete_uses_children_index -- --nocapture
+    - run: cargo test -p deve_core commit_diff_rejects_duplicate_live_structure_node -- --nocapture
+    - run: cargo test -p deve_core commit_diff_rejects_file_node_doc_id_mismatch -- --nocapture
+    - run: cargo test -p deve_core commit_diff_rejects_missing_or_non_directory_parent -- --nocapture
+    - run: cargo test -p deve_core commit_diff_rejects_structure_path_collision -- --nocapture
     - run: cargo test -p deve_core run_pending_mirror_commits_terminal_projection_for_multiple_queued_records -- --nocapture
     - run: cargo test -p deve_core run_pending_mirror_rejects_terminal_projection_workspace_content_mismatch -- --nocapture
     - run: cargo test -p deve_core run_pending_mirror_creates_terminal_commit_instead_of_reusing_unmapped_head -- --nocapture
@@ -298,6 +302,8 @@
     - api_assert: doc_id_source_control_targets_prefer_live_rename_successor true
     - api_assert: source_control_rename_pair_stage_is_atomic_and_idempotent true
     - api_assert: commit_diff_reversed_order_fails_closed true
+    - api_assert: commit_diff_structure_replay_is_streaming_and_bounded_by_live_tree true
+    - api_assert: commit_diff_invalid_structure_facts_fail_closed true
     - ui_assert: command_palette_legacy_bridge_mode_absent true
     - ui_assert: command_palette_source_control_authority_reactive_after_node_role_probe true
     - ui_assert: source_control_legacy_bridge_mode_absent true

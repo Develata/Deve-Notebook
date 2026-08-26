@@ -5,7 +5,7 @@
 - `Layer`: `Authority Core`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-08-14`
+- `Last Review`: `2026-08-26`
 - `Counterpart Feature`: `docs/features/07_diff_logic.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/04_diff.md`
 - `Primary Code Areas`: `crates/core/src/source_control/`, `crates/core/src/ledger/source_control.rs`, `apps/cli/src/server/handlers/source_control/`, `apps/web/src/hooks/use_core/callbacks_sc_*.rs`
@@ -137,7 +137,7 @@ DeveStaged
   Source Control 不干净、Git worktree 不干净、存在 queued/out-of-sync record、`.notegit`
   tracked 泄漏或 Git HEAD 未映射到最新 NoteGit/ngit commit。
 - Git push 的公开 report、CLI 输出与 blocker 只能包含 allowlisted remote/branch/head/category。公开或持久化的 Git object id 必须先规范化为精确的 40/64 位十六进制值；异常 Git stdout 或损坏的 durable object id 必须以固定 category fail-closed，不得进入 report。`remote get-url` 的 userinfo、query、fragment，以及 Git stderr/stdout、credential helper detail、host path 或 provider response body不得进入这些 surface；包括 status/store 在内的顶层命令失败必须投影为固定 repair category，原始 detail 只允许进入受控内部诊断。
-- commit diff 重建文档内容时必须只读取 `global_seq <= commit waterline` 的有序 content ops；不得先加载该文档全部未来历史再在内存中过滤。结构历史删除必须维护派生 children index，以与 subtree size 线性地退休后代；该 index 不是 authority。
+- commit diff 重建文档内容时必须只读取 `global_seq <= commit waterline` 的有序 content ops；不得先加载该文档全部未来历史再在内存中过滤。结构历史也必须从 `LEDGER_OPS` 流式回放到 commit waterline，不得先物化该范围内全部 content/structure fact body。结构历史删除必须维护派生 children index，以与 subtree size 线性地退休后代；该 index 不是 authority。结构回放遇到重复 live node、file `NodeId`/`DocId` 不一致、missing parent、非目录 parent、cycle 或 live path collision 必须 fail-closed，不得覆盖旧节点、把孤儿节点降格为 root 或输出歧义路径。
 - repair action schema 只能用于诊断、人工修复指引和显式 retry；**MUST NOT** 被 Web、后台任务或 Command Palette 解释为自动 Git 写入授权。
 - 自动后台执行、可点击 repair UI 与 Web 后端直接执行 Git 写入 **MUST** 作为独立设计批次处理，不能从只读 status/review surface 隐式升级。
 - Proxy / plugin-host node role 摘要不得展示 legacy bridge mode；如果需要描述 Source Control，

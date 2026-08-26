@@ -5,7 +5,7 @@
 - `Layer`: `Application / UI Shell`
 - `Status`: `Current UI Contract`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-08-14`
+- `Last Review`: `2026-08-26`
 - `Counterpart Feature`: `docs/features/08_ui_design_02_desktop.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/05_ui.md`
 - `Primary Code Areas`: `apps/web/src/components/`, `apps/web/src/hooks/use_core/`, `apps/desktop/`
@@ -191,6 +191,8 @@ Desktop `LocalBackend` policy 必须满足：
 *   所有可写 UI 仍由 server/core 的 repo scope、writer-ready 与 `scope_nonce` 决定；
     process running 不等于 writable。
 *   local service 只能监听 loopback；端口、session material 与 bootstrap secret 不得进入 URL、日志或 Web localStorage。
+*   process runtime snapshot 是当前状态真值；仅用于本进程诊断的 transition event history 必须有固定上限，
+    超限时只退休最旧事件，不得因长期运行或反复恢复无界增长，也不得用 history 反推业务 authority。
 
 ## 2. The Cockpit Concept (布局哲学)
 

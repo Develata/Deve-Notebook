@@ -96,8 +96,10 @@
     - run: powershell -Command "1..50 | % { curl -s -X POST http://127.0.0.1:3000/api/auth/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"bad\"}' }"
     - run: scripts/check-auth-baseline.sh
     - run: cargo test -p deve_cli auth -- --nocapture
+    - run: cargo test -p deve_cli expired_ban_resets_failure_count_before_new_attempt -- --nocapture
   assertions:
     - http_status_in: [429]
+    - api_assert: expired_ban_starts_a_fresh_failure_window true
 
 - case_id: AUTH-009
   goal: JWT payload 受控且每次登录 session 可区分。

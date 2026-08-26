@@ -318,6 +318,7 @@
     - run: scripts/check-release-baseline.sh
     - run: cargo run -p deve_baseline -- release
     - run: cargo test -p deve_cli cgroup_ -- --nocapture
+    - run: cargo test -p deve_core count_file_docs -- --nocapture
     - run: cargo test -p deve_cli node_role_watcher_health -- --nocapture
     - chrome_mcp: open dashboard
   assertions:
@@ -329,6 +330,7 @@
     - ui_text_visible_any_of: ["embedded-frontend", "static-dir", "api-only", "plugin-host-proxy"]
     - metrics_assert: container_memory_uses_current_cgroup_usage true
     - metrics_assert: container_cpu_uses_cgroup_usage_and_effective_capacity true
+    - metrics_assert: document_count_streams_node_metadata_without_sorting_paths true
 
 - case_id: REL-007
   goal: 当前运行写读主链路可在临时 repo 中自动验收。

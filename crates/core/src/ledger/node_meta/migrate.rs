@@ -8,7 +8,7 @@
 use crate::codec;
 use crate::ledger::schema::{INODE_TO_NODEID, NODEID_TO_META, PATH_TO_NODEID};
 use crate::models::{DocId, NodeId, NodeKind, NodeMeta};
-use anyhow::Result;
+use anyhow::{Result, anyhow};
 use redb::{Database, ReadableTable};
 
 pub fn list_nodes(db: &Database) -> Result<Vec<(NodeId, NodeMeta)>> {
@@ -35,6 +35,22 @@ pub fn list_file_docs(db: &Database) -> Result<Vec<(DocId, String)>> {
     }
     docs.sort_by(|left, right| left.1.cmp(&right.1));
     Ok(docs)
+}
+
+pub fn count_file_docs(db: &Database) -> Result<u64> {
+    let read_txn = db.begin_read()?;
+    let table = read_txn.open_table(NODEID_TO_META)?;
+    let mut count = 0u64;
+    for item in table.iter()? {
+        let (_, meta_bytes) = item?;
+        let meta: NodeMeta = codec::decode(meta_bytes.value())?;
+        if meta.kind == NodeKind::File && meta.doc_id.is_some() {
+            count = count
+                .checked_add(1)
+                .ok_or_else(|| anyhow!("local document count overflow"))?;
+        }
+    }
+    Ok(count)
 }
 
 pub fn file_meta_for_doc(db: &Database, doc_id: DocId) -> Result<Option<NodeMeta>> {
@@ -64,4 +80,24 @@ fn ensure_node_tables(db: &Database) -> Result<()> {
     }
     write_txn.commit()?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::count_file_docs;
+    use crate::ledger::node_meta::{create_dir_node, ensure_file_node};
+    use crate::models::DocId;
+
+    #[test]
+    fn count_file_docs_streams_file_rows_without_materializing_paths() -> anyhow::Result<()> {
+        let dir = tempfile::tempdir()?;
+        let db = redb::Database::create(dir.path().join("node-meta.redb"))?;
+        super::ensure_node_tables(&db)?;
+        create_dir_node(&db, "notes")?;
+        ensure_file_node(&db, "notes/a.md", DocId::new())?;
+        ensure_file_node(&db, "notes/b.md", DocId::new())?;
+
+        assert_eq!(count_file_docs(&db)?, 2);
+        Ok(())
+    }
 }

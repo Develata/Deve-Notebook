@@ -8,6 +8,8 @@ use deve_core::native_adapter::{
     NativeProcessSpawnSpec, NativeServiceHealthProbe,
 };
 
+const MAX_RUNTIME_EVENTS: usize = 64;
+
 #[derive(Debug, Clone)]
 pub(super) struct DesktopProcessRuntimeCore {
     policy: NativeProcessAdapterPolicy,
@@ -162,6 +164,9 @@ impl DesktopProcessRuntimeCore {
 
     fn transition(&mut self, state: NativeProcessRuntimeState, timestamp_unix_ms: i64) {
         self.snapshot.state = state;
+        if self.events.len() == MAX_RUNTIME_EVENTS {
+            self.events.remove(0);
+        }
         self.events.push(NativeProcessRuntimeEvent {
             state,
             timestamp_unix_ms,

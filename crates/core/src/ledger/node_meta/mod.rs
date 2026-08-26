@@ -14,7 +14,7 @@ pub mod update;
 
 pub use core::{create_dir_node, ensure_dir_chain, ensure_file_node, upsert_node};
 pub use lookup::{get_node_id, get_node_meta};
-pub use migrate::{file_meta_for_doc, list_file_docs, list_nodes, path_for_doc};
+pub use migrate::{count_file_docs, file_meta_for_doc, list_file_docs, list_nodes, path_for_doc};
 pub use update::{delete_path_prefix, remove_node_by_path, rename_path_prefix};
 
 pub(crate) use core::{ensure_file_node_in_txn, upsert_node_in_txn};

@@ -1,6 +1,7 @@
 // apps/cli/src/server/metrics.rs
 //! plan_ref:
 //!   - 18_release#runtime-observability
+//!   - 22_reliability_observability#metrics-taxonomy
 //!
 //! # 系统指标采集 (System Metrics Collection)
 //!
@@ -90,7 +91,7 @@ pub fn increment_ops() {
 
 /// 采集瞬时系统指标
 ///
-/// **Invariant**: 不分配堆内存（除字符串解析的临时 buffer）
+/// **Invariant**: 不物化完整文档路径列表；文件系统与 Redb I/O 由调用方放到 blocking lane。
 pub fn collect(state: &AppState) -> ServerMessage {
     let uptime_secs = START_TIME.get().map(|t| t.elapsed().as_secs()).unwrap_or(0);
     let active_connections = state.tx.receiver_count() as u32;
@@ -126,8 +127,13 @@ pub fn spawn_broadcaster(
                     }
                 }
                 _ = interval.tick() => {
-                    let msg = collect(&state);
-                    let _ = state.tx.send(msg);
+                    let collect_state = state.clone();
+                    match tokio::task::spawn_blocking(move || collect(&collect_state)).await {
+                        Ok(msg) => {
+                            let _ = state.tx.send(msg);
+                        }
+                        Err(err) => tracing::warn!("Metrics collection task panicked: {err}"),
+                    }
                 }
             }
         }
@@ -151,8 +157,8 @@ fn local_doc_count(state: &AppState) -> anyhow::Result<u32> {
     // Invariant: doc_count 统计所有本地 repo 的文档总数，而不是默认主库的投影。
     let mut total = 0u32;
     for repo_name in state.repo.list_local_repo_names_for_execution()? {
-        let count = state.repo.list_local_docs(Some(&repo_name))?.len();
-        total = total.saturating_add(count as u32);
+        let count = state.repo.count_local_docs(Some(&repo_name))?;
+        total = total.saturating_add(u32::try_from(count).unwrap_or(u32::MAX));
     }
     Ok(total)
 }

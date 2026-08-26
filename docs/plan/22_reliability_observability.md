@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-07-21`
+- `Last Review`: `2026-08-26`
 - `Authority Owns`: `SLO/SLI catalog / telemetry schema / metrics taxonomy / tracing span boundary / observation-to-health mapping / alerting tier 映射 / resilience playbook index`
 - `Authority Defers To`: `04_repository#repo-health-and-repair (degraded 状态全集与状态迁移), 03_storage/watcher#watcher-contract (process-local RepoMountState / WatcherFailure), 13_i18n#i18n-error-code-catalog (错误码), 17_tech_stack#performance-profiles-and-feature-matrix (profile), 18_release#runtime-observability (运维观测 endpoint), 21_perf_budget (latency/RSS budget), 06_backup (Remote Projection / Remote Import 状态与 authority 边界)`
 - `Counterpart Feature`: `docs/features/operation-coverage.md (release / observability flows)`
@@ -83,6 +83,9 @@ SLI 的 latency 阈值唯一引用 `21_perf_budget` §2；本章不复制数值�
 - watcher runtime 至少观测 aggregate expected/running/unavailable gauge、startup scan pass、reconcile latch、
   terminal failure 与 shutdown cleanup failure；repo id、path 与 generation 不得作为公开或高基数 metric label。
 - Remote Import 只使用低基数 aggregate：prepare/apply/failure/cleanup counter、active/cleanup-pending gauge 与 phase latency histogram。`session_id`、revision、`entry_id`、locator、provider host/path、blob path、digest、credential 与 raw detail 禁止成为 metric label或公开 health 字段。
+- 周期性 host filesystem / Redb 指标采集必须在 async reactor 之外执行，同一 broadcaster 同时最多存在一次采集；
+  shutdown 必须等待已开始的采集结束，不得遗留 detached blocking task。文档计数只能流式扫描 node metadata，
+  不得为了一个 aggregate gauge 构造并排序完整文档路径列表。
 - 容器内的 runtime resource gauge **MUST** 以当前可见 cgroup hierarchy 为资源域：
   memory 使用当前 cgroup usage；CPU 使用当前 cgroup usage delta，并按可见祖先中最严
   quota 与 effective cpuset 的较小 capacity 归一化到 `0..=100%`。每个 metric 应按

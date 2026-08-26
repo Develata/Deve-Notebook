@@ -60,16 +60,20 @@ impl BruteForceGuard {
         let Ok(mut records) = self.lock_records() else {
             return;
         };
+        let now = Instant::now();
         let entry = records.entry(*ip).or_insert(IpRecord {
             failures: 0,
-            last_failure: Instant::now(),
+            last_failure: now,
         });
-        entry.failures += 1;
-        entry.last_failure = Instant::now();
+        if now.duration_since(entry.last_failure) >= BAN_DURATION {
+            entry.failures = 0;
+        }
+        entry.failures = entry.failures.saturating_add(1);
+        entry.last_failure = now;
 
         // 惰性 GC
         if records.len() > GC_THRESHOLD {
-            records.retain(|_, r| r.last_failure.elapsed() < BAN_DURATION);
+            records.retain(|_, r| now.duration_since(r.last_failure) < BAN_DURATION);
         }
     }
 

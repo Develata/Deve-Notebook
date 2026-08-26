@@ -141,6 +141,7 @@
   steps:
     - run: scripts/check-large-doc-baseline.sh
     - run: cargo test -p deve_web large_doc_search_gate -- --nocapture
+    - run: cargo test -p deve_cli prewarm -- --nocapture
     - ui_open_doc: "large.md"
     - ui_time_to_first_paint: true
   assertions:
@@ -148,6 +149,8 @@
     - ui_assert: snapshot_first true
     - ui_assert: progressive_replay_enabled true
     - ui_assert: search_disabled_until_prefetch_complete true
+    - api_assert: prewarm_candidate_scoring_uses_index_counts_without_materializing_ops true
+    - api_assert: up_to_date_snapshot_prewarm_avoids_loading_document_history true
 
 - case_id: RENDER-LARGE-002
   goal: 大文档 delta batch 不可应用时回退 full snapshot。

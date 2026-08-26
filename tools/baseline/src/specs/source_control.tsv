@@ -517,6 +517,10 @@ case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cargo test -p deve_core 
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cargo test -p deve_cli ngit_push_public_error_does_not_expose_internal_detail -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cargo test -p deve_core commit_diff_reconstructs_only_through_requested_waterline -- --nocapture
 case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cargo test -p deve_core commit_diff_structure_delete_uses_children_index -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cargo test -p deve_core commit_diff_rejects_duplicate_live_structure_node -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cargo test -p deve_core commit_diff_rejects_file_node_doc_id_mismatch -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cargo test -p deve_core commit_diff_rejects_missing_or_non_directory_parent -- --nocapture
+case_contains	docs/acceptance-cases/04_diff.md	DIFF-009	cargo test -p deve_core commit_diff_rejects_structure_path_collision -- --nocapture
 contains	crates/core/src/git_bridge/push/tests.rs	fn git_push_report_redacts_remote_credentials_and_command_detail
 contains	crates/core/src/git_bridge/git_cmd.rs	fn git_object_id_normalization_rejects_public_report_injection
 contains	crates/core/src/git_bridge/push/tests.rs	fn git_push_report_rejects_corrupt_durable_object_id_without_projection
@@ -534,5 +538,9 @@ cargo_test_lib	deve_core	mark_committed_rejects_invalid_git_object_id_without_pe
 cargo_test_lib	deve_cli	ngit_push_public_error_does_not_expose_internal_detail
 cargo_test_lib	deve_core	commit_diff_reconstructs_only_through_requested_waterline
 cargo_test_lib	deve_core	commit_diff_structure_delete_uses_children_index
+cargo_test_lib	deve_core	commit_diff_rejects_duplicate_live_structure_node
+cargo_test_lib	deve_core	commit_diff_rejects_file_node_doc_id_mismatch
+cargo_test_lib	deve_core	commit_diff_rejects_missing_or_non_directory_parent
+cargo_test_lib	deve_core	commit_diff_rejects_structure_path_collision
 cargo_test_lib	deve_core	unchanged_commit_diff_status_is_absent_instead_of_renamed
 cargo_test_lib	deve_core	doc_scoped_unstage_uses_staged_doc_index_without_deserializing_unrelated_rows

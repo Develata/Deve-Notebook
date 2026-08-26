@@ -122,6 +122,19 @@ impl RepoManager {
         self.run_on_local_repo(name, node_meta::list_file_docs)
     }
 
+    /// 流式统计指定本地仓库的文档，不构造或排序路径列表。
+    pub fn count_local_docs(&self, repo_name: Option<&str>) -> Result<u64> {
+        let default_name;
+        let name = match repo_name {
+            Some(name) => name,
+            None => {
+                default_name = self.current_local_repo_name()?;
+                &default_name
+            }
+        };
+        self.run_on_local_repo(name, node_meta::count_file_docs)
+    }
+
     /// 列出指定本地仓库的节点
     pub fn list_local_nodes(&self, repo_name: Option<&str>) -> Result<Vec<(NodeId, NodeMeta)>> {
         let default_name;

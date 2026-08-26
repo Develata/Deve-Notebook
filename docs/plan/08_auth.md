@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.0.1`
-- `Last Review`: `2026-08-25`
+- `Last Review`: `2026-08-26`
 - `Counterpart Feature`: `docs/features/09_auth.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/08_auth.md`
 - `Primary Code Areas`: `crates/core/src/security/auth/`, `apps/cli/src/server/auth/`, `apps/web/src/api/auth_probe.rs`, `apps/web/src/app/auth_monitor.rs`
@@ -411,6 +411,8 @@ provider/session/Ledger/removal owner I/O前返回既有结构化`AUTH_*`结果�
 
 - 达到阈值后封禁窗口生效
 - 封禁窗口结束后允许重新尝试
+- 封禁窗口过期后，该 IP 的连续失败计数必须从零重新开始；过期后的第一次失败只计为一次新失败，
+  不得沿用旧窗口计数立即重新封禁。过期记录应惰性退休，锁中毒时仍保持 fail-closed。
 
 ### 9.4 Unauthorized vs Disconnected UI Contract {#unauthorized-disconnected-ui}
 
