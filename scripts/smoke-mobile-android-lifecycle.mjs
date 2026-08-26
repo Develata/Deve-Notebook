@@ -59,7 +59,11 @@ const {
   waitForAndroidRootReentry,
   readAndroidUiBackSurfaceObservation,
 } = createAndroidLifecycleHarness({ timeoutMs, adb, serial });
-const waitForNativeInputTarget = createAndroidWebViewInputTargetGate(adbOutput, appId);
+const waitForNativeInputTarget = createAndroidWebViewInputTargetGate(
+  adbOutput,
+  appId,
+  adbCommand,
+);
 async function inputAndroidEditorText(content, _point, page, expectedDocId = null) {
   return typeAndroidEditorText(page, content, {
     delay,

@@ -1,4 +1,6 @@
 const WEBVIEW_INPUT_FOCUS_SETTLE_MS = 250;
+const NATIVE_INPUT_PASSIVE_TIMEOUT_MS = 1_500;
+const NATIVE_INPUT_REENTRY_TIMEOUT_MS = 30_000;
 const ANDROID_APP_ID_PATTERN = /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/;
 const ANDROID_COMPONENT_PATTERN =
   /(?:^|[\s{])([A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+)\/([A-Za-z0-9_.$]+)(?=[\s}]|$)/g;
@@ -74,7 +76,14 @@ export function classifyAndroidNativeInputTarget(activityOutput, windowOutput, a
   return activityState === "resumed" && windowState === "focused" ? "ready" : "not-ready";
 }
 
-async function waitForInputTarget(page, waitUntil, readNativeTargetState, timeout, label) {
+async function waitForInputTarget(
+  page,
+  waitUntil,
+  readNativeTargetState,
+  timeout,
+  label,
+  onObservation = null,
+) {
   let matchedSince = null;
   let matchedDocument = null;
   await waitUntil(label, async () => {
@@ -89,6 +98,13 @@ async function waitForInputTarget(page, waitUntil, readNativeTargetState, timeou
     } catch {
       matchedSince = null;
       matchedDocument = null;
+      onObservation?.({
+        documentIdentityValid: false,
+        pageVisible: false,
+        pageFocused: false,
+        mobileLayout: false,
+        nativeTargetState: "not-sampled",
+      });
       throw new Error("android_webview_input_focus_sample_failed");
     }
     let nativeTargetState = "ready";
@@ -98,12 +114,28 @@ async function waitForInputTarget(page, waitUntil, readNativeTargetState, timeou
       } catch {
         matchedSince = null;
         matchedDocument = null;
+        onObservation?.({
+          documentIdentityValid: Number.isFinite(state?.documentTimeOrigin),
+          pageVisible: state?.visible === true,
+          pageFocused: state?.focused === true,
+          mobileLayout: state?.mobile === true,
+          nativeTargetState: "probe-failed",
+        });
         throw new Error("android_native_input_target_sample_failed");
       }
     }
+    const projectedNativeTargetState = ["ready", "not-ready", "unavailable"]
+      .includes(nativeTargetState) ? nativeTargetState : "invalid";
+    onObservation?.({
+      documentIdentityValid: Number.isFinite(state?.documentTimeOrigin),
+      pageVisible: state?.visible === true,
+      pageFocused: state?.focused === true,
+      mobileLayout: state?.mobile === true,
+      nativeTargetState: projectedNativeTargetState,
+    });
     if (!Number.isFinite(state?.documentTimeOrigin)
       || !state.visible || !state.focused || !state.mobile
-      || nativeTargetState !== "ready") {
+      || projectedNativeTargetState !== "ready") {
       matchedSince = null;
       matchedDocument = null;
       return false;
@@ -136,26 +168,87 @@ export async function waitForCurrentAndroidWebViewInputTarget(
   if (typeof readNativeTargetState !== "function") {
     throw new Error("android_native_input_target_probe_missing");
   }
-  await waitForInputTarget(
-    page,
-    waitUntil,
-    readNativeTargetState,
-    timeout,
-    "current Android native input target settlement",
-  );
+  let lastObservation = null;
+  try {
+    await waitForInputTarget(
+      page,
+      waitUntil,
+      readNativeTargetState,
+      timeout,
+      "current Android native input target settlement",
+      (observation) => { lastObservation = observation; },
+    );
+  } catch {
+    throw new Error(
+      `android_native_input_target_settlement_failed; last=${JSON.stringify(lastObservation)}`,
+    );
+  }
 }
 
-export function createAndroidWebViewInputTargetGate(adbOutput, appId) {
-  if (typeof adbOutput !== "function") {
+export function createAndroidWebViewInputTargetGate(
+  adbOutput,
+  appId,
+  adbCommand,
+  {
+    passiveTimeoutMs = NATIVE_INPUT_PASSIVE_TIMEOUT_MS,
+    reentryTimeoutMs = NATIVE_INPUT_REENTRY_TIMEOUT_MS,
+  } = {},
+) {
+  if (typeof adbOutput !== "function" || typeof adbCommand !== "function") {
     throw new Error("android_native_input_target_adb_probe_missing");
   }
-  return (page, waitUntil) => waitForCurrentAndroidWebViewInputTarget(
-    page,
-    waitUntil,
-    () => classifyAndroidNativeInputTarget(
-      adbOutput("shell", "dumpsys", "activity", "activities"),
-      adbOutput("shell", "dumpsys", "window"),
-      appId,
-    ),
+  if (typeof appId !== "string" || !ANDROID_APP_ID_PATTERN.test(appId)
+    || !Number.isFinite(passiveTimeoutMs) || passiveTimeoutMs <= 0
+    || !Number.isFinite(reentryTimeoutMs) || reentryTimeoutMs <= 0) {
+    throw new Error("android_native_input_target_gate_config_invalid");
+  }
+  const readNativeTargetState = () => classifyAndroidNativeInputTarget(
+    adbOutput("shell", "dumpsys", "activity", "activities"),
+    adbOutput("shell", "dumpsys", "window"),
+    appId,
   );
+  return async (page, waitUntil) => {
+    try {
+      await waitForCurrentAndroidWebViewInputTarget(
+        page,
+        waitUntil,
+        readNativeTargetState,
+        passiveTimeoutMs,
+      );
+      return;
+    } catch {
+      // A live WebView can temporarily lose the Android task/window input lease.
+      // Reassert the existing launcher task once; business input is still sealed.
+    }
+    let pidBefore;
+    try {
+      pidBefore = adbOutput("shell", "pidof", appId).trim();
+      if (!/^[1-9][0-9]*$/.test(pidBefore)) throw new Error("invalid pid");
+      adbCommand(
+        "shell", "monkey", "-p", appId,
+        "-c", "android.intent.category.LAUNCHER", "1",
+      );
+    } catch {
+      throw new Error("android_native_input_target_reentry_driver_failed");
+    }
+    try {
+      await waitForCurrentAndroidWebViewInputTarget(
+        page,
+        waitUntil,
+        readNativeTargetState,
+        reentryTimeoutMs,
+      );
+    } catch (error) {
+      throw new Error(`android_native_input_target_reentry_failed; ${error.message}`);
+    }
+    let pidAfter;
+    try {
+      pidAfter = adbOutput("shell", "pidof", appId).trim();
+    } catch {
+      throw new Error("android_native_input_target_reentry_pid_probe_failed");
+    }
+    if (pidAfter !== pidBefore) {
+      throw new Error("android_native_input_target_reentry_pid_unstable");
+    }
+  };
 }

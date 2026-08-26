@@ -71,7 +71,11 @@ function adbOutput(...args) {
   }).replaceAll("\r", "");
 }
 
-const waitForNativeInputTarget = createAndroidWebViewInputTargetGate(adbOutput, appId);
+const waitForNativeInputTarget = createAndroidWebViewInputTargetGate(
+  adbOutput,
+  appId,
+  adbCommand,
+);
 
 function appPid(probeTimeoutMs = remainingMs()) {
   return probeAndroidAppProcess({

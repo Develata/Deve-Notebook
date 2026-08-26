@@ -152,9 +152,15 @@ test("native presentation is re-admitted after same-WebView reload before drawer
   assert.match(writableEvidence, /nativeDrawerGesturesAfterReload:/);
   assert.match(writableEvidence, /drawerGestureProof\.workEditSelectionStable/);
   assert.match(remoteJourney, /nativeSystemGestureInsetsAcceptedAfterReload: true/);
-  assert.match(localJourney, /createAndroidWebViewInputTargetGate/);
+  assert.match(
+    localJourney,
+    /createAndroidWebViewInputTargetGate\(\s*adbOutput,\s*appId,\s*adbCommand,\s*\)/,
+  );
   assert.match(localJourney, /waitForInputFocus: waitForNativeInputTarget/);
-  assert.match(remoteJourney, /createAndroidWebViewInputTargetGate/);
+  assert.match(
+    remoteJourney,
+    /createAndroidWebViewInputTargetGate\(\s*adbOutput,\s*appId,\s*adbCommand,\s*\)/,
+  );
   assert.match(remoteJourney, /waitForInputFocus: waitForNativeInputTarget/);
 });
 

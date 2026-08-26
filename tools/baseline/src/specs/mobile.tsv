@@ -54,6 +54,8 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: app_activ
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_swipe_point_is_hit_tested_outside_action_controls true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_adb_swipe_waits_for_stable_current_webview_input_focus true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_native_input_requires_exact_current_window_resumed_activity_and_webview_focus true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_native_input_allows_one_pid_stable_launcher_reentry_before_failing_closed true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_native_input_failure_projects_only_fixed_page_activity_window_categories true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_input_focus_settlement_restarts_after_document_replacement true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: node --test scripts/android-webview-input-focus.test.mjs
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: node --test scripts/android-native-back-observation.test.mjs
@@ -238,11 +240,16 @@ contains	scripts/android-webview-input-focus.test.mjs	Android current window cla
 contains	scripts/android-webview-input-focus.test.mjs	Android native input classifier requires resumed Activity and exact current window
 contains	scripts/android-webview-input-focus.test.mjs	Android native input gate samples resumed Activity and current window together
 contains	scripts/android-webview-input-focus.test.mjs	Android native input gate rejects a missing ADB probe with a fixed category
+contains	scripts/android-webview-input-focus.test.mjs	Android native input gate allows one PID-stable launcher reentry
+contains	scripts/android-webview-input-focus.test.mjs	Android native input reentry failure reports only fixed target categories
+contains	scripts/android-webview-input-focus.test.mjs	Android native input reentry rejects PID replacement
 contains	scripts/android-webview-input-focus.test.mjs	Android native input target resets settlement until Activity and window are current
 contains	scripts/android-webview-input-focus.test.mjs	Android native input target redacts platform probe failures
 contains	scripts/lib/android-webview-input-focus.mjs	createAndroidWebViewInputTargetGate
 contains	scripts/lib/android-webview-input-focus.mjs	classifyAndroidWindowFocused
 contains	scripts/lib/android-webview-input-focus.mjs	adbOutput("shell", "dumpsys", "window")
+contains	scripts/lib/android-webview-input-focus.mjs	"shell", "monkey", "-p", appId
+contains	scripts/lib/android-webview-input-focus.mjs	android_native_input_target_reentry_pid_unstable
 contains	scripts/smoke-mobile-android-lifecycle.mjs	waitForInputFocus: waitForNativeInputTarget
 contains	scripts/smoke-mobile-android-remote-browser.mjs	waitForInputFocus: waitForNativeInputTarget
 contains	scripts/mobile-android-presentation.test.mjs	native presentation requires a settled system-bar safe area around mobile chrome

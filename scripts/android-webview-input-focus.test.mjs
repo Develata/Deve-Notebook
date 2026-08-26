@@ -171,7 +171,9 @@ test("Android native input gate samples resumed Activity and current window toge
     throw new Error("synthetic native input target timeout");
   };
   try {
-    await createAndroidWebViewInputTargetGate(adbOutput, appId)(page, waitUntil);
+    await createAndroidWebViewInputTargetGate(adbOutput, appId, () => {
+      throw new Error("foreground reentry must not run for an admitted target");
+    })(page, waitUntil);
     assert.equal(adbCalls.length, 6);
     assert.deepEqual(adbCalls.slice(0, 2), [
       ["shell", "dumpsys", "activity", "activities"],
@@ -187,6 +189,158 @@ test("Android native input gate rejects a missing ADB probe with a fixed categor
     () => createAndroidWebViewInputTargetGate(null, "dev.deve.notebook.mobile"),
     /android_native_input_target_adb_probe_missing/,
   );
+  assert.throws(
+    () => createAndroidWebViewInputTargetGate(() => "", Symbol("invalid"), () => {}),
+    /android_native_input_target_gate_config_invalid/,
+  );
+});
+
+test("Android native input gate allows one PID-stable launcher reentry", async () => {
+  const originalNow = Date.now;
+  let now = 0;
+  let foregrounded = false;
+  let reentryCount = 0;
+  Date.now = () => now;
+  const appId = "dev.deve.notebook.mobile";
+  const adbOutput = (...args) => {
+    const command = args.join(" ");
+    if (command === `shell pidof ${appId}`) return "1234\n";
+    if (command === "shell dumpsys activity activities") {
+      const packageName = foregrounded ? appId : "com.android.launcher3";
+      return `topResumedActivity=ActivityRecord{a u0 ${packageName}/.MainActivity t1}`;
+    }
+    if (command === "shell dumpsys window") {
+      const packageName = foregrounded ? appId : "com.android.launcher3";
+      return `mCurrentFocus=Window{b u0 ${packageName}/${packageName}.MainActivity}`;
+    }
+    throw new Error("unexpected ADB probe");
+  };
+  const adbCommand = (...args) => {
+    assert.deepEqual(args, [
+      "shell", "monkey", "-p", appId,
+      "-c", "android.intent.category.LAUNCHER", "1",
+    ]);
+    reentryCount += 1;
+    foregrounded = true;
+  };
+  const page = {
+    async call() {
+      return { documentTimeOrigin: 1, visible: true, focused: true, mobile: true };
+    },
+  };
+  let waitCall = 0;
+  const waitUntil = async (_label, predicate) => {
+    waitCall += 1;
+    const samples = waitCall === 1 ? 1 : 4;
+    for (let index = 0; index < samples; index += 1) {
+      if (await predicate()) return true;
+      now += 125;
+    }
+    throw new Error("synthetic native input target timeout");
+  };
+  try {
+    await createAndroidWebViewInputTargetGate(adbOutput, appId, adbCommand, {
+      passiveTimeoutMs: 1,
+      reentryTimeoutMs: 1000,
+    })(page, waitUntil);
+    assert.equal(reentryCount, 1);
+    assert.equal(waitCall, 2);
+  } finally {
+    Date.now = originalNow;
+  }
+});
+
+test("Android native input reentry failure reports only fixed target categories", async () => {
+  const appId = "dev.deve.notebook.mobile";
+  const secretSentinel = "secret=/private/input/window";
+  const adbOutput = (...args) => {
+    const command = args.join(" ");
+    if (command === `shell pidof ${appId}`) return "1234\n";
+    if (command === "shell dumpsys activity activities") {
+      return "topResumedActivity=ActivityRecord{a u0 com.android.launcher3/.MainActivity t1}";
+    }
+    if (command === "shell dumpsys window") {
+      return "mCurrentFocus=Window{b u0 com.android.launcher3/.MainActivity}";
+    }
+    throw new Error(secretSentinel);
+  };
+  const page = {
+    async call() {
+      return { documentTimeOrigin: 1, visible: true, focused: true, mobile: true };
+    },
+  };
+  const waitUntil = async (_label, predicate) => {
+    await predicate();
+    throw new Error(secretSentinel);
+  };
+  await assert.rejects(
+    createAndroidWebViewInputTargetGate(adbOutput, appId, () => {}, {
+      passiveTimeoutMs: 1,
+      reentryTimeoutMs: 1,
+    })(page, waitUntil),
+    (error) => {
+      assert.match(
+        error.message,
+        /android_native_input_target_reentry_failed; android_native_input_target_settlement_failed; last=.*"nativeTargetState":"not-ready"/,
+      );
+      assert.doesNotMatch(error.message, /secret|private|input\/window/);
+      return true;
+    },
+  );
+});
+
+test("Android native input reentry rejects PID replacement", async () => {
+  const originalNow = Date.now;
+  let now = 0;
+  let foregrounded = false;
+  let pidReads = 0;
+  let waitRound = 0;
+  Date.now = () => now;
+  const appId = "dev.deve.notebook.mobile";
+  const adbOutput = (...args) => {
+    const command = args.join(" ");
+    if (command === `shell pidof ${appId}`) {
+      pidReads += 1;
+      return pidReads === 1 ? "1234\n" : "5678\n";
+    }
+    const packageName = foregrounded ? appId : "com.android.launcher3";
+    if (command === "shell dumpsys activity activities") {
+      return `topResumedActivity=ActivityRecord{a u0 ${packageName}/.MainActivity t1}`;
+    }
+    if (command === "shell dumpsys window") {
+      return `mCurrentFocus=Window{b u0 ${packageName}/${packageName}.MainActivity}`;
+    }
+    throw new Error("unexpected ADB probe");
+  };
+  const page = {
+    async call() {
+      return { documentTimeOrigin: 1, visible: true, focused: true, mobile: true };
+    },
+  };
+  const waitUntil = async (_label, predicate) => {
+    waitRound += 1;
+    if (waitRound === 1) {
+      await predicate();
+      throw new Error("synthetic passive timeout");
+    }
+    assert.equal(await predicate(), false);
+    now += 250;
+    assert.equal(await predicate(), true);
+    return true;
+  };
+  try {
+    await assert.rejects(
+      createAndroidWebViewInputTargetGate(
+        adbOutput,
+        appId,
+        () => { foregrounded = true; },
+        { passiveTimeoutMs: 1, reentryTimeoutMs: 1000 },
+      )(page, waitUntil),
+      /android_native_input_target_reentry_pid_unstable/,
+    );
+  } finally {
+    Date.now = originalNow;
+  }
 });
 
 test("Android native input target resets settlement until Activity and window are current", async () => {
@@ -244,7 +398,7 @@ test("Android native input target redacts platform probe failures", async () => 
     waitForCurrentAndroidWebViewInputTarget(page, waitUntil, () => {
       throw new Error("secret=/private/window/path");
     }),
-    /synthetic native input target timeout/,
+    /android_native_input_target_settlement_failed/,
   );
   assert.deepEqual(observed, ["android_native_input_target_sample_failed"]);
   assert.doesNotMatch(JSON.stringify(observed), /secret|private|window\/path/);

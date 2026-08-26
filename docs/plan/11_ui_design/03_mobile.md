@@ -459,6 +459,12 @@ Task 按钮必须发送 `10_rendering.md` 定义的 `InsertTaskItem` 语义 inte
     未到达却发生 UI 变化或第二次仍 missing 均必须 fail-closed。语义已 closed 但几何、
     pointer-events 或 marker 不一致时不得发送 root Back、重建 surface 或冒充已归一；必须 fail-closed，并且
     timeout 只输出最后一次固定 Drawer observation，不得带 DOM 文本、路径、凭证或其它页面数据。
+    若短时被动准入未取得完整输入目标，target-host 可在记录当前有效 PID 后执行至多一次既有 Launcher
+    foreground reentry；该动作只能恢复 Android task/window ownership，不能重建业务 surface、重发 Create、
+    swipe 或 Back。reentry 后必须从零重新证明当代 Document、resumed Activity 与 `mCurrentFocus` 的完整稳定
+    窗口，并要求 PID 与 reentry 前完全一致；PID 替换、driver 失败或第二个准入窗口耗尽都必须 fail-closed。
+    失败诊断只允许输出 reentry 是否执行、PID 是否稳定及页面/Activity/window 的固定分类，不得输出原始
+    `dumpsys`、DOM、路径、凭证或底层异常。
 
 ## 4. Visual Adaptations
 
