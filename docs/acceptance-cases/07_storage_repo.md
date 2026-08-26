@@ -239,6 +239,7 @@
     - run: cargo test -p deve_cli mounted_repo_gate -- --nocapture
     - run: cargo test -p deve_cli watcher_failure -- --nocapture
     - run: cargo test -p deve_cli watcher_server_isolation -- --nocapture
+    - run: cargo test -p deve_core --test startup_scan_projection_skip_test -- --nocapture
     - run: scripts/check-repo-file-ops-baseline.sh
   assertions:
     - degraded_projection_blocks_docs_create_before_mutation: true
@@ -258,6 +259,8 @@
     - terminal_failure_closes_mount_admission_without_waiting_for_refresh_publication: true
     - lifecycle_cancel_never_restores_a_terminally_failed_watcher_to_mounted: true
     - bootstrap_with_zero_mounted_repos_keeps_readonly_diagnostics_and_create_available: true
+    - broken_structure_projection_marks_only_affected_repo_degraded_and_source_control_reads_fail_closed: true
+    - degraded_repo_fs_events_do_not_create_pending_overlay: true
     - runtime_all_watchers_failed_keeps_readonly_and_diagnostics_available_with_degraded_health: true
     - cli_assert: repo_file_ops_baseline_bound true
 

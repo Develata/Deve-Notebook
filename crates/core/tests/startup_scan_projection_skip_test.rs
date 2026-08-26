@@ -107,10 +107,21 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
             .expect("degraded repos"),
         vec![wiki_execution_name.clone()]
     );
+    let source_control_error = repo
+        .list_pending_fs_in_local_repo(&wiki_execution_name)
+        .expect_err("broken structure must fail closed for derived source-control reads");
     assert!(
-        repo.list_pending_fs_in_local_repo(&wiki_execution_name)
-            .unwrap()
-            .is_empty()
+        source_control_error
+            .to_string()
+            .contains("Commit diff structure references missing node"),
+        "unexpected source-control error: {source_control_error}"
+    );
+    assert!(
+        repo.run_on_local_repo(&wiki_execution_name, |db| {
+            deve_core::source_control::pending_fs::list_all(db)
+        })
+        .expect("raw pending state")
+        .is_empty()
     );
     assert!(
         sync.handle_fs_event(
@@ -125,8 +136,10 @@ fn startup_scan_skips_repo_with_broken_structure_projection() {
         .is_empty()
     );
     assert!(
-        repo.list_pending_fs_in_local_repo(&wiki_execution_name)
-            .unwrap()
-            .is_empty()
+        repo.run_on_local_repo(&wiki_execution_name, |db| {
+            deve_core::source_control::pending_fs::list_all(db)
+        })
+        .expect("raw pending state after ignored event")
+        .is_empty()
     );
 }
