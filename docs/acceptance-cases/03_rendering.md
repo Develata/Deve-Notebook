@@ -141,6 +141,7 @@
   steps:
     - run: scripts/check-large-doc-baseline.sh
     - run: cargo test -p deve_web large_doc_search_gate -- --nocapture
+    - run: cargo test -p deve_web prefetch -- --nocapture
     - run: cargo test -p deve_cli prewarm -- --nocapture
     - ui_open_doc: "large.md"
     - ui_time_to_first_paint: true
@@ -148,6 +149,7 @@
     - metric_lt_ms: ["first_paint", 2000]
     - ui_assert: snapshot_first true
     - ui_assert: progressive_replay_enabled true
+    - api_assert: progressive_replay_uses_one_owned_task_without_forgotten_timers true
     - ui_assert: search_disabled_until_prefetch_complete true
     - api_assert: prewarm_candidate_scoring_uses_index_counts_without_materializing_ops true
     - api_assert: up_to_date_snapshot_prewarm_avoids_loading_document_history true
@@ -160,6 +162,7 @@
   steps:
     - run: scripts/check-large-doc-baseline.sh
     - run: cargo test -p deve_web snapshot_apply_failure -- --nocapture
+    - run: cargo test -p deve_web snapshot_delta_fallback_borrows_confirmed_ops -- --nocapture
     - run: cargo test -p deve_web history_replay -- --nocapture
     - run: cargo test -p deve_web editor_sync_failure_sink -- --nocapture
     - run: cargo test -p deve_web editor_sync_retry_generation_request_id -- --nocapture
@@ -168,6 +171,8 @@
     - cli_assert: remote_batch_apply_returns_failure true
     - cli_assert: remote_batch_apply_is_single_dispatch_and_prefix_atomic true
     - cli_assert: failed_batch_does_not_advance_version_or_history true
+    - api_assert: full_snapshot_fallback_does_not_clone_complete_delta_list true
+    - api_assert: full_snapshot_fallback_is_lazy_on_batch_failure true
     - cli_assert: failed_replay_does_not_ready_or_resend_pending true
     - ui_assert: snapshot_auto_reopen_at_most_once true
     - ui_assert: editor_sync_error_retry_uses_new_generation_request true

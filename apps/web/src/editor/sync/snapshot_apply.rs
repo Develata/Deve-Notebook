@@ -9,7 +9,6 @@ use deve_core::protocol::ConfirmedOp;
 use leptos::prelude::*;
 
 pub(super) type BatchHandler = std::rc::Rc<dyn Fn(&[ConfirmedOp]) -> bool>;
-pub(super) type BatchFailureHandler = std::rc::Rc<dyn Fn()>;
 type RemoteBatchApplier = std::rc::Rc<dyn Fn(&[Op]) -> bool>;
 pub(super) type ProgressHandler = std::rc::Rc<dyn Fn(usize, usize, f64)>;
 
@@ -22,20 +21,13 @@ pub(super) struct SnapshotApplySignals {
 pub(super) fn build_apply_batch(
     signals: SnapshotApplySignals,
     gate: SnapshotRequestGate,
-    on_failure: BatchFailureHandler,
 ) -> BatchHandler {
-    build_apply_batch_with_applier(
-        signals,
-        gate,
-        on_failure,
-        std::rc::Rc::new(apply_remote_ops_batch),
-    )
+    build_apply_batch_with_applier(signals, gate, std::rc::Rc::new(apply_remote_ops_batch))
 }
 
 fn build_apply_batch_with_applier(
     signals: SnapshotApplySignals,
     gate: SnapshotRequestGate,
-    on_failure: BatchFailureHandler,
     applier: RemoteBatchApplier,
 ) -> BatchHandler {
     std::rc::Rc::new(move |batch: &[ConfirmedOp]| {
@@ -44,7 +36,6 @@ fn build_apply_batch_with_applier(
         }
         let ops_only: Vec<_> = batch.iter().map(|entry| entry.op.clone()).collect();
         if !applier(&ops_only) {
-            on_failure();
             return false;
         }
         if let Some(entry) = batch.last() {
@@ -94,7 +85,6 @@ mod tests {
     use deve_core::protocol::ConfirmedOp;
     use leptos::prelude::*;
     use leptos::reactive::owner::Owner;
-    use std::cell::Cell;
     use std::rc::Rc;
     use std::sync::Arc;
     use std::sync::atomic::AtomicU64;
@@ -111,15 +101,12 @@ mod tests {
                 content: "base".into(),
             },
         )]);
-        let failed = Rc::new(Cell::new(false));
-        let failed_for_callback = Rc::clone(&failed);
         let handler = build_apply_batch_with_applier(
             SnapshotApplySignals {
                 set_local_version,
                 set_history,
             },
             matching_gate(),
-            Rc::new(move || failed_for_callback.set(true)),
             Rc::new(|_| false),
         );
 
@@ -131,7 +118,6 @@ mod tests {
             },
             None,
         )]));
-        assert!(failed.get());
         assert_eq!(local_version.get_untracked(), 2);
         assert_eq!(history.get_untracked().len(), 1);
     }
@@ -142,15 +128,12 @@ mod tests {
         runtime.set();
         let (local_version, set_local_version) = signal(2u64);
         let (history, set_history) = signal(Vec::<(u64, Op)>::new());
-        let failed = Rc::new(Cell::new(false));
-        let failed_for_callback = Rc::clone(&failed);
         let handler = build_apply_batch_with_applier(
             SnapshotApplySignals {
                 set_local_version,
                 set_history,
             },
             matching_gate(),
-            Rc::new(move || failed_for_callback.set(true)),
             Rc::new(|_| true),
         );
 
@@ -162,7 +145,6 @@ mod tests {
             },
             None,
         )]));
-        assert!(!failed.get());
         assert_eq!(local_version.get_untracked(), 5);
         assert_eq!(history.get_untracked().len(), 1);
     }

@@ -370,6 +370,13 @@ Markdown 文档正文使用内容字体栈，不与应用壳层按钮/菜单字�
 
 - “未完全预加载前禁用全文搜索”是 runtime gate，不是 view 层提示文字而已。
 - snapshot-first / replay 策略必须与 `09_web_thin_client_ledger.md` 保持一致。
+- delta replay 的渐进调度必须由单个 owner 持有的异步任务完成；每批可以向浏览器事件循环让步，
+  但不得用 `Timeout::forget()` 为每批泄漏一个 callback。任务必须在完整结束、generation/scope
+  失效或 batch apply 失败时有界退出，失败/取消路径不得调用成功完成回调。
+- full-snapshot fallback 必须是失败时才执行的惰性路径；正常 replay 不得预先重建完整结果或复制
+  完整 history。失败后重放 delta 时必须直接借用 batch task 仍持有的 confirmed op，不得先克隆
+  完整 delta 列表形成第二份瞬时载荷。该约束只降低 CPU/峰值内存，不改变 ledger、snapshot 或
+  pending authority。
 - backend snapshot prewarm 对候选文档评分必须只读取 `DOC_OPS` 二级索引 count；选中文档是否需要重建必须先读取
   max waterline，不得为评分或已是最新 snapshot 的文档解码并物化全部 `LedgerEntry`。只有被选中且确实需要重建
   snapshot 的文档才允许加载正文 ops，且重建输入不得再克隆一份完整历史。

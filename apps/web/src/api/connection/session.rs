@@ -6,7 +6,7 @@
 use super::super::ConnectionStatus;
 use super::super::connection_role::WatcherHealthSnapshot;
 use super::super::incoming::handle_socket_event;
-use super::super::output::{is_write_message, send_or_requeue};
+use super::super::output::{enqueue_with_limit, is_write_message, send_or_requeue};
 use super::super::socket::{BrowserSocket, SocketEvent};
 use super::super::write_gate::{WriterReadyResetSignals, set_status_and_revoke_writer_ready};
 use super::ConnectionLifecycle;
@@ -118,7 +118,7 @@ pub(super) async fn run_connected_session(
                         leptos::logging::warn!("WebLightPeer: 断连时禁止写入消息 {:?}", msg);
                         continue;
                     }
-                    queue.push_back(msg);
+                    enqueue_with_limit(queue, msg);
                 }
                 None => return ConnectedSessionOutcome::Lost,
             },

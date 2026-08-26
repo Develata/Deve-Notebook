@@ -12,7 +12,7 @@ use super::snapshot_gate::{SnapshotRequestGate, SnapshotRequestGateInput};
 use crate::editor::buffered_ops::clear_sync_buffers;
 use crate::editor::ffi::{applyRemoteContent, set_read_only};
 use crate::editor::hook_open::advance_session_generation;
-use crate::editor::prefetch::{PrefetchConfig, apply_ops_in_batches};
+use crate::editor::prefetch::{CancelBatchFn, PrefetchConfig, apply_ops_in_batches};
 use crate::runtime::domain::{EditorSyncFailure, EditorSyncFailureCode, LoadPhase};
 use deve_core::models::{Op, PeerId, RepoId};
 use deve_core::protocol::{ClientMessage, ConfirmedOp};
@@ -70,8 +70,6 @@ pub(super) fn handle_snapshot(ctx: &SyncContext, message: SnapshotMessage) {
         message.delta_ops.len()
     );
 
-    let full_fallback_content =
-        reconstruct_full_snapshot_content(&message.new_content, &message.delta_ops);
     if !applyRemoteContent(&message.new_content) {
         leptos::logging::warn!(
             "Snapshot apply blocked: editor content bridge unavailable for doc={}",
@@ -81,6 +79,7 @@ pub(super) fn handle_snapshot(ctx: &SyncContext, message: SnapshotMessage) {
         return;
     }
     emit_stats(ctx.on_stats, &message.new_content);
+    let fallback_base = (!message.delta_ops.is_empty()).then(|| message.new_content.clone());
     ctx.set_content.set(message.new_content);
     ctx.set_local_version.set(message.base_seq);
     ctx.set_playback_version.set(message.base_seq);
@@ -101,16 +100,15 @@ pub(super) fn handle_snapshot(ctx: &SyncContext, message: SnapshotMessage) {
             set_history: ctx.set_history,
         },
         gate.clone(),
-        build_delta_failure_fallback(
-            ctx,
-            &gate,
-            DeltaFailureFallback {
-                full_content: full_fallback_content,
-                version: message.version,
-                history: confirmed_history(&message.delta_ops),
-                finish: LoadFinish::from_ctx(ctx, message.version, load_start, message.request_id),
-            },
-        ),
+    );
+    let on_cancel = build_delta_failure_fallback(
+        ctx,
+        &gate,
+        DeltaFailureFallback {
+            base_content: fallback_base.expect("non-empty delta retains snapshot base"),
+            version: message.version,
+            finish: LoadFinish::from_ctx(ctx, message.version, load_start, message.request_id),
+        },
     );
     let on_progress = build_progress_handler(ctx.set_load_progress, ctx.set_load_eta_ms);
     let finish = LoadFinish::from_ctx(ctx, message.version, load_start, message.request_id);
@@ -128,15 +126,15 @@ pub(super) fn handle_snapshot(ctx: &SyncContext, message: SnapshotMessage) {
             max_batch: 256,
         },
         apply_batch,
+        on_cancel,
         on_progress,
         on_done,
     );
 }
 
 struct DeltaFailureFallback {
-    full_content: Option<String>,
+    base_content: String,
     version: u64,
-    history: Vec<(u64, Op)>,
     finish: LoadFinish,
 }
 
@@ -144,7 +142,7 @@ fn build_delta_failure_fallback(
     ctx: &SyncContext,
     gate: &SnapshotRequestGate,
     fallback: DeltaFailureFallback,
-) -> std::rc::Rc<dyn Fn()> {
+) -> CancelBatchFn<ConfirmedOp> {
     let gate = gate.clone();
     let doc_id = ctx.doc_id;
     let set_local_version = ctx.set_local_version;
@@ -156,17 +154,19 @@ fn build_delta_failure_fallback(
     let open_request_id = ctx.open_request_id;
     let session_generation = ctx.session_generation.clone();
     let ready_generation = ctx.ready_generation.clone();
-    std::rc::Rc::new(move || {
+    std::rc::Rc::new(move |delta_ops| {
         if !gate.matches() {
             return;
         }
-        if let Some(full_content) = fallback.full_content.clone() {
+        if let Some(full_content) =
+            reconstruct_full_snapshot_content(&fallback.base_content, delta_ops)
+        {
             leptos::logging::warn!(
                 "Snapshot delta batch apply failed; applying reconstructed full snapshot fallback for doc={doc_id}"
             );
             if applyRemoteContent(&full_content) {
                 set_local_version.set(fallback.version);
-                set_history.set(fallback.history.clone());
+                set_history.set(confirmed_history(delta_ops));
                 fallback.finish.clone().complete_with_content(full_content);
                 return;
             }
@@ -233,8 +233,7 @@ fn initial_snapshot_may_auto_reopen(attempted: bool) -> bool {
 }
 
 fn reconstruct_full_snapshot_content(base: &str, delta_ops: &[ConfirmedOp]) -> Option<String> {
-    let ops: Vec<_> = delta_ops.iter().map(|entry| entry.op.clone()).collect();
-    deve_core::state::try_apply_content_ops(base, &ops)
+    deve_core::state::try_apply_content_ops(base, delta_ops.iter().map(|entry| &entry.op))
 }
 
 fn confirmed_history(delta_ops: &[ConfirmedOp]) -> Vec<(u64, Op)> {

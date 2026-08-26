@@ -224,6 +224,9 @@ contains	apps/cli/src/server/repo_mutation/gate.rs	pub(crate) struct RepoMutatio
 contains	apps/cli/src/server/repo_mutation/gate.rs	execute_catalog_repo
 contains	apps/cli/src/server/ws/send/mod.rs	unicast_tx.send(msg).await
 contains	apps/web/src/api/incoming.rs	pub(crate) enum IncomingBatch
+contains	apps/web/src/api/connection/session.rs	enqueue_with_limit(queue, msg);
+absent	apps/web/src/api/connection/session.rs	queue.push_back(msg);
+contains	apps/web/src/api/output/tests.rs	fn output_queue_drops_oldest_message_at_capacity()
 contains	apps/web/src/runtime/projection_recovery/editor_cycle.rs	pub struct ProjectionRecoveryCoordinator
 contains	docs/acceptance-cases/06_network.md	case_id: NET-020
 contains	crates/core/src/protocol/frame/tests/epoch_recovery.rs	fn first_public_ws_epoch_is_lockstep()

@@ -97,9 +97,15 @@
     - run: scripts/check-auth-baseline.sh
     - run: cargo test -p deve_cli auth -- --nocapture
     - run: cargo test -p deve_cli expired_ban_resets_failure_count_before_new_attempt -- --nocapture
+    - run: cargo test -p deve_cli brute_force_capacity_fails_closed_for_new_ip -- --nocapture
+    - run: cargo test -p deve_cli brute_force_reclaims_expired_capacity -- --nocapture
+    - run: cargo test -p deve_cli rate_limit -- --nocapture
   assertions:
     - http_status_in: [429]
     - api_assert: expired_ban_starts_a_fresh_failure_window true
+    - api_assert: http_and_brute_force_live_ip_state_is_bounded_and_new_ips_fail_closed_at_capacity true
+    - api_assert: expired_ip_cleanup_scans_globally_only_under_capacity_pressure true
+    - api_assert: capacity_exhaustion_warning_is_edge_triggered_per_saturation_epoch true
 
 - case_id: AUTH-009
   goal: JWT payload 受控且每次登录 session 可区分。

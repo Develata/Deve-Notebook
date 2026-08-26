@@ -432,6 +432,7 @@
     - run: cargo test -p deve_cli serializes_same_repo_and_preserves_publication_order -- --nocapture
     - run: cargo test -p deve_cli critical_repo_scoped_broadcasts_are_not_dropped_when_unicast_queue_is_full -- --nocapture
     - run: cargo test -p deve_web incoming_gap -- --nocapture
+    - run: cargo test -p deve_web output_queue -- --nocapture
     - run: cargo test -p deve_web projection_recovery -- --nocapture
     - ui_run: WEBWRITE-FEAT-00
   assertions:
@@ -440,6 +441,7 @@
     - committed_degraded_or_partial_always_publishes_recovery true
     - broadcast_lag_emits_scoped_projection_recovery true
     - critical_queue_full_retires_session_without_detached_resend true
+    - browser_connected_session_outbound_queue_uses_bounded_admission true
     - incoming_gap_discards_message_suffix_and_reconnects_once_per_epoch true
     - pending_overlay_survives_recovery_and_replays_once true
     - unrelated_document_recovery_keeps_editor_writable true

@@ -92,7 +92,7 @@ fn snapshot_request_rejects_scope_nonce_mismatch_even_with_same_repo_and_request
 }
 
 #[test]
-fn snapshot_delta_fallback_reconstructs_full_content() {
+fn snapshot_delta_fallback_borrows_confirmed_ops() {
     let ops = vec![
         ConfirmedOp::new(
             3,

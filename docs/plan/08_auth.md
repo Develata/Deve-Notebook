@@ -269,6 +269,12 @@ session。生产环境或未显式进入 development 时设置该开关必须 fa
 - WebSocket messages
   - `200 msg/min/connection`
 
+HTTP per-IP limiter 与 brute-force guard 的 live-IP 状态都必须有明确硬上限。运行时只可清理已
+过期记录；不得驱逐仍在窗口内的记录来接纳新 IP，因为这会绕过已有计数。过期清理后容量仍满时，
+新 IP 必须 fail-closed 返回 `429`，已记录 IP 仍按原滑动窗口或连续失败窗口判定。常规热路径只
+清理当前 IP；全表过期回收只允许在新 IP 遭遇容量压力时执行，不能因到期时间彼此错开而退化为
+逐请求全表扫描。容量耗尽诊断必须按饱和周期 edge-triggered，不能让攻击请求放大成逐请求日志写入。
+
 ### 6.5 Security Headers {#security-headers}
 
 所有 HTTP 响应必须包含：
@@ -412,7 +418,8 @@ provider/session/Ledger/removal owner I/O前返回既有结构化`AUTH_*`结果�
 - 达到阈值后封禁窗口生效
 - 封禁窗口结束后允许重新尝试
 - 封禁窗口过期后，该 IP 的连续失败计数必须从零重新开始；过期后的第一次失败只计为一次新失败，
-  不得沿用旧窗口计数立即重新封禁。过期记录应惰性退休，锁中毒时仍保持 fail-closed。
+  不得沿用旧窗口计数立即重新封禁。过期记录应惰性退休，锁中毒时仍保持 fail-closed。live-IP
+  容量耗尽时，未登记 IP 必须按已封禁处理，不能通过轮换来源让失败记录跨多个 HTTP 限流窗口累积。
 
 ### 9.4 Unauthorized vs Disconnected UI Contract {#unauthorized-disconnected-ui}
 

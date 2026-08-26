@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-08-24`
+- `Last Review`: `2026-08-26`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/cli/src/server/p2p/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -843,6 +843,8 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 
 - 负责 browser peer identity、repo-scoped handshake、client-side durable state probe 与 stale message discard。
 - Web runtime 不得在 disconnected、unauthorized 或 peer identity 缺失时保持可写。
+- connected-session 暂存的 outbound message 必须统一经过有界队列入口；socket 尚未可写或发送失败时
+  不得用裸 `push_back` 绕过容量策略。容量耗尽的处置仍须保持 read/write 分类与重连恢复语义。
 - Web runtime 必须把 incoming queue gap 当成 connection integrity failure：停止消费该 gap 后的
   所有消息、撤销 writer-ready、退休当前 connection epoch，再由 fresh handshake/snapshot 恢复。
 - typed projection refresh 必须绑定 connection epoch、repo/branch/scope nonce 与单调 flight id；任一 refresh

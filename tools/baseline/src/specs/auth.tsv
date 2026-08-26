@@ -107,12 +107,24 @@ contains	apps/cli/src/server/auth/handlers/session.rs	fn status_rejects_token_co
 contains	apps/cli/src/server/auth/middleware.rs	Json(AuthErrorResponse::new(code))
 contains	apps/cli/src/server/auth/middleware.rs	development-only anonymous localhost auth bypass active
 contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-008
+contains	docs/acceptance-cases/08_auth.md	http_and_brute_force_live_ip_state_is_bounded_and_new_ips_fail_closed_at_capacity true
+contains	apps/cli/src/server/rate_limit.rs	const MAX_TRACKED_IPS
+contains	apps/cli/src/server/rate_limit.rs	fn new_ip_is_rejected_when_live_ip_capacity_is_full()
+contains	apps/cli/src/server/rate_limit.rs	fn reclaim_expired_capacity(&mut self, now: Instant)
+contains	apps/cli/src/server/rate_limit.rs	fn expired_capacity_is_reclaimed_under_capacity_pressure()
+contains	apps/cli/src/server/rate_limit.rs	capacity_warning_emitted
+absent	apps/cli/src/server/rate_limit.rs	next_expiry
 contains	apps/cli/src/server/auth/middleware.rs	StatusCode::TOO_MANY_REQUESTS
 contains	apps/cli/src/server/auth/handlers/login.rs	Login blocked (brute force)
 contains	apps/cli/src/server/auth/brute_force.rs	BruteForceGuard lock poisoned; failing closed
 contains	apps/cli/src/server/auth/brute_force/tests.rs	fn test_blocked_after_max_failures()
 contains	apps/cli/src/server/auth/brute_force/tests.rs	fn poisoned_lock_blocks_ip_fail_closed()
 contains	apps/cli/src/server/auth/brute_force/tests.rs	fn expired_ban_resets_failure_count_before_new_attempt()
+contains	apps/cli/src/server/auth/brute_force/tests.rs	fn brute_force_capacity_fails_closed_for_new_ip()
+contains	apps/cli/src/server/auth/brute_force/tests.rs	fn brute_force_reclaims_expired_capacity()
+contains	apps/cli/src/server/auth/brute_force.rs	fn reclaim_expired_capacity(&mut self, now: Instant)
+contains	apps/cli/src/server/auth/brute_force.rs	capacity_warning_emitted
+absent	apps/cli/src/server/auth/brute_force.rs	next_expiry
 contains	docs/acceptance-cases/08_auth.md	case_id: AUTH-010
 contains	apps/cli/src/server/ws/mod.rs	Json(AuthErrorResponse::new(code))
 contains	apps/cli/src/server/ws/mod.rs	StatusCode::UNAUTHORIZED

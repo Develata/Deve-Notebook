@@ -50,12 +50,14 @@
 1. User opens a large document.
 2. Instruction interface starts open-doc loading and accepts the initial snapshot.
 3. Flow coordination shows snapshot content first, then replays remaining ops in adaptive batches.
-4. Failed delta replay stops the batch chain and applies reconstructed full snapshot content. If adapter application still fails, the editor enters a read-only structured error state; only the initial snapshot adapter failure may reopen once automatically, and explicit Retry creates a new generation/request.
-5. Execution domains are rendering projection and ledger-backed document content.
+4. The batch chain is one owned task: it yields between batches and retires on completion, stale generation, or apply failure without leaving per-batch timers behind.
+5. Failed delta replay stops the batch chain and lazily reconstructs full snapshot content from the batch task's retained operations. Normal replay does not precompute that fallback. If adapter application still fails, the editor enters a read-only structured error state; only the initial snapshot adapter failure may reopen once automatically, and explicit Retry creates a new generation/request.
+6. Execution domains are rendering projection and ledger-backed document content.
 
 ## Notes
 
 - This flow is about snapshot-first visibility plus progressive replay, not a second authority buffer.
 - Failed delta replay must not advance local version or history.
+- Full-snapshot fallback is lazy and borrows confirmed delta operations during reconstruction instead of precomputing a second full document or cloning a second complete operation/history list.
 - Failed pending/history/live replay must not enter Ready or resend pending edits.
 - Main objects: `doc::content`, `load::progress`, `render::projection`.

@@ -7,14 +7,19 @@ use std::fs::File;
 use std::io::{Read, Take};
 use std::path::Path;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) const MAX_PLUGIN_MANIFEST_BYTES: u64 = 64 * 1024;
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) const MAX_PLUGIN_SCRIPT_BYTES: u64 = 1024 * 1024;
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) const MAX_PLUGIN_HOST_TEXT_BYTES: u64 = 1024 * 1024;
 pub(crate) const MAX_SKILL_FILE_BYTES: u64 = 256 * 1024;
 pub(crate) const MAX_SKILL_TOTAL_BYTES: usize = 8 * 1024 * 1024;
 pub(crate) const MAX_SKILL_COUNT: usize = 128;
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) const MAX_PLUGIN_COUNT: usize = 64;
 
+#[cfg(not(target_arch = "wasm32"))]
 pub(crate) fn read_utf8_file_bounded(
     path: &Path,
     max_bytes: u64,

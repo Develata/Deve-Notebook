@@ -35,7 +35,12 @@ contains	apps/web/src/editor/sync/snapshot.rs	applyRemoteContent(&message.new_co
 contains	apps/web/src/editor/sync/snapshot.rs	ctx.set_load_state.set(LoadPhase::Partial)
 contains	apps/web/src/editor/sync/snapshot.rs	apply_ops_in_batches(
 before	apps/web/src/editor/sync/snapshot.rs	applyRemoteContent(&message.new_content)	apply_ops_in_batches(
-contains	apps/web/src/editor/prefetch.rs	Timeout::new(0, task).forget();
+contains	apps/web/src/editor/prefetch.rs	spawn_local(async move {
+contains	apps/web/src/editor/prefetch.rs	TimeoutFuture::new(0).await;
+absent	apps/web/src/editor/prefetch.rs	.forget()
+contains	apps/web/src/editor/prefetch.rs	on_cancel(ops);
+contains	apps/web/src/editor/prefetch.rs	fn cancelled_batch_routes_retained_ops_only_to_failure_handler()
+contains	apps/web/src/editor/prefetch.rs	fn prefetch_initial_batch_respects_configured_maximum()
 contains	apps/web/src/editor/sync/snapshot.rs	initial_batch: 16
 contains	apps/web/src/editor/sync/snapshot.rs	max_batch: 256
 contains	apps/web/src/hooks/use_core/callbacks/misc.rs	!load_state.get_untracked().is_ready()
@@ -46,10 +51,11 @@ contains	apps/web/src/hooks/use_core/callbacks/misc/tests.rs	drain_sent_for_test
 contains	apps/web/src/hooks/use_core/callbacks/misc/tests.rs	large_doc_search_gate_sends_after_ready
 contains	apps/web/src/editor/sync/snapshot.rs	build_delta_failure_fallback(
 contains	apps/web/src/editor/sync/snapshot.rs	try_apply_content_ops
+absent	apps/web/src/editor/sync/snapshot.rs	let full_fallback_content
 contains	apps/web/src/editor/sync/snapshot_finish.rs	complete_with_content
 contains	apps/web/src/editor/sync/snapshot.rs	ClientMessage::OpenDoc
 contains	apps/web/src/editor/sync/snapshot_apply.rs	snapshot_apply_failure_does_not_advance_version_or_history
-contains	apps/web/src/editor/sync/snapshot/tests.rs	snapshot_delta_fallback_reconstructs_full_content
+contains	apps/web/src/editor/sync/snapshot/tests.rs	snapshot_delta_fallback_borrows_confirmed_ops
 contains	apps/web/src/editor/sync/history_replay.rs	pub(super) fn apply_replay_ops_atomically(
 contains	apps/web/src/editor/ffi.rs	pub fn applyRemoteOpsBatch(ops_json: &str) -> bool {
 contains	apps/web/js/index_bootstrap.js	return false;

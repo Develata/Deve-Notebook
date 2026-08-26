@@ -115,7 +115,10 @@ pub fn reconstruct_content_until(
 ///
 /// 返回 `None` 表示操作无法按当前文本边界应用；调用方必须 fail closed，
 /// 不能在本地投影未更新时推进版本。
-pub fn try_apply_content_ops(base: &str, ops: &[Op]) -> Option<String> {
+pub fn try_apply_content_ops<'a>(
+    base: &str,
+    ops: impl IntoIterator<Item = &'a Op>,
+) -> Option<String> {
     let mut content = Rope::from_str(base);
     let mut total_utf16 = utf16::utf16_len(base)?;
     let mut cache = Utf16IndexCache::build(&content, adaptive_step(total_utf16));
