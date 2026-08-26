@@ -20,6 +20,7 @@ function documentCreateHarness({
   projectExactPath = true,
   exactProjectionCount = 1,
   editorReady = true,
+  focusReady = true,
   mobile = false,
   deferPostCreateLookup = false,
   admitPostCreateLookup = true,
@@ -35,6 +36,8 @@ function documentCreateHarness({
     drawerOpen: false,
     postCreatePending: false,
     lookupAdmissionChecks: 0,
+    inputFocusAdmissions: 0,
+    actionOrder: [],
   };
   const surface = () => {
     const projected = projectExactPath && state.query && !state.query.startsWith("+")
@@ -113,6 +116,7 @@ function documentCreateHarness({
   const clickCreate = async (_page, path, writerScope) => {
     assert.equal(path, exactPath);
     assert.deepEqual(writerScope, expectedWriterScope);
+    state.actionOrder.push("create");
     state.createClicks += 1;
     if (acknowledgeCreate) {
       state.searchVisible = false;
@@ -137,6 +141,11 @@ function documentCreateHarness({
     state.sidebarCloses += 1;
     state.drawerOpen = false;
   };
+  const waitForInputFocus = async () => {
+    state.actionOrder.push("focus");
+    state.inputFocusAdmissions += 1;
+    if (!focusReady) throw new Error("synthetic current WebView focus unavailable");
+  };
   return {
     state,
     page,
@@ -148,6 +157,7 @@ function documentCreateHarness({
       clickExactOpen,
       openSidebar,
       closeSidebar,
+      waitForInputFocus,
       expectedWriterScope,
     },
   };
@@ -163,6 +173,19 @@ test("Android document create binds one Create through doc-id to the exact edito
   assert.equal(harness.state.newDocumentClicks, 2);
   assert.equal(harness.state.createClicks, 1);
   assert.equal(harness.state.exactOpenClicks, 1);
+  assert.equal(harness.state.inputFocusAdmissions, 1);
+  assert.deepEqual(harness.state.actionOrder, ["focus", "create"]);
+});
+
+test("Android document create fails before native touch without stable current WebView focus", async () => {
+  const harness = documentCreateHarness({ focusReady: false });
+  await assert.rejects(
+    createAndSelectAndroidDocument(harness.page, exactPath, harness.options),
+    /android_document_create_create_input_focus.*searchVisible.*true/,
+  );
+  assert.equal(harness.state.inputFocusAdmissions, 1);
+  assert.equal(harness.state.createClicks, 0);
+  assert.equal(harness.state.exactOpenClicks, 0);
 });
 
 test("Android document create does not retry Create without an action acknowledgement", async () => {

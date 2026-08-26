@@ -5,8 +5,9 @@ import {
   selectNonInteractiveSwipePoints,
   shouldRetryAndroidDrawerGestureDelivery,
   takeTouchDeliveryProbe,
-  waitForCurrentWebViewInputFocus,
 } from "./android-drawer-touch-proof.mjs";
+import { observeNativeBackDelivery } from "./android-native-back-observation.mjs";
+import { waitForCurrentWebViewInputFocus } from "./android-webview-input-focus.mjs";
 
 const SAFE_FLOOR_CSS = 24;
 const ACTIVATION_OFFSET_CSS = 18;
@@ -15,6 +16,7 @@ const DRAWER_TRANSITION_SETTLE_MS = 250;
 const SWIPE_DELIVERY_TIMEOUT_MS = 4000;
 const SWIPE_Y_FRACTIONS = [0.35, 0.58, 0.76];
 const MAX_SWIPE_DELIVERY_ATTEMPTS = SWIPE_Y_FRACTIONS.length;
+const MAX_BACK_DELIVERY_ATTEMPTS = 2;
 
 export function drawerVisualStateMatches(state, side, open) {
   if (!state || !["left", "right"].includes(side)) return false;
@@ -186,20 +188,49 @@ export async function waitForDrawerVisualState(page, side, open, waitUntil, time
   return lastState;
 }
 
-async function closeDrawerWithFocusedPlatformBack(page, {
+export async function closeDrawerWithFocusedPlatformBack(page, {
   adbCommand,
   side,
   waitUntil,
   waitForInputFocus = waitForCurrentWebViewInputFocus,
   waitForVisualState = waitForDrawerVisualState,
+  readVisualState = readDrawerVisualState,
+  observePlatformBack = observeNativeBackDelivery,
 }) {
-  await waitForInputFocus(page, waitUntil);
-  try {
-    adbCommand("shell", "input", "keyevent", "4");
-  } catch {
-    throw new Error(`${side} drawer platform Back failed`);
+  for (let attempt = 1; attempt <= MAX_BACK_DELIVERY_ATTEMPTS; attempt += 1) {
+    await waitForInputFocus(page, waitUntil);
+    const delivery = await observePlatformBack(
+      page,
+      () => adbCommand("shell", "input", "keyevent", "4"),
+    );
+    if (delivery?.kind === "delivered") {
+      if (delivery.listenerSeen !== true || delivery.outcome !== "Handled") {
+        throw new Error(
+          `${side} drawer platform Back acknowledgement invalid: ${JSON.stringify(delivery)}`,
+        );
+      }
+      await waitForVisualState(page, side, false, waitUntil);
+      return { attempts: attempt };
+    }
+    if (delivery?.kind !== "missing") {
+      throw new Error(`${side} drawer platform Back delivery observation invalid`);
+    }
+    let current;
+    try {
+      current = await readVisualState(page, side);
+    } catch {
+      throw new Error(`${side} drawer platform Back post-delivery observation failed`);
+    }
+    if (!drawerVisualStateMatches(current, side, true)) {
+      throw new Error(
+        `${side} drawer changed without an observed Web Back: ${JSON.stringify(current)}`,
+      );
+    }
+    if (attempt === MAX_BACK_DELIVERY_ATTEMPTS) {
+      throw new Error(`${side} drawer platform Back delivery missing after 2 bounded attempts`);
+    }
   }
-  await waitForVisualState(page, side, false, waitUntil);
+  throw new Error(`${side} drawer platform Back delivery ended unexpectedly`);
 }
 
 export async function openDrawerWithObservedNativeSwipe(page, {
@@ -227,6 +258,11 @@ export async function openDrawerWithObservedNativeSwipe(page, {
     throw new Error(`${side} drawer initial observation failed`);
   }
   if (drawerVisualStateIsSemanticallyOpen(initialState)) {
+    if (!drawerVisualStateMatches(initialState, side, true)) {
+      throw new Error(
+        `${side} drawer initial open visual state is invalid: ${JSON.stringify(initialState)}`,
+      );
+    }
     // A reloaded document can legitimately retain an open presentation. One
     // typed Back normalizes the setup, but only after the current document owns
     // stable WebView input focus; closed-but-inconsistent state still fails.
@@ -236,6 +272,8 @@ export async function openDrawerWithObservedNativeSwipe(page, {
       waitUntil,
       waitForInputFocus,
       waitForVisualState,
+      readVisualState,
+      observePlatformBack: testing.observeNativeBackDelivery ?? observeNativeBackDelivery,
     });
   } else {
     await waitForVisualState(page, side, false, waitUntil);

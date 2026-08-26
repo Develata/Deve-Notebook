@@ -3,6 +3,7 @@ import {
   readExactCreateDocumentPointer,
 } from "./android-document-create-touch.mjs";
 import { clickAndroidNewDocumentActionWhenAdmitted } from "./android-document-search-admission.mjs";
+import { waitForCurrentWebViewInputFocus } from "./android-webview-input-focus.mjs";
 import {
   closeMobileSidebar,
   openMobileSidebarView,
@@ -188,6 +189,7 @@ export async function createAndSelectAndroidDocument(
     clickExactOpen = clickExactCreatedDocument,
     openSidebar = openMobileSidebarView,
     closeSidebar = closeMobileSidebar,
+    waitForInputFocus = waitForCurrentWebViewInputFocus,
     expectedWriterScope,
   },
 ) {
@@ -206,6 +208,9 @@ export async function createAndSelectAndroidDocument(
     },
     10000,
   ).catch((error) => throwDocumentCreateFailure(page, path, "create_identity", error));
+  await waitForInputFocus(page, waitUntil).catch(
+    (error) => throwDocumentCreateFailure(page, path, "create_input_focus", error),
+  );
   const pointerObservation = await clickCreate(page, path, expectedWriterScope).catch(
     (error) => throwDocumentCreateFailure(page, path, "create_pointer", error),
   );

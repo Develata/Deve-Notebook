@@ -6,7 +6,6 @@ import {
   selectNonInteractiveSwipePoints,
   shouldRetryAndroidDrawerGestureDelivery,
   takeTouchDeliveryProbe,
-  waitForCurrentWebViewInputFocus,
 } from "./lib/android-drawer-touch-proof.mjs";
 
 const expectedLeftDelivery = {
@@ -21,39 +20,6 @@ const completeLeftDelivery = (identifier = 7) => [
   { type: "touchstart", identifier, x: 40, y: 100, touchCount: 1 },
   { type: "touchend", identifier, x: 120, y: 100, touchCount: 0 },
 ];
-
-async function runInputFocusSamples(samples) {
-  const originalNow = Date.now;
-  const observedErrors = [];
-  let now = 0;
-  Date.now = () => now;
-  const page = {
-    calls: 0,
-    async call() {
-      const sample = samples[Math.min(this.calls, samples.length - 1)];
-      this.calls += 1;
-      if (sample instanceof Error) throw sample;
-      return sample;
-    },
-  };
-  const waitUntil = async (_label, predicate) => {
-    for (let index = 0; index < 10; index += 1) {
-      try {
-        if (await predicate()) return true;
-      } catch (error) {
-        observedErrors.push(error.message);
-      }
-      now += 125;
-    }
-    throw new Error("synthetic focus timeout");
-  };
-  try {
-    await waitForCurrentWebViewInputFocus(page, waitUntil);
-    return { calls: page.calls, observedErrors };
-  } finally {
-    Date.now = originalNow;
-  }
-}
 
 test("drawer delivery classifier binds identifier, coordinates, direction, and retry categories", () => {
   assert.equal(classifyAndroidDrawerGestureDelivery([], expectedLeftDelivery), "missing");
@@ -80,69 +46,6 @@ test("drawer delivery classifier binds identifier, coordinates, direction, and r
   assert.equal(shouldRetryAndroidDrawerGestureDelivery("invalid", 1, 3), false);
   assert.equal(shouldRetryAndroidDrawerGestureDelivery("missing", 3, 3), false);
   assert.equal(shouldRetryAndroidDrawerGestureDelivery("missing", 1), false);
-});
-
-test("ADB drawer input waits for a continuously visible and focused current WebView", async () => {
-  const result = await runInputFocusSamples([
-    { documentTimeOrigin: 1, visible: true, focused: false, mobile: true },
-    { documentTimeOrigin: 1, visible: true, focused: true, mobile: true },
-    { documentTimeOrigin: 1, visible: true, focused: true, mobile: true },
-    { documentTimeOrigin: 1, visible: false, focused: true, mobile: true },
-    { documentTimeOrigin: 1, visible: true, focused: true, mobile: true },
-    { documentTimeOrigin: 1, visible: true, focused: true, mobile: true },
-    { documentTimeOrigin: 1, visible: true, focused: true, mobile: true },
-  ]);
-  assert.deepEqual(result, { calls: 7, observedErrors: [] });
-});
-
-test("ADB drawer input focus settlement restarts after document replacement", async () => {
-  const result = await runInputFocusSamples([
-    { documentTimeOrigin: 1, visible: true, focused: true, mobile: true },
-    { documentTimeOrigin: 1, visible: true, focused: true, mobile: true },
-    { documentTimeOrigin: 2, visible: true, focused: true, mobile: true },
-    { documentTimeOrigin: 2, visible: true, focused: true, mobile: true },
-    { documentTimeOrigin: 2, visible: true, focused: true, mobile: true },
-  ]);
-  assert.deepEqual(result, { calls: 5, observedErrors: [] });
-});
-
-test("ADB drawer input focus settlement restarts after a redacted sampling failure", async () => {
-  const secretSentinel = "secret=/private/device/path";
-  const result = await runInputFocusSamples([
-    { documentTimeOrigin: 1, visible: true, focused: true, mobile: true },
-    { documentTimeOrigin: 1, visible: true, focused: true, mobile: true },
-    new Error(secretSentinel),
-    { documentTimeOrigin: 1, visible: true, focused: true, mobile: true },
-    { documentTimeOrigin: 1, visible: true, focused: true, mobile: true },
-    { documentTimeOrigin: 1, visible: true, focused: true, mobile: true },
-  ]);
-  assert.deepEqual(result, {
-    calls: 6,
-    observedErrors: ["android_webview_input_focus_sample_failed"],
-  });
-  assert.doesNotMatch(JSON.stringify(result), new RegExp(secretSentinel));
-});
-
-test("ADB drawer input focus timeout keeps the fixed admission label and caller timeout", async () => {
-  const page = {
-    async call() {
-      return { documentTimeOrigin: 1, visible: false, focused: false, mobile: true };
-    },
-  };
-  let observedLabel;
-  let observedTimeout;
-  const waitUntil = async (label, predicate, timeout) => {
-    observedLabel = label;
-    observedTimeout = timeout;
-    assert.equal(await predicate(), false);
-    throw new Error("synthetic focus timeout");
-  };
-  await assert.rejects(
-    waitForCurrentWebViewInputFocus(page, waitUntil, 1234),
-    /synthetic focus timeout/,
-  );
-  assert.equal(observedLabel, "current Android WebView input focus settlement");
-  assert.equal(observedTimeout, 1234);
 });
 
 test("drawer hit testing rejects action controls and requires the marked Work Edit surface", async () => {

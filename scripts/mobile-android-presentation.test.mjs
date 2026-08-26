@@ -3,6 +3,7 @@ import fs from "node:fs";
 import test from "node:test";
 import {
   androidSafeAreaStateMatches,
+  closeDrawerWithFocusedPlatformBack,
   drawerVisualStateIsSemanticallyOpen,
   drawerVisualStateMatches,
   openDrawerWithObservedNativeSwipe,
@@ -45,9 +46,11 @@ const leftClosed = {
 function createSwipeHarness({
   deliveries = [], openFailures = [], adbFailure = false, focusFailure = false,
   initialState = leftClosed,
+  backDeliveries = [{ kind: "delivered", listenerSeen: true, outcome: "Handled" }],
 } = {}) {
   const calls = {
-    adb: 0, adbArgs: [], begin: 0, focus: 0, take: 0, select: 0, visual: [], order: [],
+    adb: 0, adbArgs: [], backObserve: 0, begin: 0, focus: 0, take: 0, select: 0,
+    visual: [], order: [],
   };
   return {
     calls,
@@ -65,6 +68,11 @@ function createSwipeHarness({
         calls.order.push("focus");
         calls.focus += 1;
         if (focusFailure) throw new Error("synthetic focus timeout");
+      },
+      async observeNativeBackDelivery(_page, dispatchBack) {
+        calls.backObserve += 1;
+        dispatchBack();
+        return backDeliveries[calls.backObserve - 1] ?? { kind: "missing" };
       },
       async selectNonInteractiveSwipePoints() {
         calls.order.push("select");
@@ -100,6 +108,18 @@ async function runLeftSwipe(harness) {
     density: 2,
     waitUntil: async () => true,
     testing: harness.testing,
+  });
+}
+
+async function runLeftBackClose(harness) {
+  return closeDrawerWithFocusedPlatformBack({}, {
+    adbCommand: harness.adbCommand,
+    side: "left",
+    waitUntil: async () => true,
+    waitForInputFocus: harness.testing.waitForCurrentWebViewInputFocus,
+    waitForVisualState: harness.testing.waitForDrawerVisualState,
+    readVisualState: harness.testing.readDrawerVisualState,
+    observePlatformBack: harness.testing.observeNativeBackDelivery,
   });
 }
 
@@ -359,6 +379,12 @@ test("drawer proof normalizes only a semantically open initial drawer before con
     { adb: 0, begin: 0, take: 0 },
   );
 
+  const inconsistentOpen = createSwipeHarness({
+    initialState: { ...leftOpen, closeControlTop: 20 },
+  });
+  await assert.rejects(runLeftSwipe(inconsistentOpen), /initial open visual state is invalid/);
+  assert.equal(inconsistentOpen.calls.adb, 0);
+
   const unfocused = createSwipeHarness({ focusFailure: true });
   await assert.rejects(runLeftSwipe(unfocused), /synthetic focus timeout/);
   assert.deepEqual(unfocused.calls.order, ["focus"]);
@@ -374,6 +400,76 @@ test("drawer proof normalizes only a semantically open initial drawer before con
     { adb: 1, begin: 1, focus: 1, take: 1 },
   );
   assert.deepEqual(success.calls.order, ["focus", "select", "begin", "adb", "take"]);
+});
+
+test("drawer platform Back retries only a missing transport delivery", async () => {
+  const retry = createSwipeHarness({
+    initialState: leftOpen,
+    backDeliveries: [
+      { kind: "missing" },
+      { kind: "delivered", listenerSeen: true, outcome: "Handled" },
+    ],
+  });
+  const result = await runLeftBackClose(retry);
+  assert.deepEqual(result, { attempts: 2 });
+  assert.deepEqual(
+    { adb: retry.calls.adb, backObserve: retry.calls.backObserve, focus: retry.calls.focus },
+    { adb: 2, backObserve: 2, focus: 2 },
+  );
+});
+
+test("drawer platform Back never repeats an observed Web semantic action", async () => {
+  const handledButOpen = createSwipeHarness({ initialState: leftOpen });
+  handledButOpen.testing.waitForDrawerVisualState = async () => {
+    throw new Error("synthetic drawer remained open");
+  };
+  await assert.rejects(
+    runLeftBackClose(handledButOpen),
+    /synthetic drawer remained open/,
+  );
+  assert.equal(handledButOpen.calls.adb, 1);
+
+  const unhandled = createSwipeHarness({
+    initialState: leftOpen,
+    backDeliveries: [{ kind: "delivered", listenerSeen: true, outcome: "Unhandled" }],
+  });
+  await assert.rejects(
+    runLeftBackClose(unhandled),
+    /acknowledgement invalid/,
+  );
+  assert.equal(unhandled.calls.adb, 1);
+
+  const invalid = createSwipeHarness({
+    initialState: leftOpen,
+    backDeliveries: [{ kind: "invalid" }],
+  });
+  await assert.rejects(
+    runLeftBackClose(invalid),
+    /delivery observation invalid/,
+  );
+  assert.equal(invalid.calls.adb, 1);
+});
+
+test("drawer platform Back fails closed after two missing deliveries", async () => {
+  const missing = createSwipeHarness({
+    initialState: leftOpen,
+    backDeliveries: [{ kind: "missing" }, { kind: "missing" }],
+  });
+  await assert.rejects(
+    runLeftBackClose(missing),
+    /delivery missing after 2 bounded attempts/,
+  );
+  assert.equal(missing.calls.adb, 2);
+
+  const changed = createSwipeHarness({
+    initialState: { ...leftOpen, left: 4, right: 324 },
+    backDeliveries: [{ kind: "missing" }],
+  });
+  await assert.rejects(
+    runLeftBackClose(changed),
+    /changed without an observed Web Back/,
+  );
+  assert.equal(changed.calls.adb, 1);
 });
 
 test("drawer proof retries two missing deliveries but not complete or invalid delivery", async () => {
