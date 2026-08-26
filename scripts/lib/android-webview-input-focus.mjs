@@ -190,16 +190,22 @@ export function createAndroidWebViewInputTargetGate(
   appId,
   adbCommand,
   {
+    allowForegroundReentry = false,
+    settlementTimeoutMs = NATIVE_INPUT_REENTRY_TIMEOUT_MS,
     passiveTimeoutMs = NATIVE_INPUT_PASSIVE_TIMEOUT_MS,
     reentryTimeoutMs = NATIVE_INPUT_REENTRY_TIMEOUT_MS,
   } = {},
 ) {
-  if (typeof adbOutput !== "function" || typeof adbCommand !== "function") {
+  if (typeof adbOutput !== "function"
+    || (allowForegroundReentry && typeof adbCommand !== "function")) {
     throw new Error("android_native_input_target_adb_probe_missing");
   }
+  const strictTimeoutValid = Number.isFinite(settlementTimeoutMs) && settlementTimeoutMs > 0;
+  const reentryTimeoutsValid = Number.isFinite(passiveTimeoutMs) && passiveTimeoutMs > 0
+    && Number.isFinite(reentryTimeoutMs) && reentryTimeoutMs > 0;
   if (typeof appId !== "string" || !ANDROID_APP_ID_PATTERN.test(appId)
-    || !Number.isFinite(passiveTimeoutMs) || passiveTimeoutMs <= 0
-    || !Number.isFinite(reentryTimeoutMs) || reentryTimeoutMs <= 0) {
+    || typeof allowForegroundReentry !== "boolean"
+    || (allowForegroundReentry ? !reentryTimeoutsValid : !strictTimeoutValid)) {
     throw new Error("android_native_input_target_gate_config_invalid");
   }
   const readNativeTargetState = () => classifyAndroidNativeInputTarget(
@@ -208,6 +214,15 @@ export function createAndroidWebViewInputTargetGate(
     appId,
   );
   return async (page, waitUntil) => {
+    if (!allowForegroundReentry) {
+      await waitForCurrentAndroidWebViewInputTarget(
+        page,
+        waitUntil,
+        readNativeTargetState,
+        settlementTimeoutMs,
+      );
+      return;
+    }
     try {
       await waitForCurrentAndroidWebViewInputTarget(
         page,

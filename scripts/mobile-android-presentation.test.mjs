@@ -154,14 +154,30 @@ test("native presentation is re-admitted after same-WebView reload before drawer
   assert.match(remoteJourney, /nativeSystemGestureInsetsAcceptedAfterReload: true/);
   assert.match(
     localJourney,
-    /createAndroidWebViewInputTargetGate\(\s*adbOutput,\s*appId,\s*adbCommand,\s*\)/,
+    /const waitForNativeInputTarget = createAndroidWebViewInputTargetGate\(adbOutput, appId\);/,
   );
-  assert.match(localJourney, /waitForInputFocus: waitForNativeInputTarget/);
+  assert.match(
+    localJourney,
+    /const waitForNativeDrawerInputTarget = createAndroidWebViewInputTargetGate\(\s*adbOutput,\s*appId,\s*adbCommand,\s*\{ allowForegroundReentry: true \},\s*\);/,
+  );
+  assert.match(
+    localJourney,
+    /inputEditorText: inputAndroidEditorText,\s*waitForInputFocus: waitForNativeInputTarget/,
+  );
+  assert.match(
+    localJourney,
+    /proveAndroidDrawerGesturesAfterReload\(page,[\s\S]*?waitForInputFocus: waitForNativeDrawerInputTarget/,
+  );
+  assert.match(
+    localJourney,
+    /proveAndroidWorkEditDrawerGestures\(page,[\s\S]*?waitForInputFocus: waitForNativeDrawerInputTarget/,
+  );
   assert.match(
     remoteJourney,
-    /createAndroidWebViewInputTargetGate\(\s*adbOutput,\s*appId,\s*adbCommand,\s*\)/,
+    /const waitForNativeInputTarget = createAndroidWebViewInputTargetGate\(adbOutput, appId\);/,
   );
   assert.match(remoteJourney, /waitForInputFocus: waitForNativeInputTarget/);
+  assert.doesNotMatch(remoteJourney, /allowForegroundReentry: true/);
 });
 
 test("native presentation requires a settled system-bar safe area around mobile chrome", () => {

@@ -184,6 +184,51 @@ test("Android native input gate samples resumed Activity and current window toge
   }
 });
 
+test("Android strict native input gate waits without launcher reentry", async () => {
+  const originalNow = Date.now;
+  let now = 0;
+  let nativeSamples = 0;
+  let reentryCount = 0;
+  Date.now = () => now;
+  const appId = "dev.deve.notebook.mobile";
+  const adbOutput = (...args) => {
+    const command = args.join(" ");
+    const appCurrent = nativeSamples >= 2;
+    const packageName = appCurrent ? appId : "com.android.launcher3";
+    if (command === "shell dumpsys activity activities") {
+      nativeSamples += 1;
+      return `topResumedActivity=ActivityRecord{a u0 ${packageName}/.MainActivity t1}`;
+    }
+    if (command === "shell dumpsys window") {
+      return `mCurrentFocus=Window{b u0 ${packageName}/${packageName}.MainActivity}`;
+    }
+    throw new Error("unexpected ADB probe");
+  };
+  const page = {
+    async call() {
+      return { documentTimeOrigin: 1, visible: true, focused: true, mobile: true };
+    },
+  };
+  const waitUntil = async (_label, predicate) => {
+    for (let index = 0; index < 8; index += 1) {
+      if (await predicate()) return true;
+      now += 125;
+    }
+    throw new Error("synthetic strict native input target timeout");
+  };
+  try {
+    await createAndroidWebViewInputTargetGate(
+      adbOutput,
+      appId,
+      () => { reentryCount += 1; },
+      { settlementTimeoutMs: 1_000 },
+    )(page, waitUntil);
+    assert.equal(reentryCount, 0);
+  } finally {
+    Date.now = originalNow;
+  }
+});
+
 test("Android native input gate rejects a missing ADB probe with a fixed category", () => {
   assert.throws(
     () => createAndroidWebViewInputTargetGate(null, "dev.deve.notebook.mobile"),
@@ -240,6 +285,7 @@ test("Android native input gate allows one PID-stable launcher reentry", async (
   };
   try {
     await createAndroidWebViewInputTargetGate(adbOutput, appId, adbCommand, {
+      allowForegroundReentry: true,
       passiveTimeoutMs: 1,
       reentryTimeoutMs: 1000,
     })(page, waitUntil);
@@ -275,6 +321,7 @@ test("Android native input reentry failure reports only fixed target categories"
   };
   await assert.rejects(
     createAndroidWebViewInputTargetGate(adbOutput, appId, () => {}, {
+      allowForegroundReentry: true,
       passiveTimeoutMs: 1,
       reentryTimeoutMs: 1,
     })(page, waitUntil),
@@ -334,7 +381,11 @@ test("Android native input reentry rejects PID replacement", async () => {
         adbOutput,
         appId,
         () => { foregrounded = true; },
-        { passiveTimeoutMs: 1, reentryTimeoutMs: 1000 },
+        {
+          allowForegroundReentry: true,
+          passiveTimeoutMs: 1,
+          reentryTimeoutMs: 1000,
+        },
       )(page, waitUntil),
       /android_native_input_target_reentry_pid_unstable/,
     );

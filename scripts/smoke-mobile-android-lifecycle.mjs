@@ -59,10 +59,12 @@ const {
   waitForAndroidRootReentry,
   readAndroidUiBackSurfaceObservation,
 } = createAndroidLifecycleHarness({ timeoutMs, adb, serial });
-const waitForNativeInputTarget = createAndroidWebViewInputTargetGate(
+const waitForNativeInputTarget = createAndroidWebViewInputTargetGate(adbOutput, appId);
+const waitForNativeDrawerInputTarget = createAndroidWebViewInputTargetGate(
   adbOutput,
   appId,
   adbCommand,
+  { allowForegroundReentry: true },
 );
 async function inputAndroidEditorText(content, _point, page, expectedDocId = null) {
   return typeAndroidEditorText(page, content, {
@@ -247,7 +249,7 @@ async function main() {
     adbOutput,
     appId,
     waitUntil,
-    waitForInputFocus: waitForNativeInputTarget,
+    waitForInputFocus: waitForNativeDrawerInputTarget,
   });
   const nativePresentation = drawerGestureProof.presentation;
   console.log(
@@ -305,7 +307,7 @@ async function main() {
     window.getEditorContent?.()?.includes(expected) ?? false,
   initial));
   Object.assign(drawerGestureProof, await proveAndroidWorkEditDrawerGestures(page, {
-    adbCommand, adbOutput, appId, waitUntil, waitForInputFocus: waitForNativeInputTarget,
+    adbCommand, adbOutput, appId, waitUntil, waitForInputFocus: waitForNativeDrawerInputTarget,
   }));
   const serviceBeforeSuspend = await nativeInvoke(page, "native_backend_get_service_state");
   assert.equal(serviceBeforeSuspend?.backend_running, true, "embedded transport must be running");
