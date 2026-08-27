@@ -118,7 +118,8 @@ contains	docs/dev-runbook.md	Native Shell Modes
 contains	apps/mobile/src/lib.rs	mod embedded_backend;
 contains	apps/mobile/src/embedded_backend/generation.rs	serve_with_listener_until_shutdown
 contains	apps/cli/src/server/ws/transport.rs	pub(crate) struct WsTransportRuntime
-contains	apps/web/src/api/connection.rs	RebindNativeEndpoint
+contains	apps/web/src/api/connection/control.rs	RebindNativeEndpoint
+contains	apps/web/src/api/connection/session.rs	ConnectionControl::RebindNativeEndpoint
 contains	apps/mobile/src/embedded_backend/supervisor.rs	pub struct MobileEmbeddedBackendSupervisor
 contains	apps/mobile/src/embedded_backend/generation.rs	bind_native_loopback_listener(None)
 contains	apps/mobile/src/embedded_backend/mod.rs	NativeLoopbackAuthMaterial

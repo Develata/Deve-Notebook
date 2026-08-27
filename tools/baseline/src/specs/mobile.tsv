@@ -929,7 +929,8 @@ contains	apps/mobile/src/tauri_lifecycle.rs	WindowEvent::Suspended
 contains	apps/mobile/src/tauri_lifecycle.rs	WindowEvent::Resumed
 contains	apps/mobile/src/tauri_lifecycle.rs	shutdown_mobile_backend_before_restart
 contains	apps/web/src/hooks/use_core/effects/handshake/lifecycle.rs	deve-native-suspended
-contains	apps/web/src/api/connection.rs	RebindNativeEndpoint
+contains	apps/web/src/api/connection/control.rs	RebindNativeEndpoint
+contains	apps/web/src/api/connection/session.rs	ConnectionControl::RebindNativeEndpoint
 contains	apps/web/src/hooks/use_core/effects/handshake/lifecycle.rs	probe_auth_status_with_http_base
 contains	apps/web/src/hooks/use_core/effects/handshake/lifecycle.rs	fn native_suspend_immediately_revokes_write_readiness()
 contains	scripts/check-mobile-android-emulator-install-startup-smoke.sh	smoke-mobile-android-lifecycle.sh
