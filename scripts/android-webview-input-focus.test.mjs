@@ -3,6 +3,7 @@ import test from "node:test";
 
 import {
   classifyAndroidNativeInputTarget,
+  classifyAndroidNativeInputTargetObservation,
   classifyAndroidWindowFocused,
   createAndroidWebViewInputTargetGate,
   waitForCurrentAndroidWebViewInputTarget,
@@ -139,6 +140,14 @@ test("Android native input classifier requires resumed Activity and exact curren
     appId,
   ), "not-ready");
   assert.equal(classifyAndroidNativeInputTarget(resumed, "mCurrentFocus=null", appId), "unavailable");
+  assert.deepEqual(
+    classifyAndroidNativeInputTargetObservation(resumed, "mCurrentFocus=null", appId),
+    {
+      activityState: "resumed",
+      windowState: "unavailable",
+      nativeTargetState: "unavailable",
+    },
+  );
 });
 
 test("Android native input gate samples resumed Activity and current window together", async () => {
@@ -237,6 +246,39 @@ test("Android native input gate rejects a missing ADB probe with a fixed categor
   assert.throws(
     () => createAndroidWebViewInputTargetGate(() => "", Symbol("invalid"), () => {}),
     /android_native_input_target_gate_config_invalid/,
+  );
+});
+
+test("Android native input gate reports split fixed Activity and window categories", async () => {
+  const appId = "dev.deve.notebook.mobile";
+  const secretSentinel = "secret=/private/input/window";
+  const adbOutput = (...args) => {
+    const command = args.join(" ");
+    if (command === "shell dumpsys activity activities") {
+      return `topResumedActivity=ActivityRecord{a u0 ${appId}/.MainActivity t1}`;
+    }
+    if (command === "shell dumpsys window") return "mCurrentFocus=null";
+    throw new Error(secretSentinel);
+  };
+  const page = {
+    async call() {
+      return { documentTimeOrigin: 1, visible: true, focused: true, mobile: true };
+    },
+  };
+  const waitUntil = async (_label, predicate) => {
+    assert.equal(await predicate(), false);
+    throw new Error(secretSentinel);
+  };
+  await assert.rejects(
+    createAndroidWebViewInputTargetGate(adbOutput, appId)(page, waitUntil),
+    (error) => {
+      assert.match(
+        error.message,
+        /"nativeActivityState":"resumed","nativeWindowState":"unavailable","nativeTargetState":"unavailable"/,
+      );
+      assert.doesNotMatch(error.message, /secret|private|input\/window/);
+      return true;
+    },
   );
 });
 
@@ -453,4 +495,84 @@ test("Android native input target redacts platform probe failures", async () => 
   );
   assert.deepEqual(observed, ["android_native_input_target_sample_failed"]);
   assert.doesNotMatch(JSON.stringify(observed), /secret|private|window\/path/);
+});
+
+test("Android native input target classifies page sampling failure without platform probes", async () => {
+  const secretSentinel = "secret=/private/webview/context";
+  const page = {
+    async call() {
+      throw new Error(secretSentinel);
+    },
+  };
+  const waitUntil = async (_label, predicate) => {
+    try {
+      await predicate();
+    } catch {
+      // The bounded waiter owns retries; this fixture terminates after one sample.
+    }
+    throw new Error(secretSentinel);
+  };
+  await assert.rejects(
+    waitForCurrentAndroidWebViewInputTarget(page, waitUntil, () => {
+      throw new Error("native probe must not run after page sampling failure");
+    }),
+    (error) => {
+      assert.match(error.message, /"nativeActivityState":"not-sampled"/);
+      assert.match(error.message, /"nativeWindowState":"not-sampled"/);
+      assert.match(error.message, /"nativeTargetState":"not-sampled"/);
+      assert.doesNotMatch(error.message, /secret|private|webview\/context/);
+      return true;
+    },
+  );
+});
+
+test("Android native input target rejects malformed or contradictory structured observations", async () => {
+  const cases = [
+    {
+      label: "malformed",
+      observation: {
+        activityState: "bogus",
+        windowState: "bogus",
+        nativeTargetState: "ready",
+      },
+      expected: /"nativeActivityState":"invalid","nativeWindowState":"invalid","nativeTargetState":"invalid"/,
+    },
+    {
+      label: "missing",
+      observation: { nativeTargetState: "ready" },
+      expected: /"nativeActivityState":"invalid","nativeWindowState":"invalid","nativeTargetState":"invalid"/,
+    },
+    {
+      label: "contradictory",
+      observation: {
+        activityState: "not-resumed",
+        windowState: "focused",
+        nativeTargetState: "ready",
+      },
+      expected: /"nativeActivityState":"not-resumed","nativeWindowState":"focused","nativeTargetState":"invalid"/,
+    },
+  ];
+  for (const { label, observation, expected } of cases) {
+    const page = {
+      async call() {
+        return { documentTimeOrigin: 1, visible: true, focused: true, mobile: true };
+      },
+    };
+    const waitUntil = async (_waitLabel, predicate) => {
+      if (await predicate()) return true;
+      throw new Error(`synthetic ${label} observation timeout`);
+    };
+    await assert.rejects(
+      waitForCurrentAndroidWebViewInputTarget(
+        page,
+        waitUntil,
+        async () => observation,
+      ),
+      (error) => {
+        assert.match(error.message, expected);
+        return true;
+      },
+      `${label} structured observation must fail closed`,
+    );
+  }
 });

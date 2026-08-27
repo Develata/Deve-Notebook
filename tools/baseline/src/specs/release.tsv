@@ -205,6 +205,8 @@ contains	docs/plan/18_release.md	Mobile pre-package compile/test gate 必须只�
 contains	docs/features/15_release.md	Mobile pre-package compile/test 只能读取 clean checkout 中受版本控制的输入
 contains	docs/acceptance-cases/12_tech_release.md	mobile_pre_package_tests_use_only_versioned_sources_and_do_not_include_ignored_android_generated_kotlin true
 contains	docs/acceptance-cases/12_tech_release.md	wry_generated_class_r8_jni_integration_requires_same_exact_head_minified_release_variant_install_and_startup
+contains	docs/acceptance-cases/12_tech_release.md	android_release_startup_requires_bounded_stable_single_pid_admission true
+contains	docs/acceptance-cases/12_tech_release.md	android_release_startup_probes_consume_one_shared_deadline_remaining_budget true
 contains	docs/plan/18_release.md	LocalBackend 或 RemoteBrowser journey 必须单独拥有 debug APK 的唯一安装与首次启动
 contains	docs/features/15_release.md	LocalBackend 或 RemoteBrowser journey 唯一负责安装并首次启动 debug APK
 contains	docs/acceptance-cases/12_tech_release.md	android_debug_apk_install_and_launch_has_one_selected_writable_journey_owner true

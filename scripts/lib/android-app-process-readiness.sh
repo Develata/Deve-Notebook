@@ -27,9 +27,15 @@ ANDROID_APP_PROCESS_READINESS_LAST_EVIDENCE="not-probed"
 android_app_process_pidof_probe() {
   local adb_fn="$1"
   local app_id="$2"
+  local timeout_secs="${3:-}"
   local output status
 
-  if output="$("$adb_fn" shell pidof "$app_id" 2>&1)"; then
+  if [[ -n "$timeout_secs" && ! "$timeout_secs" =~ ^[1-9][0-9]*$ ]]; then
+    return 64
+  fi
+  if [[ -n "$timeout_secs" ]]; then
+    output="$("$adb_fn" "$timeout_secs" shell pidof "$app_id" 2>&1)" && status=0 || status=$?
+  elif output="$("$adb_fn" shell pidof "$app_id" 2>&1)"; then
     status=0
   else
     status=$?
@@ -68,7 +74,7 @@ android_app_process_wait_stable() {
   local candidate_pid=""
   local stable_samples=0
   local missing_after_candidate=0
-  local now observed status
+  local now remaining sleep_secs observed status
 
   ANDROID_APP_PROCESS_STABLE_PID=""
   ANDROID_APP_PROCESS_CURRENT_PID=""
@@ -88,17 +94,31 @@ android_app_process_wait_stable() {
       ANDROID_APP_PROCESS_READINESS_LAST_EVIDENCE="deadline=expired stable-samples=$stable_samples/$ANDROID_APP_PROCESS_STABLE_SAMPLES_REQUIRED"
       return 124
     fi
+    remaining=$((deadline - now))
 
     observed=""
-    if observed="$("$probe_fn")"; then
+    if observed="$("$probe_fn" "$remaining")"; then
       status=0
     else
       status=$?
     fi
     observed="${observed//$'\r'/}"
+    if (( status == 124 )); then
+      ANDROID_APP_PROCESS_READINESS_LAST_EVIDENCE="deadline=expired stable-samples=$stable_samples/$ANDROID_APP_PROCESS_STABLE_SAMPLES_REQUIRED"
+      return 124
+    fi
     if (( status != 0 )) && ! { (( status == 1 )) && [[ -z "$observed" ]]; }; then
       ANDROID_APP_PROCESS_READINESS_LAST_EVIDENCE="probe=failed status=$status"
       return "$status"
+    fi
+
+    now="$(android_app_process_read_clock "$now_fn")" || {
+      ANDROID_APP_PROCESS_READINESS_LAST_EVIDENCE="clock=invalid"
+      return 1
+    }
+    if (( now >= deadline )); then
+      ANDROID_APP_PROCESS_READINESS_LAST_EVIDENCE="deadline=expired stable-samples=$stable_samples/$ANDROID_APP_PROCESS_STABLE_SAMPLES_REQUIRED"
+      return 124
     fi
     if [[ -n "$observed" && ! "$observed" =~ ^[1-9][0-9]*$ ]]; then
       ANDROID_APP_PROCESS_READINESS_LAST_EVIDENCE="probe=invalid-pid"
@@ -133,7 +153,10 @@ android_app_process_wait_stable() {
       return 0
     fi
 
-    if sleep "$ANDROID_APP_PROCESS_POLL_INTERVAL_SECS"; then
+    remaining=$((deadline - now))
+    sleep_secs="$ANDROID_APP_PROCESS_POLL_INTERVAL_SECS"
+    (( sleep_secs <= remaining )) || sleep_secs="$remaining"
+    if sleep "$sleep_secs"; then
       :
     else
       status=$?

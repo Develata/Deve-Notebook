@@ -69,11 +69,18 @@ export function classifyAndroidWindowFocused(output, appId) {
   );
 }
 
-export function classifyAndroidNativeInputTarget(activityOutput, windowOutput, appId) {
+export function classifyAndroidNativeInputTargetObservation(activityOutput, windowOutput, appId) {
   const activityState = classifyAndroidActivityResumed(activityOutput, appId);
   const windowState = classifyAndroidWindowFocused(windowOutput, appId);
-  if (activityState === "unavailable" || windowState === "unavailable") return "unavailable";
-  return activityState === "resumed" && windowState === "focused" ? "ready" : "not-ready";
+  const nativeTargetState = activityState === "unavailable" || windowState === "unavailable"
+    ? "unavailable"
+    : activityState === "resumed" && windowState === "focused" ? "ready" : "not-ready";
+  return { activityState, windowState, nativeTargetState };
+}
+
+export function classifyAndroidNativeInputTarget(activityOutput, windowOutput, appId) {
+  return classifyAndroidNativeInputTargetObservation(activityOutput, windowOutput, appId)
+    .nativeTargetState;
 }
 
 async function waitForInputTarget(
@@ -103,14 +110,27 @@ async function waitForInputTarget(
         pageVisible: false,
         pageFocused: false,
         mobileLayout: false,
+        nativeActivityState: "not-sampled",
+        nativeWindowState: "not-sampled",
         nativeTargetState: "not-sampled",
       });
       throw new Error("android_webview_input_focus_sample_failed");
     }
     let nativeTargetState = "ready";
+    let nativeActivityState = "not-sampled";
+    let nativeWindowState = "not-sampled";
+    let structuredNativeObservation = false;
     if (readNativeTargetState) {
       try {
-        nativeTargetState = await readNativeTargetState();
+        const nativeObservation = await readNativeTargetState();
+        if (typeof nativeObservation === "string") {
+          nativeTargetState = nativeObservation;
+        } else {
+          structuredNativeObservation = true;
+          nativeTargetState = nativeObservation?.nativeTargetState;
+          nativeActivityState = nativeObservation?.activityState;
+          nativeWindowState = nativeObservation?.windowState;
+        }
       } catch {
         matchedSince = null;
         matchedDocument = null;
@@ -119,18 +139,45 @@ async function waitForInputTarget(
           pageVisible: state?.visible === true,
           pageFocused: state?.focused === true,
           mobileLayout: state?.mobile === true,
+          nativeActivityState: "probe-failed",
+          nativeWindowState: "probe-failed",
           nativeTargetState: "probe-failed",
         });
         throw new Error("android_native_input_target_sample_failed");
       }
     }
-    const projectedNativeTargetState = ["ready", "not-ready", "unavailable"]
+    let projectedNativeTargetState = ["ready", "not-ready", "unavailable"]
       .includes(nativeTargetState) ? nativeTargetState : "invalid";
+    const projectedActivityState = ["resumed", "not-resumed", "unavailable", "not-sampled"]
+      .includes(nativeActivityState) ? nativeActivityState : "invalid";
+    const projectedWindowState = ["focused", "not-focused", "unavailable", "not-sampled"]
+      .includes(nativeWindowState) ? nativeWindowState : "invalid";
+    if (structuredNativeObservation) {
+      const activitySampled = ["resumed", "not-resumed", "unavailable"]
+        .includes(projectedActivityState);
+      const windowSampled = ["focused", "not-focused", "unavailable"]
+        .includes(projectedWindowState);
+      if (!activitySampled || !windowSampled) {
+        projectedNativeTargetState = "invalid";
+      } else {
+        const derivedNativeTargetState = projectedActivityState === "unavailable"
+          || projectedWindowState === "unavailable"
+          ? "unavailable"
+          : projectedActivityState === "resumed" && projectedWindowState === "focused"
+            ? "ready"
+            : "not-ready";
+        if (projectedNativeTargetState !== derivedNativeTargetState) {
+          projectedNativeTargetState = "invalid";
+        }
+      }
+    }
     onObservation?.({
       documentIdentityValid: Number.isFinite(state?.documentTimeOrigin),
       pageVisible: state?.visible === true,
       pageFocused: state?.focused === true,
       mobileLayout: state?.mobile === true,
+      nativeActivityState: projectedActivityState,
+      nativeWindowState: projectedWindowState,
       nativeTargetState: projectedNativeTargetState,
     });
     if (!Number.isFinite(state?.documentTimeOrigin)
@@ -208,7 +255,7 @@ export function createAndroidWebViewInputTargetGate(
     || (allowForegroundReentry ? !reentryTimeoutsValid : !strictTimeoutValid)) {
     throw new Error("android_native_input_target_gate_config_invalid");
   }
-  const readNativeTargetState = () => classifyAndroidNativeInputTarget(
+  const readNativeTargetState = () => classifyAndroidNativeInputTargetObservation(
     adbOutput("shell", "dumpsys", "activity", "activities"),
     adbOutput("shell", "dumpsys", "window"),
     appId,

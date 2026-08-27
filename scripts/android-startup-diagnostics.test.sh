@@ -14,6 +14,7 @@ trap cleanup EXIT
 operations="$temporary/operations"
 stderr_file="$temporary/stderr"
 MOCK_APP_PID=""
+MOCK_PROCESS_CLOCK=0
 MOCK_DIAG_MODE="success"
 SECRET_SENTINEL="test-secret-sentinel-5a3f9c"
 
@@ -22,8 +23,17 @@ test_fail() {
   exit 1
 }
 
-app_pid() {
+app_process_probe() {
+  [[ -n "$MOCK_APP_PID" ]] || return 1
   printf '%s\n' "$MOCK_APP_PID"
+}
+
+app_process_readiness_now() {
+  printf '%s\n' "$MOCK_PROCESS_CLOCK"
+}
+
+sleep() {
+  MOCK_PROCESS_CLOCK=$((MOCK_PROCESS_CLOCK + $1))
 }
 
 emit_bytes() {
@@ -120,6 +130,7 @@ run_missing_pid_case() {
   local mode="$1"
   local status=0
   : >"$operations"
+  MOCK_PROCESS_CLOCK=0
   MOCK_APP_PID=""
   MOCK_DIAG_MODE="$mode"
   set +e
@@ -127,15 +138,16 @@ run_missing_pid_case() {
   status=$?
   set -e
   [[ "$status" == "1" ]] || test_fail "$mode: expected status 1, got $status"
-  grep -Fq "Android app did not remain running after launch: dev.deve.notebook.mobile" "$stderr_file" \
-    || test_fail "$mode: primary process-exit failure was replaced or lost"
-  [[ "$(tail -n 1 "$stderr_file")" == *"Android app did not remain running after launch"* ]] \
+  grep -Fq "Android app did not reach stable process readiness: dev.deve.notebook.mobile (deadline=expired stable-samples=0/2 status=124)" "$stderr_file" \
+    || test_fail "$mode: primary process-readiness failure was replaced or lost"
+  [[ "$(tail -n 1 "$stderr_file")" == *"Android app did not reach stable process readiness"* ]] \
     || test_fail "$mode: primary failure must be the final reported line"
   assert_all_diag_calls_time_bounded
 }
 
 # Success path: diagnostics must not run and must not print anything.
 : >"$operations"
+MOCK_PROCESS_CLOCK=0
 MOCK_APP_PID="4321"
 MOCK_DIAG_MODE="success"
 (require_app_running_after_launch) 2>"$stderr_file" \
@@ -185,6 +197,27 @@ grep -Fq -- "--- app process state" "$stderr_file" \
 run_missing_pid_case all-fail
 grep -Fq "section command failed (nonfatal)" "$stderr_file" \
   || test_fail "failed diagnostic sections must be reported as nonfatal"
+
+# Diagnostics are not part of the primary readiness state machine and may not
+# overwrite the already classified failure evidence.
+MOCK_PROCESS_CLOCK=0
+MOCK_APP_PID=""
+set +e
+(
+  android_startup_diagnostics_collect() {
+    ANDROID_APP_PROCESS_READINESS_LAST_EVIDENCE="diagnostic=clobbered"
+    return 0
+  }
+  require_app_running_after_launch
+) 2>"$stderr_file"
+status=$?
+set -e
+[[ "$status" == "1" ]] || test_fail "evidence snapshot case: expected status 1, got $status"
+grep -Fq "(deadline=expired stable-samples=0/2 status=124)" "$stderr_file" \
+  || test_fail "diagnostics overwrote the primary readiness evidence snapshot"
+if grep -Fq "diagnostic=clobbered" "$stderr_file"; then
+  test_fail "diagnostic state leaked into the primary failure evidence"
+fi
 
 # Combined output is capped by the explicit byte budget.
 ANDROID_STARTUP_DIAG_TOTAL_BUDGET_BYTES=4096
@@ -258,6 +291,7 @@ ANDROID_STARTUP_DIAG_TOTAL_BUDGET_BYTES=131072
 
 # The verified pid is exported to the primary success output path.
 : >"$operations"
+MOCK_PROCESS_CLOCK=0
 MOCK_APP_PID="4321"
 MOCK_DIAG_MODE="success"
 APP_RUNNING_PID=""

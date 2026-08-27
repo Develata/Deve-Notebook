@@ -273,6 +273,13 @@ LocalBackend 或 RemoteBrowser journey 必须单独拥有 debug APK 的唯一安
 orchestrator 不得在 journey 前再经通用 startup gate 预装或启动同一 debug APK。否则随后的
 `adb install -r` package replacement 会在已存在的 Activity/WebView task 上制造第二个进程与
 renderer generation，并可能使一次性 native session handoff 失效；该状态不得通过延时或重试掩盖。
+release startup proof 的“保持启动”必须在单一有界 deadline 内准入同一规范 app PID 的连续两次
+观测；首个 PID 出现前的 absent 只表示尚未准入，首个 PID 之后最多允许一次 Android 进程表记账
+空窗。PID replacement、连续两次 absent、非法 PID、ADB/transport probe failure、clock/poll failure
+或 deadline expiry 都必须固定分类并 fail-closed。该 proof 不得用固定 sleep 后的单次 `pidof`/`ps`
+快照替代稳定准入；每次 ADB probe 必须只消费该 deadline 的剩余预算，不得另启更长的独立 timeout。
+也不得把失败后的诊断快照中重新出现的进程倒推为本次成功；诊断只补充原始失败证据，不能覆盖
+其状态。
 release startup proof 返回成功前必须 fail-closed 地完成卸载，并验证 package、launcher resolution 与
 app process 均已退役；任何残留都必须阻止 debug journey 开始。
 

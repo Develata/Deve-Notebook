@@ -258,6 +258,8 @@
     - release_assert: mobile_pre_package_tests_use_only_versioned_sources_and_do_not_include_ignored_android_generated_kotlin true
     - release_assert: mobile_target_host_diagnostic_signer_is_ephemeral_and_never_claims_candidate_signing_identity true
     - evidence_boundary: wry_generated_class_r8_jni_integration_requires_same_exact_head_minified_release_variant_install_and_startup
+    - release_assert: android_release_startup_requires_bounded_stable_single_pid_admission true
+    - release_assert: android_release_startup_probes_consume_one_shared_deadline_remaining_budget true
     - release_assert: android_debug_apk_install_and_launch_has_one_selected_writable_journey_owner true
     - release_assert: android_release_startup_package_launcher_and_process_retire_before_debug_journey true
     - release_assert: android_emulator_settings_provider_readiness_precedes_install true

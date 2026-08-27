@@ -5,12 +5,13 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 source "$ROOT_DIR/scripts/baseline-wrapper.sh"
 source "$ROOT_DIR/scripts/lib/android-tools.sh"
 source "$ROOT_DIR/scripts/lib/android-startup-diagnostics.sh"
+source "$ROOT_DIR/scripts/lib/android-app-process-readiness.sh"
 source "$ROOT_DIR/scripts/lib/android-package-session.sh"
 REQUIRED="${DEVE_MOBILE_ANDROID_INSTALL_STARTUP_SMOKE_REQUIRED:-0}"
 APK_PATH="${DEVE_MOBILE_ANDROID_APK_PATH:-apps/mobile/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk}"
 APP_ID="${DEVE_MOBILE_ANDROID_APP_ID:-dev.deve.notebook.mobile}"
 UNINSTALL_AFTER="${DEVE_MOBILE_ANDROID_INSTALL_SMOKE_UNINSTALL:-1}"
-STARTUP_WAIT_SECS="${DEVE_MOBILE_ANDROID_STARTUP_WAIT_SECS:-3}"
+STARTUP_WAIT_SECS="${DEVE_MOBILE_ANDROID_STARTUP_WAIT_SECS:-10}"
 ADB_SERIAL="${DEVE_MOBILE_ANDROID_SERIAL:-}"
 ADB_TIMEOUT_SECS="${DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS:-60}"
 PROCESS_RETIREMENT_WAIT_SECS="${DEVE_MOBILE_ANDROID_PROCESS_RETIREMENT_WAIT_SECS:-10}"
@@ -60,29 +61,81 @@ adb_timed() {
   adb_with_timeout "$ADB_TIMEOUT_SECS" "$@"
 }
 
-app_pid() {
-  local pid
-  pid="$(adb_timed shell pidof "$APP_ID" 2>/dev/null | tr -d '\r' || true)"
-  if [[ -n "$pid" ]]; then
-    printf '%s\n' "$pid"
-    return 0
+adb_with_startup_deadline() (
+  local timeout_secs="$1"
+  local adb_args=()
+  local timeout_stderr
+  local timeout_expired=0
+  local stderr_line
+  local status
+  shift
+
+  android_tool_path adb >/dev/null 2>&1 || fail "adb is required for Android install/startup smoke"
+  command -v timeout >/dev/null 2>&1 \
+    || fail "timeout is required for bounded Android install/startup smoke"
+  if [[ -n "$ADB_SERIAL" ]]; then
+    adb_args=(-s "$ADB_SERIAL")
   fi
-  adb_timed shell ps -A 2>/dev/null | tr -d '\r' | awk -v app="$APP_ID" 'index($0, app) { print $2; exit }'
+  timeout_stderr="$(mktemp)" || return "$ANDROID_APP_PROCESS_TRANSPORT_FAILURE_STATUS"
+  trap 'rm -f -- "$timeout_stderr"' EXIT
+  if LC_ALL=C timeout --verbose --signal=KILL "${timeout_secs}s" \
+    "$(android_tool_path adb)" "${adb_args[@]}" "$@" 2>"$timeout_stderr"; then
+    status=0
+  else
+    status=$?
+  fi
+  while IFS= read -r stderr_line || [[ -n "$stderr_line" ]]; do
+    if [[ "$stderr_line" == "timeout: sending signal KILL to command "* ]]; then
+      timeout_expired=1
+    else
+      printf '%s\n' "$stderr_line" >&2
+    fi
+  done <"$timeout_stderr"
+  rm -f -- "$timeout_stderr"
+  trap - EXIT
+  (( status != 0 )) || return 0
+  # GNU timeout reports 128+SIGKILL for --signal=KILL. Normalize only when
+  # timeout itself confirms sending that signal; a child-originated 137 stays
+  # a transport failure instead of being mislabeled as deadline expiry.
+  (( status == 137 && timeout_expired == 1 )) && return 124
+  return "$status"
+)
+
+app_process_probe() {
+  local remaining_secs="$1"
+  android_app_process_pidof_probe adb_with_startup_deadline "$APP_ID" "$remaining_secs"
+}
+
+app_process_readiness_now() {
+  printf '%s\n' "$SECONDS"
 }
 
 android_startup_diag_adb() {
   adb_with_timeout "$@"
 }
 
-# Keeps the primary process-exit failure authoritative: diagnostics run only
-# when the app process is missing, and a diagnostics failure never replaces it.
+# Keeps the primary readiness failure authoritative. Android process accounting
+# may expose one transient gap, so release startup uses the same immutable-PID
+# admission as the writable journeys instead of a single process snapshot.
 require_app_running_after_launch() {
-  APP_RUNNING_PID="$(app_pid)"
-  if [[ -z "$APP_RUNNING_PID" ]]; then
-    android_startup_diagnostics_collect "$APP_ID" \
-      || echo "mobile-android-install-startup-smoke-check: startup exit diagnostics collection failed" >&2
-    fail "Android app did not remain running after launch: $APP_ID"
+  local started_at
+  local deadline
+  local status
+  local readiness_evidence
+
+  started_at="$(app_process_readiness_now)" \
+    || fail "Android app startup readiness clock failed: $APP_ID"
+  deadline=$((started_at + STARTUP_WAIT_SECS))
+  if android_app_process_wait_stable "$deadline" app_process_probe app_process_readiness_now; then
+    APP_RUNNING_PID="$ANDROID_APP_PROCESS_STABLE_PID"
+    return 0
+  else
+    status=$?
+    readiness_evidence="$ANDROID_APP_PROCESS_READINESS_LAST_EVIDENCE"
   fi
+  android_startup_diagnostics_collect "$APP_ID" \
+    || echo "mobile-android-install-startup-smoke-check: startup readiness diagnostics collection failed" >&2
+  fail "Android app did not reach stable process readiness: $APP_ID ($readiness_evidence status=$status)"
 }
 
 process_retirement_now() {
@@ -173,6 +226,8 @@ fi
 
 [[ "$ADB_TIMEOUT_SECS" =~ ^[1-9][0-9]*$ ]] \
   || fail "DEVE_MOBILE_ANDROID_ADB_TIMEOUT_SECS must be a positive integer"
+[[ "$STARTUP_WAIT_SECS" =~ ^[1-9][0-9]*$ ]] \
+  || fail "DEVE_MOBILE_ANDROID_STARTUP_WAIT_SECS must be a positive integer"
 [[ "$PROCESS_RETIREMENT_WAIT_SECS" =~ ^[1-9][0-9]*$ ]] \
   || fail "DEVE_MOBILE_ANDROID_PROCESS_RETIREMENT_WAIT_SECS must be a positive integer"
 
@@ -202,7 +257,6 @@ trap cleanup_on_exit EXIT
 run install_apk
 android_startup_diagnostics_prepare "$APP_ID"
 run adb_timed shell monkey -p "$APP_ID" -c android.intent.category.LAUNCHER 1
-sleep "$STARTUP_WAIT_SECS"
 
 require_app_running_after_launch
 
