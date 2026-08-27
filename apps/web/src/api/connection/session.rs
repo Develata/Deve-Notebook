@@ -6,13 +6,16 @@
 use super::super::ConnectionStatus;
 use super::super::connection_role::WatcherHealthSnapshot;
 use super::super::incoming::handle_socket_event;
-use super::super::output::{enqueue_with_limit, is_write_message, send_or_requeue};
+use super::super::outbound_admission::OutboundFrame;
+use super::super::output::{
+    OutboundMessageClass, SocketDispatchFailure, send_or_requeue, try_enqueue,
+};
 use super::super::socket::{BrowserSocket, SocketEvent};
 use super::super::write_gate::{WriterReadyResetSignals, set_status_and_revoke_writer_ready};
 use super::ConnectionLifecycle;
 use futures::FutureExt;
 use futures::StreamExt;
-use futures::channel::mpsc::UnboundedReceiver;
+use futures::channel::mpsc::{Receiver, UnboundedReceiver};
 use gloo_timers::future::TimeoutFuture;
 use leptos::prelude::*;
 use std::collections::VecDeque;
@@ -24,6 +27,7 @@ pub(super) enum ConnectedSessionOutcome {
     Lost,
     RebindRequested,
     ResyncRequested,
+    OutboundAdmissionRejected,
 }
 
 #[derive(Clone)]
@@ -45,9 +49,9 @@ pub(super) struct ConnectedSessionSignals {
 pub(super) async fn run_connected_session(
     socket: BrowserSocket,
     mut events: UnboundedReceiver<SocketEvent>,
-    rx: &mut UnboundedReceiver<deve_core::protocol::ClientMessage>,
+    rx: &mut Receiver<OutboundFrame>,
     control_rx: &mut UnboundedReceiver<ConnectionControl>,
-    queue: &mut VecDeque<deve_core::protocol::ClientMessage>,
+    queue: &mut VecDeque<OutboundFrame>,
     signals: ConnectedSessionSignals,
 ) -> ConnectedSessionOutcome {
     let mut confirmed_connected = false;
@@ -77,9 +81,11 @@ pub(super) async fn run_connected_session(
 
         if socket.is_open()
             && let Some(msg) = queue.pop_front()
-            && !send_or_requeue(&socket, msg, queue)
+            && let Err(failure) = send_or_requeue(&socket, msg, queue)
         {
-            return ConnectedSessionOutcome::Lost;
+            return match failure {
+                SocketDispatchFailure::Transport => ConnectedSessionOutcome::Lost,
+            };
         }
 
         let inbound = events.next().fuse();
@@ -114,11 +120,19 @@ pub(super) async fn run_connected_session(
             },
             maybe_msg = outbound => match maybe_msg {
                 Some(msg) => {
-                    if !confirmed_connected && is_write_message(&msg) {
-                        leptos::logging::warn!("WebLightPeer: 断连时禁止写入消息 {:?}", msg);
+                    if !confirmed_connected && msg.message_class() == OutboundMessageClass::Write {
+                        leptos::logging::warn!(
+                            "web_write_rejected_before_confirmation class=write"
+                        );
                         continue;
                     }
-                    enqueue_with_limit(queue, msg);
+                    if let Err(rejected) = try_enqueue(queue, msg) {
+                        leptos::logging::error!(
+                            "web_socket_queue_rejected class={} reason=saturated",
+                            rejected.message_class().label()
+                        );
+                        return ConnectedSessionOutcome::OutboundAdmissionRejected;
+                    }
                 }
                 None => return ConnectedSessionOutcome::Lost,
             },
@@ -131,6 +145,14 @@ pub(super) async fn run_connected_session(
                         return ConnectedSessionOutcome::ResyncRequested;
                     }
                     continue;
+                }
+                Some(ConnectionControl::RetireOutboundAdmission { observed_connection_epoch }) => {
+                    leptos::logging::warn!(
+                        "web_outbound_retire_control_observed requested_epoch={} active_epoch={}",
+                        observed_connection_epoch,
+                        signals.connection_epoch
+                    );
+                    return ConnectedSessionOutcome::OutboundAdmissionRejected;
                 }
                 None => return ConnectedSessionOutcome::Lost,
             },

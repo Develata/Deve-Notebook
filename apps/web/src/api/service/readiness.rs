@@ -143,7 +143,7 @@ impl WsService {
         self.set_status.set(ConnectionStatus::NativeServiceOffline);
     }
 
-    fn reset_node_role_state(&self, probe_failed: bool) {
+    pub(super) fn reset_node_role_state(&self, probe_failed: bool) {
         self.set_node_role.set(String::new());
         self.set_source_control_authority.set("unknown".to_string());
         self.set_host_file_copy_absolute_path.set(false);

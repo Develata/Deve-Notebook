@@ -1,13 +1,36 @@
 //! plan_ref:
+//!   - 07_network#web-ws-runtime
 //!   - 08_auth#unauthorized-handling
 //!   - 08_auth#unauthorized-disconnected-ui
 //!
 
 use deve_core::protocol::ClientMessage;
-use std::collections::VecDeque;
 
-pub(crate) fn drop_queued_writes(queue: &mut VecDeque<ClientMessage>) {
-    queue.retain(|msg| !is_write_message(msg));
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum OutboundMessageClass {
+    Keepalive,
+    Read,
+    Write,
+}
+
+impl OutboundMessageClass {
+    pub(crate) const fn label(self) -> &'static str {
+        match self {
+            Self::Keepalive => "keepalive",
+            Self::Read => "read",
+            Self::Write => "write",
+        }
+    }
+}
+
+pub(crate) fn classify_outbound_message(msg: &ClientMessage) -> OutboundMessageClass {
+    if matches!(msg, ClientMessage::Ping) {
+        OutboundMessageClass::Keepalive
+    } else if is_write_message(msg) {
+        OutboundMessageClass::Write
+    } else {
+        OutboundMessageClass::Read
+    }
 }
 
 /// 判断消息是否为写入类操作

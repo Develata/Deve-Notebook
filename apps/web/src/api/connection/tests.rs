@@ -77,3 +77,32 @@ fn non_connected_status_resets_node_role_runtime_summary() {
     assert!(writer_client_id.get_untracked().is_none());
     assert_eq!(msg_seq.get_untracked(), 0);
 }
+
+#[test]
+fn outbound_recovery_clears_both_failed_generation_queues() {
+    let (sender, mut receiver) = crate::api::outbound_admission::outbound_channel();
+    sender
+        .try_admit(deve_core::protocol::ClientMessage::Ping)
+        .unwrap();
+    sender
+        .try_admit(deve_core::protocol::ClientMessage::Ping)
+        .unwrap();
+    let mut session_queue = VecDeque::from([
+        crate::api::outbound_admission::OutboundFrame::for_test(
+            deve_core::protocol::ClientMessage::Ping,
+        ),
+        crate::api::outbound_admission::OutboundFrame::for_test(
+            deve_core::protocol::ClientMessage::ListDocs {
+                request_id: "stale-read".into(),
+                scope_nonce: Some(1),
+            },
+        ),
+    ]);
+
+    assert_eq!(
+        retire_failed_generation_queues(&mut receiver, &mut session_queue),
+        (2, 2)
+    );
+    assert!(session_queue.is_empty());
+    assert!(receiver.try_recv().is_err());
+}

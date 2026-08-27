@@ -5,7 +5,7 @@
 - `Layer`: `Runtime Protocols`
 - `Status`: `Current MUST`
 - `Version`: `0.1.0`
-- `Last Review`: `2026-08-26`
+- `Last Review`: `2026-08-27`
 - `Counterpart Feature`: `docs/features/05_network.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/06_network.md`
 - `Primary Code Areas`: `crates/core/src/protocol/`, `crates/core/src/sync/`, `apps/cli/src/server/ws/`, `apps/cli/src/server/p2p/`, `apps/web/src/hooks/use_core/effects/handshake*.rs`
@@ -844,7 +844,22 @@ Relay 节点不得依赖解密 payload 才能完成路由。
 - 负责 browser peer identity、repo-scoped handshake、client-side durable state probe 与 stale message discard。
 - Web runtime 不得在 disconnected、unauthorized 或 peer identity 缺失时保持可写。
 - connected-session 暂存的 outbound message 必须统一经过有界队列入口；socket 尚未可写或发送失败时
-  不得用裸 `push_back` 绕过容量策略。容量耗尽的处置仍须保持 read/write 分类与重连恢复语义。
+  不得用裸 `push_back` 绕过容量策略。UI intent 到 connection manager 的 admission channel 与
+  connected-session socket queue 都必须有固定上限；共享调用句柄不得通过复制底层 sender 增加隐式
+  per-sender slot。客户端 frame 必须在 admission 时只编码一次，并以跨 admission/session 两级队列
+  生命周期的 permit 同时限制累计 frame 数与编码字节；v0.1 上限为 500 个客户端 frame / 32 MiB，
+  另只允许一个不占客户端额度的系统 Ping。容量耗尽不得淘汰已 admission 的旧消息，也不得把新消息报告为已接收；必须返回
+  `saturated` / `closed` 与 `keepalive` / `read` / `write` 的 typed 分类，日志只记录固定分类和
+  connection epoch，不得输出消息 payload。
+- 任一 outbound admission 或 socket queue 完整性失败必须同步撤销 writer-ready、进入可见的
+  `Disconnected` 恢复态（若当前已有 `Unauthorized` / native bootstrap terminal status，则保留更具体
+  状态），并以每个 observed connection epoch 最多一个 control intent 退休当前会话。
+  connection manager 在 fresh handshake 前必须清空该失败 generation 中尚未发送的两级队列；已进入
+  pending overlay / typed create runtime 的 durable intent 只能按 `09_web_thin_client_ledger.md` 的
+  generation-bound recovery 重放，其它 transient read/control intent 由 fresh runtime 重新发起。不得把
+  被拒绝、编码失败或无法证明已发送的消息静默当成成功。
+- socket send 失败时，只能把刚从队首取出的 exact message 放回队首后退休会话；不得放到队尾改变
+  顺序。连接重建时保留的普通 read intent 与系统 Ping 也必须继续服从同一固定 session queue 上限。
 - Web runtime 必须把 incoming queue gap 当成 connection integrity failure：停止消费该 gap 后的
   所有消息、撤销 writer-ready、退休当前 connection epoch，再由 fresh handshake/snapshot 恢复。
 - typed projection refresh 必须绑定 connection epoch、repo/branch/scope nonce 与单调 flight id；任一 refresh

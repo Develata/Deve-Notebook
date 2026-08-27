@@ -1,8 +1,11 @@
-use super::enqueue_with_limit;
 use super::is_write_message;
 use super::prepare_queue_for_new_connection;
+use super::requeue_front_after_send_failure;
+use super::try_enqueue;
+use crate::api::outbound_admission::OutboundFrame;
 use deve_core::models::{DocId, NodeId, PeerId, RepoId, VersionVector};
 use deve_core::protocol::ScPathTarget;
+use deve_core::protocol::frame::decode_client_binary;
 use deve_core::protocol::{
     ClientMessage, DocumentCreateRequest, RepoControlRequest, RepoLifecycleIntent, ScopeNonce,
     SwitchNonce,
@@ -10,53 +13,84 @@ use deve_core::protocol::{
 use std::collections::VecDeque;
 
 #[test]
-fn output_queue_drops_oldest_message_at_capacity() {
+fn output_queue_rejects_new_message_at_capacity_without_eviction() {
     let mut queue = VecDeque::new();
-    for _ in 0..500 {
-        enqueue_with_limit(&mut queue, ClientMessage::Ping);
+    for _ in 0..super::MAX_QUEUE_SIZE {
+        try_enqueue(&mut queue, OutboundFrame::for_test(ClientMessage::Ping)).unwrap();
     }
 
-    enqueue_with_limit(
+    let rejected = try_enqueue(
         &mut queue,
-        ClientMessage::ListDocs {
+        OutboundFrame::for_test(ClientMessage::ListDocs {
             request_id: "latest".into(),
             scope_nonce: Some(1),
-        },
-    );
+        }),
+    )
+    .unwrap_err();
 
-    assert_eq!(queue.len(), 500);
-    assert!(matches!(queue.front(), Some(ClientMessage::Ping)));
+    assert_eq!(queue.len(), super::MAX_QUEUE_SIZE);
     assert!(matches!(
-        queue.back(),
-        Some(ClientMessage::ListDocs { request_id, .. }) if request_id == "latest"
+        queue.front().map(OutboundFrame::message_class),
+        Some(super::OutboundMessageClass::Keepalive)
+    ));
+    assert!(matches!(
+        queue.back().map(OutboundFrame::message_class),
+        Some(super::OutboundMessageClass::Keepalive)
+    ));
+    assert!(matches!(
+        decode_client_binary(rejected.bytes()),
+        Ok(ClientMessage::ListDocs { request_id, .. }) if request_id == "latest"
+    ));
+}
+
+#[test]
+fn socket_send_failure_requeues_exact_message_at_front() {
+    let failed = OutboundFrame::for_test(ClientMessage::ListDocs {
+        request_id: "failed".into(),
+        scope_nonce: Some(1),
+    });
+    let mut queue = VecDeque::from([OutboundFrame::for_test(ClientMessage::Ping)]);
+
+    requeue_front_after_send_failure(&mut queue, failed);
+
+    assert!(matches!(
+        queue.front().map(|frame| decode_client_binary(frame.bytes())),
+        Some(Ok(ClientMessage::ListDocs { request_id, .. })) if request_id == "failed"
+    ));
+    assert!(matches!(
+        queue.back().map(OutboundFrame::message_class),
+        Some(super::OutboundMessageClass::Keepalive)
     ));
 }
 
 #[test]
 fn prepare_queue_for_new_connection_keeps_reads_and_prepends_ping() {
     let mut queue = VecDeque::from([
-        ClientMessage::StageFile {
+        OutboundFrame::for_test(ClientMessage::StageFile {
             target: ScPathTarget::from_path("note.md"),
             scope_nonce: Some(1),
-        },
-        ClientMessage::ListDocs {
+        }),
+        OutboundFrame::for_test(ClientMessage::ListDocs {
             request_id: "docs".into(),
             scope_nonce: Some(1),
-        },
-        ClientMessage::GetChanges {
+        }),
+        OutboundFrame::for_test(ClientMessage::GetChanges {
             request_id: "changes".into(),
             scope_nonce: Some(1),
-        },
+        }),
     ]);
 
     prepare_queue_for_new_connection(&mut queue);
 
-    assert!(matches!(queue.front(), Some(ClientMessage::Ping)));
+    assert!(matches!(
+        queue.front().map(OutboundFrame::message_class),
+        Some(super::OutboundMessageClass::Keepalive)
+    ));
     assert_eq!(queue.len(), 3);
     assert!(
         queue
             .iter()
-            .all(|msg| !matches!(msg, ClientMessage::StageFile { .. }))
+            .all(|frame| frame.message_class() != super::OutboundMessageClass::Write)
     );
 }
 

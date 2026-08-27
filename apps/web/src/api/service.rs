@@ -1,4 +1,5 @@
 //! plan_ref:
+//!   - 07_network#web-ws-runtime
 //!   - 03_storage/watcher#watcher-contract
 //!   - 08_auth#unauthorized-handling
 //!   - 18_release#runtime-observability
@@ -7,7 +8,7 @@
 
 use deve_core::protocol::{ClientMessage, ServerMessage};
 #[cfg(test)]
-use futures::channel::mpsc::UnboundedReceiver;
+use futures::channel::mpsc::{Receiver, UnboundedReceiver};
 use futures::channel::mpsc::{UnboundedSender, unbounded};
 use leptos::prelude::*;
 use std::collections::VecDeque;
@@ -20,6 +21,9 @@ use super::connection::{
 };
 use super::connection_role::WatcherHealthSnapshot;
 use super::incoming::{IncomingBatch, messages_since};
+#[cfg(test)]
+use super::outbound_admission::OutboundFrame;
+use super::outbound_admission::{OutboundAdmissionSender, outbound_channel};
 use super::status::ConnectionStatus;
 use super::write_gate::WriterReadyResetSignals;
 use super::writer_id::new_writer_session_nonce;
@@ -68,14 +72,16 @@ pub struct WsService {
     pub connection_epoch: ReadSignal<u64>,
     reconnect_requested_epoch: ReadSignal<Option<u64>>,
     set_reconnect_requested_epoch: WriteSignal<Option<u64>>,
+    outbound_retirement_requested_epoch: ReadSignal<Option<u64>>,
+    set_outbound_retirement_requested_epoch: WriteSignal<Option<u64>>,
     external_apply_request_id: ReadSignal<Option<String>>,
     set_external_apply_request_id: WriteSignal<Option<String>>,
     writer_session_nonce: u64,
     msg_queue: ReadSignal<VecDeque<(u64, u64, ServerMessage)>>,
-    tx: UnboundedSender<ClientMessage>,
+    tx: OutboundAdmissionSender,
     connection_control_tx: UnboundedSender<ConnectionControl>,
     #[cfg(test)]
-    test_rx: Option<Arc<Mutex<UnboundedReceiver<ClientMessage>>>>,
+    test_rx: Option<Arc<Mutex<Receiver<OutboundFrame>>>>,
     #[cfg(test)]
     test_connection_control_rx: Option<Arc<Mutex<UnboundedReceiver<ConnectionControl>>>>,
 }
@@ -89,6 +95,8 @@ impl WsService {
         let (msg_seq, set_msg_seq) = signal(0u64);
         let (connection_epoch, set_connection_epoch) = signal(0u64);
         let (reconnect_requested_epoch, set_reconnect_requested_epoch) = signal(None::<u64>);
+        let (outbound_retirement_requested_epoch, set_outbound_retirement_requested_epoch) =
+            signal(None::<u64>);
         let (external_apply_request_id, set_external_apply_request_id) = signal(None::<String>);
         let (msg_queue, set_msg_queue) = signal(VecDeque::<(u64, u64, ServerMessage)>::new());
         let (endpoint, set_endpoint) = signal(String::new());
@@ -102,7 +110,7 @@ impl WsService {
         let (node_role_probe_failed, set_node_role_probe_failed) = signal(false);
         let (workspace_ingestion_blocker, set_workspace_ingestion_blocker) =
             signal(None::<WorkspaceIngestionBlocker>);
-        let (tx, rx) = unbounded::<ClientMessage>();
+        let (tx, rx) = outbound_channel();
         let (connection_control_tx, connection_control_rx) = unbounded::<ConnectionControl>();
         let lifecycle = ConnectionLifecycle::new();
         let cleanup_lifecycle = lifecycle.clone();
@@ -135,9 +143,7 @@ impl WsService {
             },
         );
 
-        spawn_ping_loop(status, tx.clone());
-
-        Self {
+        let service = Self {
             lifecycle,
             status,
             set_status,
@@ -166,6 +172,8 @@ impl WsService {
             connection_epoch,
             reconnect_requested_epoch,
             set_reconnect_requested_epoch,
+            outbound_retirement_requested_epoch,
+            set_outbound_retirement_requested_epoch,
             external_apply_request_id,
             set_external_apply_request_id,
             writer_session_nonce: new_writer_session_nonce(),
@@ -176,12 +184,14 @@ impl WsService {
             test_rx: None,
             #[cfg(test)]
             test_connection_control_rx: None,
-        }
+        };
+        spawn_ping_loop(status, service.clone());
+        service
     }
 
     pub fn send(&self, msg: ClientMessage) {
-        if let Err(e) = self.tx.unbounded_send(msg) {
-            leptos::logging::error!("消息入队失败: {:?}", e);
+        if let Err(failure) = self.tx.try_admit(msg) {
+            self.handle_outbound_admission_failure(failure);
         }
     }
 

@@ -14,16 +14,19 @@
 //! 3. 读取服务器消息并更新信号
 //! 4. 将连接会话委托给 `connection_session`
 
+mod control;
 mod lifecycle;
 mod session;
 
-use futures::channel::mpsc::UnboundedReceiver;
-use futures::{FutureExt, StreamExt};
-use gloo_timers::future::TimeoutFuture;
+use futures::channel::mpsc::{Receiver, UnboundedReceiver};
 use leptos::prelude::*;
 use leptos::task::spawn_local;
 use std::collections::VecDeque;
 
+pub(crate) use self::control::ConnectionControl;
+use self::control::{
+    BackoffWait, retire_failed_generation_queues, wait_for_backoff_or_rebind, wait_for_rebind,
+};
 pub(super) use self::lifecycle::ConnectionLifecycle;
 use self::session::{ConnectedSessionOutcome, ConnectedSessionSignals};
 use super::ConnectionStatus;
@@ -35,18 +38,13 @@ use super::connection_role::{
 use super::connection_urls::{build_same_origin_ws_url, build_ws_urls_for_native_state};
 use super::native_bootstrap::read_native_bootstrap;
 use super::native_http::preferred_http_base;
+use super::outbound_admission::OutboundFrame;
 use super::output::prepare_queue_for_new_connection;
 use super::socket::BrowserSocket;
 use super::write_gate::{WriterReadyResetSignals, set_status_and_revoke_writer_ready};
 
 /// 本地开发后端默认端口；仅在 debug 构建中作为兜底候选。
 pub(super) const DEV_WS_PORT: u16 = 3001;
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub(crate) enum ConnectionControl {
-    RebindNativeEndpoint,
-    ReconnectForResync { connection_epoch: u64 },
-}
 
 #[derive(Clone)]
 pub(super) struct ConnectionManagerSignals {
@@ -69,7 +67,7 @@ pub(super) struct ConnectionManagerSignals {
 
 /// 启动连接管理器任务
 pub fn spawn_connection_manager(
-    mut rx: UnboundedReceiver<deve_core::protocol::ClientMessage>,
+    mut rx: Receiver<OutboundFrame>,
     mut control_rx: UnboundedReceiver<ConnectionControl>,
     signals: ConnectionManagerSignals,
 ) {
@@ -91,7 +89,7 @@ pub fn spawn_connection_manager(
                 if !try_set_connection_status(&signals, blocked_status) {
                     return;
                 }
-                if wait_for_rebind(&mut control_rx).await {
+                if wait_for_rebind(&mut control_rx, &mut rx, &mut queue).await {
                     backoff.reset();
                     continue;
                 }
@@ -214,7 +212,12 @@ pub fn spawn_connection_manager(
                             backoff.reset();
                             continue 'bootstrap;
                         }
-                        if outcome == ConnectedSessionOutcome::ResyncRequested {
+                        if matches!(
+                            outcome,
+                            ConnectedSessionOutcome::ResyncRequested
+                                | ConnectedSessionOutcome::OutboundAdmissionRejected
+                        ) {
+                            retire_failed_generation_queues(&mut rx, &mut queue);
                             backoff.reset();
                             if !try_set_connection_status(&signals, ConnectionStatus::Disconnected)
                             {
@@ -230,7 +233,7 @@ pub fn spawn_connection_manager(
                         leptos::logging::log!("WS: Connection Lost");
 
                         if native_rebind_pending(&signals) {
-                            if wait_for_rebind(&mut control_rx).await {
+                            if wait_for_rebind(&mut control_rx, &mut rx, &mut queue).await {
                                 backoff.reset();
                                 continue 'bootstrap;
                             }
@@ -251,7 +254,7 @@ pub fn spawn_connection_manager(
                             return;
                         }
                         if native_rebind_pending(&signals) {
-                            if wait_for_rebind(&mut control_rx).await {
+                            if wait_for_rebind(&mut control_rx, &mut rx, &mut queue).await {
                                 backoff.reset();
                                 continue 'bootstrap;
                             }
@@ -276,7 +279,7 @@ pub fn spawn_connection_manager(
                     return;
                 }
                 if native_rebind_pending(&signals) {
-                    if wait_for_rebind(&mut control_rx).await {
+                    if wait_for_rebind(&mut control_rx, &mut rx, &mut queue).await {
                         backoff.reset();
                         continue 'bootstrap;
                     }
@@ -298,47 +301,16 @@ pub fn spawn_connection_manager(
                         backoff.reset();
                         continue 'bootstrap;
                     }
+                    BackoffWait::RetireOutboundAdmission => {
+                        retire_failed_generation_queues(&mut rx, &mut queue);
+                        backoff.reset();
+                        url_idx = 0;
+                    }
                     BackoffWait::Closed => return,
                 }
             }
         }
     });
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-enum BackoffWait {
-    Elapsed,
-    Rebind,
-    Closed,
-}
-
-async fn wait_for_rebind(control_rx: &mut UnboundedReceiver<ConnectionControl>) -> bool {
-    loop {
-        match control_rx.next().await {
-            Some(ConnectionControl::RebindNativeEndpoint) => return true,
-            Some(ConnectionControl::ReconnectForResync { .. }) => continue,
-            None => return false,
-        }
-    }
-}
-
-async fn wait_for_backoff_or_rebind(
-    backoff: &mut BackoffStrategy,
-    control_rx: &mut UnboundedReceiver<ConnectionControl>,
-) -> BackoffWait {
-    let delay = backoff.take_delay_ms();
-    leptos::logging::log!("WS: Reconnecting in {}ms...", delay);
-    let timer = TimeoutFuture::new(delay).fuse();
-    let control = control_rx.next().fuse();
-    futures::pin_mut!(timer, control);
-    futures::select! {
-        _ = timer => BackoffWait::Elapsed,
-        command = control => match command {
-            Some(ConnectionControl::RebindNativeEndpoint) => BackoffWait::Rebind,
-            Some(ConnectionControl::ReconnectForResync { .. }) => BackoffWait::Elapsed,
-            None => BackoffWait::Closed,
-        },
-    }
 }
 
 fn native_rebind_pending(signals: &ConnectionManagerSignals) -> bool {

@@ -25,6 +25,10 @@
 - 重连成功后，当前 repo scope 应恢复到可用状态。
 - 如果服务端 broadcast lag 或浏览器本地有界消息队列发现缺口，页面必须停止处理缺口后的消息、
   立即只读并新建连接恢复；不能继续消费一个无法证明完整的消息后缀。
+- 如果浏览器向连接管理器提交消息时 admission 已满/关闭，或 socket 暂存队列已满，界面必须立即
+  进入可见的重连只读态；不得删除较早消息为新操作腾位，也不得继续显示该操作已经安全发出。
+  编辑与 Document Create 等已有 typed pending runtime 的操作只在 fresh handshake 后按原 intent
+  重放；查询、菜单动作和其它临时请求由新 generation 重新发起。
 - 后端批量 authority mutation 可以发送 scoped projection recovery。只有恢复计划命中当前文档时
   才锁住编辑器；无关文档的列表刷新不应打断当前输入。
 

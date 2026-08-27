@@ -12,6 +12,8 @@ use std::sync::{Arc, Mutex};
 use super::super::connection::{ConnectionControl, ConnectionLifecycle};
 use super::{ConnectionStatus, WsService};
 use crate::api::WatcherHealthSnapshot;
+use crate::api::outbound_admission::outbound_channel;
+use deve_core::protocol::frame::decode_client_binary;
 
 impl WsService {
     pub(crate) fn new_for_test(status: ConnectionStatus) -> Self {
@@ -31,6 +33,8 @@ impl WsService {
         let (msg_seq, _set_msg_seq) = signal(msg_seq_value);
         let (connection_epoch, _set_connection_epoch) = signal(current_connection_epoch);
         let (reconnect_requested_epoch, set_reconnect_requested_epoch) = signal(None::<u64>);
+        let (outbound_retirement_requested_epoch, set_outbound_retirement_requested_epoch) =
+            signal(None::<u64>);
         let (external_apply_request_id, set_external_apply_request_id) = signal(None::<String>);
         let (msg_queue, _set_msg_queue) = signal(messages);
         let (endpoint, _set_endpoint) = signal(String::new());
@@ -43,7 +47,7 @@ impl WsService {
         let (watcher_health, set_watcher_health) = signal(WatcherHealthSnapshot::default());
         let (node_role_probe_failed, set_node_role_probe_failed) = signal(false);
         let (workspace_ingestion_blocker, set_workspace_ingestion_blocker) = signal(None);
-        let (tx, rx) = unbounded::<ClientMessage>();
+        let (tx, rx) = outbound_channel();
         let (connection_control_tx, connection_control_rx) = unbounded::<ConnectionControl>();
 
         Self {
@@ -75,6 +79,8 @@ impl WsService {
             connection_epoch,
             reconnect_requested_epoch,
             set_reconnect_requested_epoch,
+            outbound_retirement_requested_epoch,
+            set_outbound_retirement_requested_epoch,
             external_apply_request_id,
             set_external_apply_request_id,
             writer_session_nonce: 1,
@@ -110,8 +116,10 @@ impl WsService {
         };
         let mut rx = test_rx.lock().expect("test receiver lock");
         let mut messages = Vec::new();
-        while let Ok(message) = rx.try_recv() {
-            messages.push(message);
+        while let Ok(frame) = rx.try_recv() {
+            messages.push(
+                decode_client_binary(frame.bytes()).expect("test outbound frame must decode"),
+            );
         }
         messages
     }

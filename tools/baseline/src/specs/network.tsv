@@ -224,9 +224,20 @@ contains	apps/cli/src/server/repo_mutation/gate.rs	pub(crate) struct RepoMutatio
 contains	apps/cli/src/server/repo_mutation/gate.rs	execute_catalog_repo
 contains	apps/cli/src/server/ws/send/mod.rs	unicast_tx.send(msg).await
 contains	apps/web/src/api/incoming.rs	pub(crate) enum IncomingBatch
-contains	apps/web/src/api/connection/session.rs	enqueue_with_limit(queue, msg);
+contains	apps/web/src/api/outbound_admission.rs	pub(super) const OUTBOUND_ADMISSION_LIMIT: usize = 500;
+contains	apps/web/src/api/outbound_admission.rs	pub(super) const OUTBOUND_ADMISSION_BYTES_LIMIT: usize = 32 * 1024 * 1024;
+contains	apps/web/src/api/outbound_admission.rs	Arc<Mutex<Sender<OutboundFrame>>>
+contains	apps/web/src/api/outbound_admission.rs	_permit: Option<OutboundPermit>
+absent	apps/web/src/api/outbound_admission.rs	Sender<OutboundFrame>>>::clone
+contains	apps/web/src/api/service.rs	handle_outbound_admission_failure
+contains	apps/web/src/api/connection/control.rs	retire_failed_generation_queues
+contains	apps/web/src/api/connection/session.rs	try_enqueue(queue, msg)
 absent	apps/web/src/api/connection/session.rs	queue.push_back(msg);
-contains	apps/web/src/api/output/tests.rs	fn output_queue_drops_oldest_message_at_capacity()
+absent	apps/web/src/api/connection/session.rs	禁止写入消息 {:?}
+absent	apps/web/src/api/output.rs	消息: {:?}
+absent	apps/web/src/api/output.rs	encode_client_binary
+contains	apps/web/src/api/output/tests.rs	fn output_queue_rejects_new_message_at_capacity_without_eviction()
+contains	docs/acceptance-cases/06_network.md	browser_ui_to_connection_manager_admission_is_hard_bounded true
 contains	apps/web/src/runtime/projection_recovery/editor_cycle.rs	pub struct ProjectionRecoveryCoordinator
 contains	docs/acceptance-cases/06_network.md	case_id: NET-020
 contains	crates/core/src/protocol/frame/tests/epoch_recovery.rs	fn first_public_ws_epoch_is_lockstep()

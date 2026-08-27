@@ -22,6 +22,7 @@ mod incoming;
 mod native_backend_bridge;
 mod native_bootstrap;
 mod native_http;
+mod outbound_admission;
 mod output;
 mod query;
 mod service;

@@ -224,6 +224,72 @@ fn incoming_gap_reconnect_is_coalesced_per_connection_epoch() {
 }
 
 #[test]
+fn outbound_admission_rejection_retires_once_per_connection_epoch() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let ws = WsService::new_with_incoming_for_test(
+        ConnectionStatus::Connected,
+        9,
+        std::collections::VecDeque::new(),
+    );
+    ws.set_node_role_for_test("main");
+    ws.mark_writer_ready("repo-a", 7, "web-light-peer");
+
+    for _ in 0..crate::api::outbound_admission::OUTBOUND_ADMISSION_LIMIT {
+        ws.send(ClientMessage::Ping);
+    }
+    ws.send(ClientMessage::ListDocs {
+        request_id: "rejected-without-payload-log".into(),
+        scope_nonce: Some(7),
+    });
+    ws.send(ClientMessage::Ping);
+
+    assert_eq!(ws.status.get_untracked(), ConnectionStatus::Disconnected);
+    assert!(!ws.writer_ready_for(Some("repo-a"), Some(7)));
+    assert_eq!(ws.node_role.get_untracked(), "");
+    assert_eq!(
+        ws.drain_connection_controls_for_test(),
+        vec![ConnectionControl::RetireOutboundAdmission {
+            observed_connection_epoch: 9,
+        }]
+    );
+    let admitted = ws.drain_sent_for_test();
+    assert_eq!(
+        admitted.len(),
+        crate::api::outbound_admission::OUTBOUND_ADMISSION_LIMIT
+    );
+    assert!(
+        admitted
+            .iter()
+            .all(|message| matches!(message, ClientMessage::Ping))
+    );
+}
+
+#[test]
+fn outbound_admission_rejection_preserves_more_specific_unauthorized_status() {
+    let runtime = leptos::reactive::owner::Owner::new();
+    runtime.set();
+    let ws = WsService::new_with_incoming_for_test(
+        ConnectionStatus::Unauthorized,
+        4,
+        std::collections::VecDeque::new(),
+    );
+
+    for _ in 0..crate::api::outbound_admission::OUTBOUND_ADMISSION_LIMIT {
+        ws.send(ClientMessage::Ping);
+    }
+    ws.send(ClientMessage::Ping);
+
+    assert_eq!(ws.status.get_untracked(), ConnectionStatus::Unauthorized);
+    assert_eq!(
+        ws.drain_connection_controls_for_test(),
+        vec![ConnectionControl::RetireOutboundAdmission {
+            observed_connection_epoch: 4,
+        }]
+    );
+}
+
+#[test]
 fn external_apply_request_is_correlated_without_projection_state_update() {
     let runtime = leptos::reactive::owner::Owner::new();
     runtime.set();

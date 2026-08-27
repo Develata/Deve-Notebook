@@ -432,6 +432,7 @@
     - run: cargo test -p deve_cli serializes_same_repo_and_preserves_publication_order -- --nocapture
     - run: cargo test -p deve_cli critical_repo_scoped_broadcasts_are_not_dropped_when_unicast_queue_is_full -- --nocapture
     - run: cargo test -p deve_web incoming_gap -- --nocapture
+    - run: cargo test -p deve_web outbound_admission -- --nocapture
     - run: cargo test -p deve_web output_queue -- --nocapture
     - run: cargo test -p deve_web projection_recovery -- --nocapture
     - ui_run: WEBWRITE-FEAT-00
@@ -441,6 +442,15 @@
     - committed_degraded_or_partial_always_publishes_recovery true
     - broadcast_lag_emits_scoped_projection_recovery true
     - critical_queue_full_retires_session_without_detached_resend true
+    - browser_ui_to_connection_manager_admission_is_hard_bounded true
+    - outbound_count_and_encoded_byte_budget_survive_channel_drain true
+    - outbound_frame_is_encoded_once_before_both_queues true
+    - cloned_browser_admission_handles_do_not_expand_capacity true
+    - outbound_admission_rejection_is_typed_and_retires_once_per_epoch true
+    - outbound_recovery_clears_both_failed_generation_queues_before_handshake true
+    - socket_queue_full_never_evicts_an_older_message true
+    - socket_send_failure_requeues_exact_message_at_front true
+    - outbound_diagnostics_do_not_render_message_payload true
     - browser_connected_session_outbound_queue_uses_bounded_admission true
     - incoming_gap_discards_message_suffix_and_reconnects_once_per_epoch true
     - pending_overlay_survives_recovery_and_replays_once true
