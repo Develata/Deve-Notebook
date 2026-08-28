@@ -63,6 +63,56 @@ fn direct_node_steps_require_explicit_tool_metadata() {
 }
 
 #[test]
+fn setsid_tool_metadata_is_linux_only() {
+    let mut producer = producer();
+    producer.artifacts.clear();
+    producer.steps.push(ProducerStep {
+        program: "cargo".into(),
+        args: vec![ProducerArg::LiteralString("--version".into())],
+    });
+    producer.required_tools.push("setsid".into());
+    let error = validate_producer(Path::new("."), &producer, &BTreeMap::new())
+        .expect_err("setsid on a non-Linux producer must fail closed")
+        .to_string();
+    assert!(
+        error.contains("setsid is restricted to host_os linux"),
+        "{error}"
+    );
+
+    producer.host_os = vec!["linux".into()];
+    validate_producer(Path::new("."), &producer, &BTreeMap::new())
+        .expect("Linux producer may declare setsid");
+}
+
+#[test]
+fn bounded_unix_fixture_metadata_is_linux_and_tool_complete() {
+    let workspace_root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../..");
+    let mut producer = producer();
+    producer.artifacts = vec!["scripts/lib/remote-browser-fixture-bounded.sh".into()];
+    producer.steps.push(ProducerStep {
+        program: "cargo".into(),
+        args: vec![ProducerArg::LiteralString("--version".into())],
+    });
+    let error = validate_producer(Path::new("."), &producer, &BTreeMap::new())
+        .expect_err("bounded fixture on Windows must fail closed")
+        .to_string();
+    assert!(error.contains("restricted to host_os linux"), "{error}");
+
+    producer.host_os = vec!["linux".into()];
+    let error = validate_producer(Path::new("."), &producer, &BTreeMap::new())
+        .expect_err("bounded fixture without explicit tools must fail closed")
+        .to_string();
+    assert!(error.contains("requires required_tools bash"), "{error}");
+
+    producer.required_tools = ["bash", "node", "python3", "setsid"]
+        .into_iter()
+        .map(str::to_owned)
+        .collect();
+    validate_producer(&workspace_root, &producer, &BTreeMap::new())
+        .expect("Linux bounded fixture with complete tools");
+}
+
+#[test]
 fn shell_invocation_rejects_command_string_variants() {
     let producer = producer();
     for option in ["-c", "-lc", "-xc", "--command"] {
@@ -83,6 +133,19 @@ fn shell_invocation_rejects_command_string_variants() {
         }];
         assert!(validate_shell_invocation(&producer, "pwsh", &args).is_err());
     }
+}
+
+#[test]
+fn producer_steps_reject_internal_fixture_test_command() {
+    let producer = producer();
+    let step = ProducerStep {
+        program: "cargo".into(),
+        args: vec![ProducerArg::LiteralString("__test-start".into())],
+    };
+    let error = validate_step(Path::new("."), &producer, &step)
+        .expect_err("internal fixture test command must fail closed")
+        .to_string();
+    assert!(error.contains("internal fixture test command"), "{error}");
 }
 
 #[test]

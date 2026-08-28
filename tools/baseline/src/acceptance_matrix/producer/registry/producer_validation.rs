@@ -11,12 +11,14 @@ use std::fs;
 use std::path::{Component, Path};
 
 mod evidence_binding;
+mod tool_contract;
 
 pub(in crate::acceptance_matrix::producer) use evidence_binding::executable_evidence_ids;
+use tool_contract::validate_indirect_tool_contract;
 
 const ALLOWED_TIERS: [&str; 4] = ["ci", "full", "target-host", "tag-ready"];
 const ALLOWED_HOSTS: [&str; 3] = ["linux", "macos", "windows"];
-const ALLOWED_TOOLS: [&str; 1] = ["node"];
+const ALLOWED_TOOLS: [&str; 4] = ["bash", "node", "python3", "setsid"];
 const RUNNER_STATE_ENV: &str = "DEVE_ACCEPTANCE_PRODUCER_STATE_DIR";
 const RUNNER_BASELINE_ENV: &str = "DEVE_BASELINE_BIN";
 
@@ -53,6 +55,15 @@ pub(super) fn validate_producer(
         "required_tools",
         producer,
     )?;
+    if producer.required_tools.iter().any(|tool| tool == "setsid")
+        && producer.host_os.as_slice() != ["linux"]
+    {
+        bail!(
+            "acceptance producers: {} required_tools setsid is restricted to host_os linux",
+            producer.producer_id
+        );
+    }
+    validate_indirect_tool_contract(producer)?;
     if !(1..=14_400).contains(&producer.timeout_seconds) {
         bail!(
             "acceptance producers: {} timeout_seconds must be in 1..=14400",
@@ -202,6 +213,12 @@ pub(super) fn validate_step(root: &Path, producer: &Producer, step: &ProducerSte
     for argument in &step.args {
         match argument {
             ProducerArg::LiteralString(literal) | ProducerArg::Literal { literal } => {
+                if literal == "__test-start" {
+                    bail!(
+                        "acceptance producers: {} may not invoke the internal fixture test command",
+                        producer.producer_id
+                    );
+                }
                 if literal.contains('\0') {
                     bail!(
                         "acceptance producers: {} has a literal argument containing NUL",

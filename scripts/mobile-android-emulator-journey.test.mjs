@@ -188,6 +188,8 @@ test("Android producers own a bounded runner finally cleanup", () => {
 test("RemoteBrowser receipt binds only its public HTTPS target", () => {
   const remote = producerRegistry.producers.find(({ producer_id: id }) =>
     id === "android.remote-browser");
+  assert.deepEqual(remote.host_os, ["linux"]);
+  assert.deepEqual(remote.required_tools, ["bash", "node", "python3", "setsid"]);
   assert.deepEqual(remote.bound_env, ["DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN"]);
   assert.ok(!remote.bound_env.includes("DEVE_MOBILE_ANDROID_REMOTE_USERNAME"));
   assert.ok(!remote.bound_env.includes("DEVE_MOBILE_ANDROID_REMOTE_PASSWORD"));
@@ -198,9 +200,22 @@ test("RemoteBrowser receipt binds only its public HTTPS target", () => {
   assert.deepEqual(fixtureArtifacts, [
     "scripts/remote-browser-fixture.sh",
     "scripts/lib/remote-browser-fixture.sh",
+    "scripts/lib/remote-browser-fixture-bounded.sh",
+    "scripts/lib/remote-browser-fixture-bounded-control.sh",
+    "scripts/lib/remote-browser-fixture-subreaper.py",
+    "scripts/lib/remote-browser-fixture-subreaper-tree.sh",
+    "scripts/lib/remote-browser-fixture-process-tree.sh",
+    "scripts/lib/remote-browser-fixture-process-table.sh",
     "scripts/lib/remote-browser-fixture-http.sh",
     "scripts/lib/remote-browser-fixture-json.sh",
+    "scripts/lib/remote-browser-fixture-admission-deadline.py",
+    "scripts/lib/remote-browser-fixture-start-publisher.sh",
+    "scripts/lib/remote-browser-fixture-start-process.sh",
+    "scripts/lib/remote-browser-fixture-start-signals.sh",
     "scripts/lib/remote-browser-fixture-start-supervisor.sh",
+    "scripts/lib/remote-browser-fixture-signal-exec.py",
+    "scripts/lib/remote-browser-fixture-start-worker.sh",
+    "scripts/lib/remote-browser-fixture-startup-state.sh",
   ]);
 });
 

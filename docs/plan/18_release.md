@@ -5,7 +5,7 @@
 - `Layer`: `Governance Contracts (non-layer ownership-axis slice)`
 - `Status`: `Current MUST`
 - `Version`: `0.2.0`
-- `Last Review`: `2026-08-25`
+- `Last Review`: `2026-08-28`
 - `Counterpart Feature`: `docs/features/15_release.md`
 - `Counterpart Acceptance`: `docs/acceptance-cases/12_tech_release.md`
 - `Primary Code Areas`: `rust-toolchain.toml`, `.github/workflows/`, `Dockerfile`, `scripts/`, `tools/baseline`
@@ -317,9 +317,104 @@ Account-less quick tunnel 发布 HTTPS origin 只表示入口名称已分配，�
 为 600 秒。重试不得接受 3xx/4xx/5xx、替换 endpoint 或绕过公开 CA origin。最终失败诊断只可
 保留 allowlisted HTTP status / transport class 与受限日志路径，不得输出 response body、cookie、
 credential 或 session material；2xx 只有在进程 identity 后检且返回时刻仍未越过传播 deadline 时
-才能被接纳。Unix fixture 必须先完成无副作用的参数组合校验，再通过 signal-ready handshake 开放
-owned-resource admission；父层取消若撞上成功 publication，必须立即走正式 Stop 回滚，不能同时返回
-取消并遗留可用 fixture。failed-start cleanup 必须在启动局部 ownership 变量仍存活的作用域内执行；
+才能被接纳。Unix fixture 必须先完成无副作用的参数组合校验，再通过双向 signal-ready/admission handshake 开放
+owned-resource admission。worker 必须先发布 startup ownership state 并重试 readiness；supervisor 只能在 exact
+worker process token 验证通过后原子回复 admission。在 admission 之前 worker 不得创建 backend、tunnel
+或 container，token probe 持续不可用时必须自行超时、清理并被 parent 显式 reap。readiness 建立前必须
+逐次证明 supervisor 仍是 worker 的 direct parent，且 supervisor PID 对应的 process token 与 spawn 前
+捕获值一致；只能向复核后的 `$PPID` 发送 readiness，禁止向裸的缓存 parent PID 发信号。readiness 建立前必须
+只发送一次 edge notification，由 supervisor 保留 readiness 状态并在 observation tick 中重试 token/admission；
+worker 不得用重复 USR1 轮询制造 signal storm 或饿死 INT/TERM cancellation。
+先原子发布只含 allowlisted resource identity、固定 owned path
+与阶段名的 startup ownership state；不得包含 credential value。backend/tunnel spawn intent 必须先于 spawn
+写入该 state；从 direct child 产生到 PID/token 原子补记之间，worker 必须将 INT/TERM 仅记为 pending，
+不得在 identity 持久化前退出，且资源必须保持在 exact worker tree 内。identity 补记完成后必须立即
+先恢复 cleanup trap、再消费 pending signal，不得留下 snapshot-to-restore 信号丢失窗口。deadline
+恢复必须先终止并 reap 整棵树。正式 Unix worker 必须在资源 admission 前由独立 OS process group/session 承载，
+并证明 `root PID == PGID` 且 supervisor 不在该 group；当前正式 Unix producer 只允许 Linux `setsid`。
+异步 spawn 不得把非交互 Bash 对后台 child 的 SIGINT-ignore disposition 继承进正式 worker；`setsid` 后必须先由
+受控 exec adapter 将 INT/TERM 恢复为 default，再 exec Bash worker，由 worker 安装 typed cleanup trap。adapter
+缺失、路径不安全、信号恢复失败或 exec 失败都必须在 resource admission 前 fail-closed。
+live PID 的 `/proc` identity 短暂不可读只能标记为 token probe unavailable，不得据此把 direct child
+判为已退出并进入 exact blocking wait；只有 wait event 或 PID 已不存在才能授权 child-status reap。
+该规则同样适用于 admission deadline child 的启动/停止；live-but-unreadable timer 不得进入 exact wait，
+supervisor 失败退出时必须由 timer 的 parent-death contract 收敛。shell tree/group snapshot 必须从同一次
+`/proc/<pid>/stat` 观察同时取得 PID、PPID、PGID、state 与 starttime token；禁止把旧进程表关系与随后
+复用该数值 PID 的新 token 组合为 owned identity。snapshot 不完整时必须重试或 fail-closed。
+macOS 在具备 target-host 验证的 stable native process-token adapter 前不得运行这条 shell fixture；Windows 正式路径使用
+PowerShell fixture。无法建立内核级 group ownership 与 stable process identity 时必须在创建资源前 fail-closed，
+Git Bash 的非 group 路径只可用于无正式 receipt 的内部合成回归；公开 `start|run` 必须拒绝 ambient
+`DEVE_REMOTE_FIXTURE_TEST_*`，正式 workflow/producer 也不得调用内部 test command。已验证的 group capability 必须在
+root 存活时绑定 exact PID/token/PGID，但该用户态 capability 不得冒充 pinned kernel handle：root exit 后只能复核 PGID 已空，
+不得再向该数值 PGID 发送信号；非空 retained PGID 必须保留现场并 fail-closed。未绑定 group、root exit 后出现的动态新成员、
+process-group capability 绑定失败、进程表失败或非空 PGID 都不得降级为 ungrouped cleanup 或冒充 tree cleanup 成功。
+fixture 内部受 timeout/输出上限约束的子进程若使用独立 `setsid`，必须先启动稳定 child-subreaper leader，并由该 leader fork
+等待 admission 的 Bash control launcher。父层绑定 subreaper 的 exact PID/token/PGID capability 后才允许 control launcher 执行 payload；
+payload 另建 session 后产生的 orphan 仍必须保持在可枚举、可 token-bind 的 subreaper descendant tree。control launcher 在 payload
+status 原子发布后继续存活并等待私有 release，subreaper 始终保持 live group leader；父层同时复核原 PGID 与完整 descendant tree
+都不存在 payload member 后才显式放行。payload 提前返回但
+遗留后台成员时，必须在 leader 仍存活且 capability 仍可用时回收整组；首次 token 探测暂不可用、group binding 失败或
+release/status channel 异常都不得先无界 `wait`。preadmission 的 exact retained child 必须先请求 subreaper 自主清理并证明
+预期 PGID 为空；不得先 TERM/KILL subreaper root 后把尚未 admitted 的 Bash launcher 留给外层 init。若自主清理或空组证明失败，
+必须保留私有控制现场并 fail-closed。bounded scope 必须暂时接管 INT/TERM 为纯 latch，完成 exact group cleanup
+并恢复调用者 trap 后再传播 `130|143`，禁止让调用者 scope unwind 遗留嵌套 session。超限或超时时使用同一 capability
+回收整组，正常 root exit 也必须复核 group empty。输出超限路径即使 tree cleanup 失败也必须在 cleanup 前后执行
+combined cap 截断，并分别保留 primary failure 与 cleanup failure，不得把 cleanup failure 变成无界 diagnostic 保留。
+stdout/stderr 必须在 payload 侧继承各自的 kernel-enforced file-size budget，使 cleanup 明确失败且 writer 仍存活时也不能
+继续扩大日志；此时必须保留 live leader 与私有控制现场，关闭父层 handle 后 control launcher 必须重新阻塞在仍存在的 private
+release channel，不能因 EOF 或删除 channel 把 retained tree 变成无 leader 状态。
+subreaper cleanup 必须使用 root-last 顺序：在 leader 存活时持续发现、token-bind 并终止包括 nested session 在内的完整
+descendant tree，证明 descendant empty 后才终止 subreaper root，最后复核原 PGID 为空；通用 worker 的 root-first 清理语义不变。
+root-last 终止后的 identity 复核必须把“首次 active 后、token read 前自然退出”归类为正常 root exit：token 缺失时须再次检查活性，
+只有第二次仍存活或观察到不同 live token 才是 identity failure，不能把合法退出误报为 token change。
+自主清理枚举的 ancestry 与 process token 必须来自同一 identity observation：读取 `PPid` 前后必须以相同 starttime token
+括住该快照；两次 token 不同或任一次不可用时必须丢弃该观察，禁止把复用后的 PID/token 绑定到旧 ancestry 并发送信号。
+若对应 `/proc/<pid>` 仍存在或完整进程表枚举失败，该轮 snapshot 必须标记为 incomplete 并重试；incomplete 空列表不得授权
+subreaper root 退出或冒充 descendant-empty proof。
+Linux process token 必须从 `/proc/<pid>/stat` 的最终 `)` 之后按固定字段解析 starttime，不能按整行空白切分；合法含空格/括号的
+`comm` 不得改变 exact identity。`kill -0` 与 proc stat 读取之间的正常进程退出必须收敛为 inactive observation，不能在
+`set -e` 调用链中因 redirection race 直接退出并绕过 cleanup。subreaper 的 expected parent PID 必须由启动方在 fork/exec 前显式传入，并在设置
+`PDEATHSIG` 前后都复核；不得把 Python 首条指令时已经变化的养父误绑定为 owner。
+若 shell 侧 root-last 清理失败但 exact subreaper PID/token 仍然存活，必须触发 subreaper 自主 descendant-first 清理并有界证明 root
+退出；父监督进程异常消失时必须由同一自主清理路径接管。只有 shell 清理与自主清理都失败时才允许保留 live root 和私有恢复控制，
+且 payload 继承的 kernel output budget 仍必须阻止日志继续增长。
+启动监督器必须以 Bash 5.1+ retained child event（`wait -n -p`）消费 readiness、父层取消与 grace/deadline。
+为闭合 latch-check 到 `wait` 之间的 lost-wake 窗口，并兼容 Bash 在后台 `wait` 中延迟执行 trap 的行为，每次 wait 必须同时等待一个
+短时、有界、retained observation-tick child；该 child 到期只促使 supervisor 回到普通上下文处理 latch，不发送父 PID 信号，且必须在
+每轮结束时 exact reap。若 `wait -n` 已消费其完成状态，禁止再向已释放 ownership 的数值 PID 发送信号；其余分支只能在不创建新 child、
+不查询 job table 的 exact `wait` 中让 tick 有界到期。正式默认观察延迟上界为一秒，测试可使用更短固定值。禁止长寿命 wake sentinel、pipe/FIFO/coprocess bridge，
+也禁止用向裸 supervisor PID 重复发信号模拟事件队列。admission 必须由 state 目录内同一个 `O_EXCL` decision capability
+线性化：取消 trap 只能用 Bash builtin/no-clobber 原子争用该 capability，admission publisher 必须先取得同一 capability 再原子发布
+marker。正式 publisher 的 retained direct child 必须是独立 session 的 child-subreaper leader，由它持有实际 Bash publisher 及其后代；
+Bash publisher 返回后只能原子发布受限 exit status，subreaper 必须继续存活，父层以 descendant-first/root-last 回收并 exact reap 该 leader
+后才能返回该 status。subreaper 在 parent-death cleanup 与 expected-parent 复核建立后仍不得立即 fork Bash publisher；父层必须先绑定
+subreaper 的 PID/token/PGID，再通过私有、单次发布的 root-admission capability 允许 fork。该 capability 发布前 root 退出时必须证明原 PGID
+为空；非空或无法枚举都必须保留控制现场并 fail-closed，禁止因 token 尚不可用而把 root-gone 视为 cleanup proof。父 supervisor 在外部命令
+运行期间仍须处理 trap。15 秒 deadline 必须由 retained child 在到期时争用同一个
+`O_EXCL` decision capability：status `0` 表示 deadline 赢得线性化点，status `1` 只表示 publisher/cancel 已先取得 decision，并不证明
+publisher 完成；只有父层在 exact timer event 之前已观察并验证的 publisher status 可被接受，任何 timer completion 都使尚未观察到的 status
+超时并触发回收，任何其它 timer 结果 fail-closed。deadline child 必须先原子发布独立、空内容且不可伪装的 deadline marker，再争用 decision；
+父层读取 publisher status 后必须复核该 marker 仍不存在，以该复核作为 status 接纳的线性化点，不能依赖 `wait -n` 在多个已完成 child 中的选择顺序。
+timer PID 一经 `wait -n` 消费必须立即清空 ownership，后续取消或 observation failure 禁止再向该数值 PID 发信号；该 timer 必须先于
+publisher spawn 和 identity/group admission 探针开始计时。publisher 必须完成 PID/token/PGID 绑定；在绑定前退出一律失败，且只有 exact
+child 已退出并证明其原 PGID 为空时，才允许把 capability 降为仅供 exact reap 的非 signalling cleanup state。取消赢得 decision 或 publisher deadline 到期时，
+必须在返回前以相同 root-last 路径强制回收并 exact reap 完整 publisher tree；若 shell cleanup 无法证明完成，supervisor 不得正常返回，必须保留私有控制文件并
+通过 parent-death/PDEATHSIG 交给 subreaper 自主清理。`>128` 的 child exit 与 parent trap interruption 必须在不创建 helper child、不查询
+job table 的重等中区分；observation exact-reap 失败必须向上 fail-closed，不能被后续赋值覆盖。
+取消先取得时 worker 永远不得观察 marker，admission 先取得时后续信号按 post-admission 取消转发和回滚。
+若 readiness 与取消在同一事件周期聚合，取消必须先于 admission 生效。禁止使用会在信号插入时破坏 shell 解析或误判 worker 已退出的
+job-table/process-substitution 轮询。INT/TERM trap 除上述无敏感信息的原子 decision claim 外，只能写入 signal、raw
+`EPOCHREALTIME` 与 pending 标志；时间换算、deadline 算术和 timer spawn 必须在普通 supervisor 上下文执行，不能在 trap 中做算术展开。
+trap 驱动的 rollback/identity cleanup 还必须复用入口处固定的平台身份，禁止在信号处理路径反复 fork `uname`；平台读取失败时入口直接
+fail-closed，不能在 cleanup 中临时探测并扩大 Bash trap 重入面。
+父层 process-token 捕获等 admission 前探针失败时，必须先恢复 outer lifecycle trap，再传播已 latch 的 `130|143`，不得降级为通用状态 1。
+readiness 前的取消只能在 exact worker process token 后检通过后终止
+尚未获得资源 ownership 的 worker；readiness 已建立时，取消信号必须立即转发给同一 token，INT 后到达的
+TERM 必须升级而不能被去重，grace/deadline 到期后必须终止 worker tree、显式 child reap，再按原子 startup
+ownership state 恢复资源。token 缺失或不匹配、startup state 损坏或 owner 不匹配时禁止向裸 PID 发信号或
+删除固定名 secret，必须保留现场并 fail-closed。父层取消若撞上成功 publication，必须立即走正式 Stop 回滚；
+supervisor 与 `start|run` 调用层之间必须保持连续的 rollback-capable trap ownership，不能出现先解除 trap 再决定
+回滚的窗口，也不能同时返回取消并遗留可用 fixture。failed-start cleanup 必须在启动局部 ownership 变量仍存活的作用域内执行；
 主失败和 cleanup failure 均须保留，不能因 shell scope unwind 退化为未绑定变量，也不能依赖 CI runner
 的 orphan-process sweep 代替 fixture 自有回收。
 
@@ -464,9 +559,11 @@ pattern download 只能读取当前 run，禁止
 `run-id`、`repository` 或 `github-token` 重绑定。artifact name 漂移必须在运行 candidate 前失败。
 包含 producer 的 job，其 timeout 必须不小于串行 producer deadline 总和再加固定准备/上传余量；
 checker 从 registry 与真实调用推导下界，禁止外层 job 在合法 producer deadline 前强杀。
-`required_tools` 是 producer 对 workflow toolchain 的显式需求；当前受控值只有 `node`。直接调用
+`required_tools` 是 producer 对 workflow toolchain 的显式需求；当前受控值为 `bash`、`node`、`python3` 与 Linux-only `setsid`。直接调用
 Node 或经 shell wrapper 间接调用 Node 的 producer 都必须声明它，CI shard validator 只能依据该
-metadata 要求固定 Node 24，不得通过递归猜测脚本文本推导隐藏工具依赖。
+metadata 要求固定 Node 24，不得通过递归猜测脚本文本推导隐藏工具依赖；Unix RemoteBrowser producer 必须声明
+`bash` 并由公开入口验证 Bash 5.1+；Linux bounded subreaper producer 必须显式声明并预检 `python3`；声明 `setsid` 的 producer
+必须把 `host_os` 收紧为仅 Linux，并在资源 admission 前验证真实 PGID 隔离。
 
 `deve_baseline acceptance-run --tier <ci|full|target-host|tag-ready> --plan`
 只做确定性解析与预检，输出将运行、因 host 不匹配而不可运行、缺少环境变量或不能满足

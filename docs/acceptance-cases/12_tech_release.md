@@ -455,7 +455,77 @@
     - native_assert: unix_remote_fixture_failed_start_cleanup_runs_before_local_scope_unwind true
     - native_assert: unix_remote_fixture_usage_failure_precedes_owner_admission true
     - native_assert: unix_remote_fixture_signal_ready_cancel_rolls_back_successful_publication true
+    - native_assert: unix_remote_fixture_signal_wait_reaps_worker_before_returning_cancel true
+    - native_assert: unix_remote_fixture_signal_handoff_has_continuous_rollback_owner true
+    - native_assert: unix_remote_fixture_worker_requires_bidirectional_token_admission true
+    - native_assert: unix_remote_fixture_readiness_revalidates_direct_parent_and_supervisor_process_token true
+    - native_assert: unix_remote_fixture_prepublished_admission_revalidates_parent_identity_before_and_after_consumption true
+    - native_assert: unix_remote_fixture_production_worker_requires_isolated_verified_process_group true
+    - native_assert: unix_remote_fixture_public_start_rejects_ambient_test_overrides true
+    - native_assert: unix_remote_fixture_macos_requires_verified_native_process_token_adapter true
+    - native_assert: unix_remote_fixture_retained_group_requires_prebound_pid_token_pgid_capability true
+    - native_assert: unix_remote_fixture_root_gone_nonempty_group_is_not_signalled_without_pinned_kernel_handle true
+    - native_assert: unix_remote_fixture_group_binding_failure_never_downgrades_to_ungrouped_recovery true
+    - native_assert: unix_remote_fixture_bounded_payload_waits_for_token_bound_group_admission true
+    - native_assert: unix_remote_fixture_bounded_subreaper_retains_live_group_leader_until_explicit_release true
+    - native_assert: unix_remote_fixture_bounded_payload_background_descendants_are_reaped_before_return true
+    - native_assert: unix_remote_fixture_bounded_cancel_reaps_nested_session_before_signal_propagation true
+    - native_assert: unix_remote_fixture_output_cap_precedes_cleanup_failure_reporting true
+    - native_assert: unix_remote_fixture_output_overflow_preserves_primary_and_cleanup_failures true
+    - native_assert: unix_remote_fixture_kernel_output_budget_prevents_growth_after_live_cleanup_failure true
+    - native_assert: unix_remote_fixture_live_cleanup_failure_preserves_leader_and_private_recovery_controls true
+    - native_assert: unix_remote_fixture_subreaper_tracks_payload_nested_sessions true
+    - native_assert: unix_remote_fixture_subreaper_cleanup_is_descendant_first_and_root_last true
+    - native_assert: unix_remote_fixture_subreaper_self_cleanup_recovers_shell_cleanup_failure true
+    - native_assert: unix_remote_fixture_subreaper_parent_death_cleanup_is_fail_closed true
+    - native_assert: unix_remote_fixture_subreaper_rejects_reparenting_before_pdeathsig_binding true
+    - native_assert: unix_remote_fixture_subreaper_parent_snapshot_is_token_bracketed true
+    - native_assert: unix_remote_fixture_root_last_exit_is_not_token_mismatch true
+    - native_assert: unix_remote_fixture_subreaper_incomplete_snapshot_cannot_authorize_empty true
+    - native_assert: unix_remote_fixture_linux_process_token_handles_spaced_comm true
+    - native_assert: unix_remote_fixture_proc_stat_disappearance_is_nonfatal_observation true
+    - native_assert: unix_remote_fixture_preadmission_pgid_probe_failure_preserves_controls true
+    - native_assert: unix_remote_fixture_deadline_is_retained_waitable_child_event_not_repeated_parent_pid_signal true
+    - native_assert: unix_remote_fixture_signal_wait_uses_no_long_lived_wake_sentinel true
+    - native_assert: unix_remote_fixture_signal_wait_uses_retained_bounded_observation_tick true
+    - native_assert: unix_remote_fixture_observation_tick_reap_never_signals_consumed_pid true
+    - native_assert: unix_remote_fixture_observation_tick_reap_failure_is_fail_closed true
+    - native_assert: unix_remote_fixture_signal_trap_latches_raw_time_without_arithmetic_expansion true
+    - native_assert: unix_remote_fixture_trap_cleanup_reuses_cached_platform_identity true
+    - native_assert: unix_remote_fixture_public_entry_requires_bash_5_1_wait_n_p_before_resource_admission true
+    - native_assert: unix_remote_fixture_group_cleanup_rechecks_empty_pgid_after_dynamic_fork true
+    - native_assert: unix_remote_fixture_root_reap_does_not_authorize_group_recovery true
+    - native_assert: unix_remote_fixture_cancel_wins_coalesced_readiness_before_admission true
+    - native_assert: unix_remote_fixture_cancel_inside_admission_atomically_prevents_marker true
+    - native_assert: unix_remote_fixture_admission_publisher_is_retained_child true
+    - native_assert: unix_remote_fixture_admission_publisher_exact_status_uses_no_job_table_poll true
+    - native_assert: unix_remote_fixture_admission_publisher_is_token_bound_and_deadline_bounded true
+    - native_assert: unix_remote_fixture_formal_admission_publisher_retires_group_capability true
+    - native_assert: unix_remote_fixture_cancel_reaps_stuck_admission_publisher_tree true
+    - native_assert: unix_remote_fixture_admission_publisher_deadline_precedes_spawn_and_identity_probes true
+    - native_assert: unix_remote_fixture_admission_publisher_deadline_uses_shared_atomic_decision true
+    - native_assert: unix_remote_fixture_admission_status_rechecks_independent_deadline_marker true
+    - native_assert: unix_remote_fixture_admission_publisher_decision_without_status_still_times_out true
+    - native_assert: unix_remote_fixture_consumed_admission_deadline_pid_is_never_signalled true
+    - native_assert: unix_remote_fixture_subreaper_does_not_fork_publisher_before_parent_capability_admission true
+    - native_assert: unix_remote_fixture_pretoken_root_exit_requires_empty_former_process_group true
+    - native_assert: unix_remote_fixture_admission_publisher_preadmission_exit_fails_after_empty_group_proof true
+    - native_assert: unix_remote_fixture_admission_publisher_cleanup_failure_never_returns_normally true
+    - native_assert: unix_remote_fixture_admission_publisher_parent_death_self_cleanup_reaps_nested_descendants true
+    - native_assert: unix_remote_fixture_admission_publisher_status_keeps_subreaper_live_until_root_last_reap true
+    - native_assert: unix_remote_fixture_parent_token_probe_preserves_latched_signal_status true
+    - native_assert: unix_remote_fixture_spawn_identity_handoff_defers_cancel true
+    - native_assert: unix_remote_fixture_int_to_term_upgrade_is_state_machine_ordered true
+    - native_assert: unix_remote_fixture_formal_worker_resets_async_int_before_bash_entry true
+    - native_assert: unix_remote_fixture_live_pid_probe_failure_never_enters_exact_wait true
+    - native_assert: unix_remote_fixture_live_timer_probe_failure_never_enters_exact_wait true
+    - native_assert: unix_remote_fixture_shell_tree_snapshot_binds_relation_and_token_atomically true
+    - native_assert: unix_remote_fixture_status_acceptance_rechecks_deadline_marker true
+    - native_assert: unix_remote_fixture_readiness_is_single_edge_and_cancel_fair true
+    - native_assert: unix_remote_fixture_cancel_deadline_recovers_atomic_startup_ownership true
+    - native_assert: unix_remote_fixture_worker_pid_token_mismatch_fails_closed true
     - native_assert: unix_remote_fixture_final_process_proof_uses_zombie_aware_active_classifier true
+    - contract_assert: candidate_bounded_fixture_producers_are_linux_tool_complete true
     - evidence_boundary: startup_marker_probe_is_not_packaged_ui_readiness
     - release_assert: signed_release_readiness_not_claimed true
     - release_assert: store_distribution_readiness_not_claimed true

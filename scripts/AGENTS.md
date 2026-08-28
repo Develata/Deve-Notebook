@@ -55,12 +55,25 @@ Build and lint utility scripts for Deve-Notebook. Provides low-memory lint confi
 | `lib/remote-browser-fixture-cloudflared.ps1` | Owns the checksum-pinned Windows cloudflared download/install path used by the RemoteBrowser fixture |
 | `lib/remote-browser-fixture-state.ps1` | Atomically publishes ready/recovery state and preflights source/resource/live-owner identity before any Windows fixture secret cleanup |
 | `lib/remote-browser-fixture-http.sh` | Owns bounded Linux/Android loopback readiness, quick-tunnel origin discovery, exact public role probes, propagation timing, and allowlisted HTTP diagnostics |
-| `lib/remote-browser-fixture-start-supervisor.sh` | Owns signal-ready Unix startup supervision and cancellation cleanup |
+| `lib/remote-browser-fixture-start-supervisor.sh` | Owns bidirectional signal-ready/admission Unix startup supervision, cancellation precedence, upgrade, deadline, and lifecycle handoff semantics |
+| `lib/remote-browser-fixture-start-process.sh` | Owns isolated production worker creation, token checks, signal forwarding, and exact direct-child reap semantics |
+| `lib/remote-browser-fixture-signal-exec.py` | Restores default INT/TERM dispositions before an asynchronously spawned formal Unix worker execs Bash |
+| `lib/remote-browser-fixture-start-signals.sh` | Owns Unix startup cancellation latching, retained observation ticks, exact-token timer retirement, and independent deadline-marker observation |
+| `lib/remote-browser-fixture-start-publisher.sh` | Owns O_EXCL admission arbitration plus the token-bound, parent-gated, deadline-bounded publisher lifecycle |
+| `lib/remote-browser-fixture-admission-deadline.py` | Binds parent-death cleanup, publishes the independent deadline marker, then atomically claims the shared startup-admission decision |
+| `lib/remote-browser-fixture-start-worker.sh` | Owns RemoteBrowser source admission, startup journaling, backend/tunnel identity handoff, failed-start cleanup, and ready-state publication |
+| `lib/remote-browser-fixture-startup-state.sh` | Atomically journals nonsecret Unix startup ownership, publishes admission only after winning the shared decision capability, admits only an exact worker token, and performs fail-closed deadline recovery |
+| `lib/remote-browser-fixture-bounded.sh` | Owns Linux-only token-admitted bounded payload sessions, stable subreaper/control-launcher release, signal latching, combined output caps, and dual-failure cleanup diagnostics; Windows uses PowerShell and Git Bash fallback is test-only |
+| `lib/remote-browser-fixture-bounded-control.sh` | Provides the bounded runner's private control-file, descriptor, signal-latch, status parsing, and output-normalization helpers |
+| `lib/remote-browser-fixture-subreaper.py` | Binds the pre-exec expected parent, waits for parent capability admission before forking, remains the Linux group leader/child-subreaper, and token-brackets autonomous cleanup snapshots |
+| `lib/remote-browser-fixture-subreaper-tree.sh` | Performs root-last, token-bound cleanup of the bounded subreaper descendant tree before proving the original process group empty |
+| `lib/remote-browser-fixture-process-tree.sh` | Owns status-propagating process/group snapshots, PID-token and PGID capability proof, and shared-deadline tree termination |
+| `lib/remote-browser-fixture-process-table.sh` | Provides read-only, status-propagating process observations, including atomic Linux PID/PPID/PGID/starttime snapshots used for tree ownership |
 | `lib/desktop-remote-browser-native-recovery.ps1` | Owns Win32 native-menu discovery/dispatch and replacement-process proof for the Desktop RemoteBrowser-to-LocalBackend recovery journey |
 | `lib/remote-browser-fixture-progress.ps1` | Atomic startup-state serialization plus the fixed nonsecret stage-name allowlist shared by the Windows fixture and its bounded-start watchdog |
 | `remote-browser-fixture.test.{sh,ps1}` | Exercises fixture input, atomic final state, dual-failure preservation, secret cleanup, PID/owner identity, zombie-aware final cleanup, and platform lifecycle invariants |
 | `remote-browser-fixture-http.test.sh` | Exercises bounded quick-tunnel readiness, exact role endpoint, process identity, deadline, and redacted failure diagnostics |
-| `remote-browser-fixture-start-supervisor.test.sh` | Exercises pending-signal handoff and successful-publication rollback at cancellation boundaries |
+| `remote-browser-fixture-start-supervisor.test.sh` | Exercises atomic startup recovery, token refusal, signal upgrade, bounded reap, and continuous publication-trap handoff |
 | `remote-browser-fixture-bounded-start.test.ps1` | Proves single env-path success output, a pipe-captured success return while fixture survivors keep running (std-handle inheritance hygiene), deadline tree termination, stage-named errors (including zero-secret worker failures), PID-token/container-owner refusal, partial/corrupted state fail-closed, fast-exit combined output limits, bounded redacted failure output, and a real-worker integration failure path |
 | `lib/remote-browser-fixture-json.sh` | Serializes the fixed private fixture state/environment JSON schemas without owning lifecycle decisions |
 | `desktop-install-root.test.ps1` | Executes real Windows install-root, prefix-escape, and junction containment regressions |

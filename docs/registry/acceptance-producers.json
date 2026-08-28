@@ -1049,13 +1049,14 @@
         "tag-ready"
       ],
       "host_os": [
-        "linux",
-        "macos",
-        "windows"
+        "linux"
       ],
       "timeout_seconds": 3600,
       "required_tools": [
-        "node"
+        "bash",
+        "node",
+        "python3",
+        "setsid"
       ],
       "required_env": [
         "DEVE_MOBILE_ANDROID_REMOTE_HTTPS_ORIGIN",
@@ -1091,10 +1092,25 @@
         "scripts/android-emulator-cleanup.test.sh",
         "scripts/cleanup-mobile-android-emulator.sh",
         "scripts/remote-browser-fixture.sh",
+        "scripts/remote-browser-fixture.test.sh",
+        "scripts/remote-browser-fixture-start-supervisor.test.sh",
         "scripts/lib/remote-browser-fixture.sh",
+        "scripts/lib/remote-browser-fixture-bounded.sh",
+        "scripts/lib/remote-browser-fixture-bounded-control.sh",
+        "scripts/lib/remote-browser-fixture-subreaper.py",
+        "scripts/lib/remote-browser-fixture-subreaper-tree.sh",
+        "scripts/lib/remote-browser-fixture-process-tree.sh",
+        "scripts/lib/remote-browser-fixture-process-table.sh",
         "scripts/lib/remote-browser-fixture-http.sh",
         "scripts/lib/remote-browser-fixture-json.sh",
+        "scripts/lib/remote-browser-fixture-admission-deadline.py",
+        "scripts/lib/remote-browser-fixture-start-publisher.sh",
+        "scripts/lib/remote-browser-fixture-start-process.sh",
+        "scripts/lib/remote-browser-fixture-start-signals.sh",
         "scripts/lib/remote-browser-fixture-start-supervisor.sh",
+        "scripts/lib/remote-browser-fixture-signal-exec.py",
+        "scripts/lib/remote-browser-fixture-start-worker.sh",
+        "scripts/lib/remote-browser-fixture-startup-state.sh",
         "scripts/lib/android-emulator-capacity.sh",
         "scripts/lib/android-emulator-owner.sh",
         "scripts/lib/android-guest-service-readiness.sh",
@@ -1563,12 +1579,14 @@
         "tag-ready"
       ],
       "host_os": [
-        "linux",
-        "windows"
+        "linux"
       ],
       "timeout_seconds": 5400,
       "required_tools": [
-        "node"
+        "bash",
+        "node",
+        "python3",
+        "setsid"
       ],
       "required_env": [
         "DEVE_RELEASE_CANDIDATE_IMAGE",
@@ -1606,6 +1624,12 @@
         "scripts/lib/docker-remote-import-journeys.mjs",
         "scripts/lib/docker-multiclient-runtime.mjs",
         "scripts/lib/remote-browser-fixture.sh",
+        "scripts/lib/remote-browser-fixture-bounded.sh",
+        "scripts/lib/remote-browser-fixture-bounded-control.sh",
+        "scripts/lib/remote-browser-fixture-subreaper.py",
+        "scripts/lib/remote-browser-fixture-subreaper-tree.sh",
+        "scripts/lib/remote-browser-fixture-process-tree.sh",
+        "scripts/lib/remote-browser-fixture-process-table.sh",
         "scripts/lib/remote-browser-fixture-http.sh"
       ],
       "steps": [

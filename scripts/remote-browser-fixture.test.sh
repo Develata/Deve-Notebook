@@ -28,6 +28,14 @@ assert_fails remote_fixture_assert_https_origin "https://fixture.example.invalid
 assert_fails remote_fixture_assert_https_origin "https://user@fixture.example.invalid"
 
 temporary="$(mktemp -d)"
+fixture_start_action="start"
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*)
+    fixture_start_action="__test-start"
+    export DEVE_REMOTE_FIXTURE_TEST_MODE=1
+    export DEVE_REMOTE_FIXTURE_TEST_ALLOW_UNGROUPED_BOUNDED=1
+    ;;
+esac
 owned_pid=""
 secondary_pid=""
 zombie_parent_pid=""
@@ -80,6 +88,218 @@ remote_fixture_stop_pid test "$owned_pid" "$token"
 kill -0 "$owned_pid" 2>/dev/null && fail "owned process survived cleanup"
 owned_pid=""
 
+# If the numeric PID changes identity after TERM, bounded cleanup must treat the
+# original process as gone and must never escalate KILL to the replacement. A
+# Bash loop with an ignored TERM is portable across Linux and Git Bash; Node's
+# signal handler is not reliable under MSYS native-process signal translation.
+bash -c 'trap "" TERM; while :; do sleep 60; done; :' &
+owned_pid="$!"
+token="$(remote_fixture_wait_stable_process_token "PID reuse guard" "$owned_pid")"
+sleep 0.1
+owned_descendant_pid=""
+owned_descendant_token=""
+for _ in $(seq 1 50); do
+  owned_descendant_pid="$(remote_fixture_descendants_deepest "$owned_pid" | head -n 1)"
+  if [[ -n "$owned_descendant_pid" ]]; then
+    owned_descendant_token="$(remote_fixture_process_token "$owned_descendant_pid" 2>/dev/null || true)"
+    [[ -n "$owned_descendant_token" ]] && break
+  fi
+  sleep 0.02
+done
+[[ -n "$owned_descendant_token" ]] || fail "PID reuse guard descendant token was unavailable"
+token_probe_counter="$temporary/token-probe-counter"
+(
+  remote_fixture_process_token() {
+    local observed_count=0
+    [[ ! -f "$token_probe_counter" ]] || observed_count="$(wc -l <"$token_probe_counter")"
+    printf 'probe\n' >>"$token_probe_counter"
+    if ((observed_count < 2)); then printf '%s\n' "$token"; else printf 'replacement-token\n'; fi
+  }
+  remote_fixture_stop_pid "PID reuse guard" "$owned_pid" "$token"
+)
+remote_fixture_pid_active "$owned_pid" \
+  || fail "PID reuse guard escalated against the replacement identity"
+remote_fixture_stop_owned_job "PID reuse guard cleanup" "$owned_pid" "$token"
+remote_fixture_live_pid_matches_token "$owned_descendant_pid" "$owned_descendant_token" \
+  && fail "shared cleanup deadline returned with an exact descendant alive"
+owned_pid=""
+
+# Process enumeration is part of the ownership proof. A producer failure must
+# fail closed before signalling the root, not turn an empty snapshot into a
+# successful tree cleanup.
+bash -c 'trap "" TERM; while :; do sleep 60; done; :' &
+owned_pid="$!"
+token="$(remote_fixture_wait_stable_process_token "enumeration failure guard" "$owned_pid")"
+process_table_definition="$(declare -f remote_fixture_tokenized_process_table)"
+remote_fixture_tokenized_process_table() { return 1; }
+enumeration_status=0
+remote_fixture_stop_owned_job "enumeration failure guard" "$owned_pid" "$token" \
+  >/dev/null 2>&1 || enumeration_status=$?
+eval "$process_table_definition"
+[[ "$enumeration_status" != 0 ]] || fail "process-table failure was accepted as an empty tree"
+remote_fixture_live_pid_matches_token "$owned_pid" "$token" \
+  || fail "process-table failure signalled the owned root"
+remote_fixture_stop_owned_job "enumeration failure cleanup" "$owned_pid" "$token"
+owned_pid=""
+
+# A negative PGID signal is legal only after the same process-table snapshot
+# proves root PID == root PGID and that the supervisor is outside the group.
+grep -Fq 'local supervisor_pid="$BASHPID"' \
+  "$ROOT_DIR/scripts/lib/remote-browser-fixture-process-table.sh" \
+  || fail "PGID proof must snapshot the caller PID before command substitution"
+bash -c 'trap "" TERM; while :; do sleep 60; done; :' &
+owned_pid="$!"
+token="$(remote_fixture_wait_stable_process_token "PGID mismatch guard" "$owned_pid")"
+pgid_status=0
+remote_fixture_stop_bounded_tree "PGID mismatch guard" "$owned_pid" 1 "$token" \
+  >/dev/null 2>&1 || pgid_status=$?
+[[ "$pgid_status" != 0 ]] || fail "non-isolated root was accepted as a process group"
+remote_fixture_live_pid_matches_token "$owned_pid" "$token" \
+  || fail "PGID mismatch guard signalled the non-isolated root"
+remote_fixture_stop_owned_job "PGID mismatch cleanup" "$owned_pid" "$token"
+owned_pid=""
+
+# On hosts with an isolated process group, the leader may exit on TERM while a
+# descendant ignores it. Completion requires the exact descendant to be gone,
+# not merely the group leader.
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*) ;;
+  *)
+    if command -v setsid >/dev/null 2>&1; then
+      group_child_file="$temporary/group-child-pid"
+      setsid bash -c '
+        trap "exit 0" TERM
+        node -e '\''process.on("SIGTERM",()=>{});setInterval(()=>{},1000);'\'' &
+        printf "%s" "$!" >"$1"
+        wait "$!"
+      ' _ "$group_child_file" &
+      owned_pid="$!"
+      token="$(remote_fixture_wait_stable_process_token "process-group guard" "$owned_pid")"
+      for _ in $(seq 1 100); do [[ -s "$group_child_file" ]] && break; sleep 0.01; done
+      [[ -s "$group_child_file" ]] || fail "process-group descendant was not published"
+      group_child_pid="$(<"$group_child_file")"
+      group_child_token="$(remote_fixture_wait_stable_process_token \
+        "process-group descendant" "$group_child_pid")"
+      remote_fixture_stop_bounded_tree "process-group guard" "$owned_pid" 1 "$token"
+      wait "$owned_pid" 2>/dev/null || true
+      remote_fixture_live_pid_matches_token "$group_child_pid" "$group_child_token" \
+        && fail "process-group cleanup returned with an exact descendant alive"
+      owned_pid=""
+
+      dynamic_survivor="$temporary/group-dynamic-survivor.sh"
+      dynamic_child="$temporary/group-dynamic-child.sh"
+      dynamic_leader="$temporary/group-dynamic-leader.sh"
+      cat >"$dynamic_survivor" <<'SH'
+#!/usr/bin/env bash
+trap '' TERM
+while :; do sleep 60; done
+SH
+      cat >"$dynamic_child" <<'SH'
+#!/usr/bin/env bash
+trap '"$1" & printf "%s" "$!" >"$2"; exit 0' TERM
+printf 'ready' >"$3"
+printf '%s' "$BASHPID" >"$4"
+while :; do sleep 60; done
+SH
+      cat >"$dynamic_leader" <<'SH'
+#!/usr/bin/env bash
+trap ':' TERM
+"$1" "$2" "$3" "$4" "$5" &
+wait "$!" || true
+while :; do sleep 60; done
+SH
+      chmod +x "$dynamic_survivor" "$dynamic_child" "$dynamic_leader"
+      dynamic_spawned_file="$temporary/group-dynamic-spawned.pid"
+      dynamic_ready_file="$temporary/group-dynamic-ready"
+      dynamic_child_pid_file="$temporary/group-dynamic-child.pid"
+      setsid "$dynamic_leader" "$dynamic_child" "$dynamic_survivor" \
+        "$dynamic_spawned_file" "$dynamic_ready_file" "$dynamic_child_pid_file" &
+      owned_pid="$!"
+      token="$(remote_fixture_wait_stable_process_token "dynamic process-group guard" "$owned_pid")"
+      for _ in $(seq 1 100); do [[ -s "$dynamic_ready_file" ]] && break; sleep 0.01; done
+      [[ -s "$dynamic_ready_file" ]] || fail "dynamic process-group child was not ready"
+      remote_fixture_stop_bounded_tree "dynamic process-group guard" "$owned_pid" 1 "$token"
+      wait "$owned_pid" 2>/dev/null || true
+      [[ -s "$dynamic_spawned_file" ]] || fail "TERM handler did not publish its dynamic descendant"
+      dynamic_spawned_pid="$(<"$dynamic_spawned_file")"
+      remote_fixture_pid_active "$dynamic_spawned_pid" \
+        && fail "dynamic process-group descendant escaped final KILL"
+      owned_pid=""
+
+      # A user-space capability does not pin a kernel process-group generation.
+      # After the exact leader exits, a nonempty retained PGID must fail closed
+      # without signalling it, even when the old identity was pre-bound.
+      rm -f -- "$dynamic_ready_file" "$dynamic_spawned_file" "$dynamic_child_pid_file"
+      setsid "$dynamic_leader" "$dynamic_child" "$dynamic_survivor" \
+        "$dynamic_spawned_file" "$dynamic_ready_file" "$dynamic_child_pid_file" &
+      owned_pid="$!"
+      token="$(remote_fixture_wait_stable_process_token "pre-bound process-group guard" "$owned_pid")"
+      for _ in $(seq 1 100); do [[ -s "$dynamic_ready_file" ]] && break; sleep 0.01; done
+      [[ -s "$dynamic_ready_file" ]] || fail "pre-bound process-group child was not ready"
+      remote_fixture_bind_isolated_process_group "$owned_pid" "$token"
+      kill -KILL "$owned_pid"
+      wait "$owned_pid" 2>/dev/null || true
+      prebound_status=0
+      remote_fixture_stop_bounded_tree "pre-bound process-group guard" "$owned_pid" 1 "$token" \
+        >/dev/null 2>&1 || prebound_status=$?
+      [[ "$prebound_status" != 0 ]] \
+        || fail "pre-bound retained process group was treated as a pinned kernel handle"
+      [[ -s "$dynamic_child_pid_file" ]] || fail "pre-bound group did not publish its descendant"
+      dynamic_child_pid="$(<"$dynamic_child_pid_file")"
+      remote_fixture_pid_active "$dynamic_child_pid" \
+        || fail "pre-bound retained process group was signalled after leader exit"
+      kill -KILL -- "-$owned_pid" 2>/dev/null || true
+      for _ in $(seq 1 100); do
+        remote_fixture_pid_active "$dynamic_child_pid" || break
+        sleep 0.01
+      done
+      remote_fixture_pid_active "$dynamic_child_pid" \
+        && fail "pre-bound retained process-group test cleanup failed"
+      owned_pid=""
+
+      rm -f -- "$dynamic_ready_file" "$dynamic_spawned_file" "$dynamic_child_pid_file"
+      setsid "$dynamic_leader" "$dynamic_child" "$dynamic_survivor" \
+        "$dynamic_spawned_file" "$dynamic_ready_file" "$dynamic_child_pid_file" &
+      owned_pid="$!"
+      token="$(remote_fixture_wait_stable_process_token "unbound process-group guard" "$owned_pid")"
+      for _ in $(seq 1 100); do [[ -s "$dynamic_ready_file" ]] && break; sleep 0.01; done
+      [[ -s "$dynamic_ready_file" ]] || fail "unbound process-group child was not ready"
+      remote_fixture_assert_isolated_process_group "$owned_pid"
+      kill -KILL "$owned_pid"
+      wait "$owned_pid" 2>/dev/null || true
+      unbound_member="$(remote_fixture_process_group_members "$owned_pid" | head -n 1)"
+      [[ -n "$unbound_member" ]] || fail "unbound retained group lost its test descendant"
+      unbound_status=0
+      remote_fixture_stop_bounded_tree "unbound process-group guard" "$owned_pid" 1 "$token" \
+        >/dev/null 2>&1 || unbound_status=$?
+      [[ "$unbound_status" != 0 ]] || fail "unbound retained process group was accepted"
+      remote_fixture_pid_active "$unbound_member" \
+        || fail "unbound retained process group was signalled"
+      kill -KILL -- "-$owned_pid" 2>/dev/null || true
+      for _ in $(seq 1 100); do
+        remote_fixture_pid_active "$unbound_member" || break
+        sleep 0.01
+      done
+      remote_fixture_pid_active "$unbound_member" \
+        && fail "unbound retained process-group test cleanup failed"
+      owned_pid=""
+
+      setsid bash -c 'trap "exit 0" TERM; while :; do sleep 60; done; :' &
+      owned_pid="$!"
+      token="$(remote_fixture_wait_stable_process_token "unbound empty-group guard" "$owned_pid")"
+      remote_fixture_assert_isolated_process_group "$owned_pid"
+      kill -TERM "$owned_pid"
+      wait "$owned_pid" 2>/dev/null || true
+      unbound_empty_status=0
+      remote_fixture_stop_bounded_tree "unbound empty-group guard" "$owned_pid" 1 "$token" \
+        >/dev/null 2>&1 || unbound_empty_status=$?
+      [[ "$unbound_empty_status" != 0 ]] \
+        || fail "unbound empty process group authorized cleanup"
+      owned_pid=""
+    fi
+    ;;
+esac
+
 node -e 'process.on("SIGTERM",()=>{});setInterval(()=>{},1000);' &
 owned_pid="$!"
 token=""
@@ -92,6 +312,69 @@ done
 remote_fixture_stop_owned_job "TERM-resistant test" "$owned_pid" "$token"
 remote_fixture_pid_active "$owned_pid" && fail "owned job survived bounded cleanup"
 owned_pid=""
+
+if [[ "$(uname -s)" == Linux* ]] && command -v python3 >/dev/null 2>&1; then
+  if ! PYTHONDONTWRITEBYTECODE=1 python3 - "$REMOTE_FIXTURE_BOUNDED_SUBREAPER" <<'PY'
+import importlib.util
+import pathlib
+import sys
+from types import SimpleNamespace
+
+helper_path = pathlib.Path(sys.argv[1])
+spec = importlib.util.spec_from_file_location("remote_fixture_subreaper", helper_path)
+assert spec is not None and spec.loader is not None
+module = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(module)
+
+tokens = iter(("101", "202"))
+module.process_token = lambda _pid: next(tokens)
+module.process_parent_pid = lambda _pid: 42
+assert module.observed_process_identity(7) is None
+
+module.process_token = lambda _pid: "303"
+assert module.observed_process_identity(7) == (42, "303")
+
+module.observed_process_identity = lambda _pid: None
+module.os.scandir = lambda _path: [SimpleNamespace(name="7", path="/proc/7")]
+module.os.path.exists = lambda _path: True
+assert module.descendant_identities(1) == ([], False)
+PY
+  then
+    fail "subreaper ancestry/token bracket or incomplete-scan gate failed closed"
+  fi
+  spaced_comm_pid_file="$temporary/spaced-comm.pid"
+  python3 - "$spaced_comm_pid_file" <<'PY' &
+import ctypes
+import os
+import pathlib
+import signal
+import sys
+import time
+
+ctypes.CDLL(None).prctl(15, b"fixture child x", 0, 0, 0)
+pathlib.Path(sys.argv[1]).write_text(str(os.getpid()), encoding="ascii")
+signal.signal(signal.SIGTERM, lambda *_: sys.exit(0))
+time.sleep(30)
+PY
+  owned_pid="$!"
+  for _ in $(seq 1 100); do [[ -s "$spaced_comm_pid_file" ]] && break; sleep 0.01; done
+  [[ -s "$spaced_comm_pid_file" ]] || fail "spaced comm process did not publish its PID"
+  spaced_comm_pid="$(<"$spaced_comm_pid_file")"
+  spaced_comm_token="$(remote_fixture_process_token "$spaced_comm_pid")"
+  expected_spaced_comm_token="$(python3 - "$spaced_comm_pid" <<'PY'
+import pathlib
+import sys
+
+tail = pathlib.Path(f"/proc/{sys.argv[1]}/stat").read_text(encoding="ascii").rsplit(") ", 1)[1].split()
+print(tail[19])
+PY
+)"
+  [[ "$spaced_comm_token" == "$expected_spaced_comm_token" ]] \
+    || fail "Linux process token was shifted by a spaced comm"
+  kill -TERM "$owned_pid"
+  wait "$owned_pid" 2>/dev/null || true
+  owned_pid=""
+fi
 
 remote_fixture_run_bounded "parallel drain test" 5 100000 \
   "$temporary/bounded-drain.stdout" "$temporary/bounded-drain.stderr" -- \
@@ -108,7 +391,7 @@ bounded_limit_bytes=$(( $(wc -c <"$temporary/bounded-limit.stdout") + $(wc -c <"
 cat >"$temporary/bounded-timeout-tree.sh" <<'SH'
 #!/usr/bin/env bash
 set -euo pipefail
-sleep 60 &
+setsid sleep 60 &
 printf '%s\n' "$!" >"$1"
 wait
 SH
@@ -121,18 +404,245 @@ bounded_grandchild_pid="$(<"$temporary/bounded-grandchild.pid")"
 sleep 0.2
 remote_fixture_pid_active "$bounded_grandchild_pid" && fail "timed-out bounded process left a grandchild alive"
 
-grep -Fq -- '--env-file "$docker_env_file"' "$ROOT_DIR/scripts/remote-browser-fixture.sh" \
+case "$(uname -s)" in
+  MINGW*|MSYS*|CYGWIN*) ;;
+  *)
+    # A subreaper may bind only the owner PID captured before fork/exec. An
+    # already-changed parent must self-clean before it can fork the launcher.
+    prebind_completion="$temporary/prebind-parent.released"
+    prebind_failure="$temporary/prebind-parent.failed"
+    prebind_identity="$temporary/prebind-parent.identity"
+    prebind_payload="$temporary/prebind-parent.payload"
+    prebind_status=0
+    setsid python3 "$REMOTE_FIXTURE_BOUNDED_SUBREAPER" \
+      "$prebind_completion" "$prebind_failure" "$prebind_identity" 999999 -- \
+      bash -c 'printf ran >"$1"' _ "$prebind_payload" \
+      >/dev/null 2>&1 || prebind_status=$?
+    [[ "$prebind_status" == 143 ]] \
+      || fail "subreaper parent prebind rejection returned $prebind_status instead of 143"
+    [[ ! -e "$prebind_identity" && ! -e "$prebind_payload" ]] \
+      || fail "subreaper forked a launcher after expected-parent mismatch"
+
+    # A failed process-table probe is not an empty-PGID proof and must keep the
+    # private controls fail-closed.
+    sleep 0.01 &
+    preadmission_probe_pid="$!"
+    wait "$preadmission_probe_pid" 2>/dev/null || true
+    process_group_members_definition="$(declare -f remote_fixture_process_group_members)"
+    remote_fixture_process_group_members() { return 1; }
+    preadmission_probe_status=0
+    remote_fixture_abort_unadmitted_subreaper \
+      "preadmission process-table failure test" "$preadmission_probe_pid" \
+      >/dev/null 2>&1 || preadmission_probe_status=$?
+    eval "$process_group_members_definition"
+    [[ "$preadmission_probe_status" != 0 ]] \
+      || fail "preadmission cleanup accepted a failed process-group probe"
+
+    # A transiently unavailable token must terminate the exact retained child
+    # before waiting. The unadmitted payload must never run.
+    (
+      remote_fixture_process_token() { return 1; }
+      assert_fails remote_fixture_run_bounded "token unavailable test" 2 4096 \
+        "$temporary/bounded-token.stdout" "$temporary/bounded-token.stderr" -- \
+        bash -c 'printf ran >"$1"' _ "$temporary/bounded-token-payload-ran"
+    )
+    [[ ! -e "$temporary/bounded-token-payload-ran" ]] \
+      || fail "bounded payload ran before process-token admission"
+
+    cat >"$temporary/bounded-retained-child.sh" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+sleep 60 &
+printf '%s\n' "$!" >"$1"
+exit 0
+SH
+    chmod +x "$temporary/bounded-retained-child.sh"
+    assert_fails remote_fixture_run_bounded "retained payload child test" 5 4096 \
+      "$temporary/bounded-retained.stdout" "$temporary/bounded-retained.stderr" -- \
+      "$temporary/bounded-retained-child.sh" "$temporary/bounded-retained-child.pid"
+    [[ -f "$temporary/bounded-retained-child.pid" ]] \
+      || fail "bounded retained-child test did not publish its child PID"
+    bounded_retained_child_pid="$(<"$temporary/bounded-retained-child.pid")"
+    sleep 0.2
+    remote_fixture_pid_active "$bounded_retained_child_pid" \
+      && fail "bounded payload returned while its background child remained alive"
+
+    cat >"$temporary/bounded-launcher-crash.sh" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+setsid sleep 60 &
+printf '%s\n' "$!" >"$1"
+kill -KILL "$PPID"
+exit 0
+SH
+    chmod +x "$temporary/bounded-launcher-crash.sh"
+    assert_fails remote_fixture_run_bounded "bounded launcher crash test" 5 4096 \
+      "$temporary/bounded-crash.stdout" "$temporary/bounded-crash.stderr" -- \
+      "$temporary/bounded-launcher-crash.sh" "$temporary/bounded-crash-child.pid"
+    [[ -f "$temporary/bounded-crash-child.pid" ]] \
+      || fail "bounded launcher-crash test did not publish its nested child PID"
+    bounded_crash_child="$(<"$temporary/bounded-crash-child.pid")"
+    sleep 0.2
+    remote_fixture_pid_active "$bounded_crash_child" \
+      && fail "bounded subreaper crash path left a nested session alive"
+
+    cat >"$temporary/bounded-self-cleanup.sh" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+trap '' TERM
+printf '%s\n' "${DEVE_REMOTE_FIXTURE_BOUNDED_ROOT_PID:?}" >"$1"
+setsid sleep 60 &
+printf '%s\n' "$!" >"$2"
+wait
+SH
+    chmod +x "$temporary/bounded-self-cleanup.sh"
+    stop_tree_definition="$(declare -f remote_fixture_stop_bounded_subreaper_tree)"
+    remote_fixture_stop_bounded_subreaper_tree() { return 9; }
+    self_cleanup_status=0
+    remote_fixture_run_bounded "bounded self-cleanup fallback test" 1 4096 \
+      "$temporary/bounded-self-cleanup.stdout" "$temporary/bounded-self-cleanup.stderr" -- \
+      "$temporary/bounded-self-cleanup.sh" "$temporary/bounded-self-cleanup-root.pid" \
+      "$temporary/bounded-self-cleanup-child.pid" \
+      2>"$temporary/bounded-self-cleanup.diagnostic" || self_cleanup_status=$?
+    eval "$stop_tree_definition"
+    ((self_cleanup_status != 0)) \
+      || fail "bounded self-cleanup fallback accepted a timed-out payload"
+    grep -Fq "cleanup failed with status 9" "$temporary/bounded-self-cleanup.diagnostic" \
+      || fail "bounded self-cleanup fallback lost the shell cleanup failure"
+    bounded_self_cleanup_root="$(<"$temporary/bounded-self-cleanup-root.pid")"
+    bounded_self_cleanup_child="$(<"$temporary/bounded-self-cleanup-child.pid")"
+    remote_fixture_pid_active "$bounded_self_cleanup_root" \
+      && fail "bounded self-cleanup fallback left its subreaper root alive"
+    remote_fixture_pid_active "$bounded_self_cleanup_child" \
+      && fail "bounded self-cleanup fallback left its nested session alive"
+
+    (
+      remote_fixture_run_bounded "bounded parent-death cleanup test" 30 4096 \
+        "$temporary/bounded-parent-death.stdout" "$temporary/bounded-parent-death.stderr" -- \
+        "$temporary/bounded-self-cleanup.sh" "$temporary/bounded-parent-death-root.pid" \
+        "$temporary/bounded-parent-death-child.pid"
+    ) &
+    bounded_parent_owner="$!"
+    for _ in $(seq 1 100); do
+      [[ -f "$temporary/bounded-parent-death-root.pid" \
+        && -f "$temporary/bounded-parent-death-child.pid" ]] && break
+      sleep 0.02
+    done
+    [[ -f "$temporary/bounded-parent-death-root.pid" \
+      && -f "$temporary/bounded-parent-death-child.pid" ]] \
+      || fail "bounded parent-death cleanup test did not publish its identities"
+    bounded_parent_root="$(<"$temporary/bounded-parent-death-root.pid")"
+    bounded_parent_child="$(<"$temporary/bounded-parent-death-child.pid")"
+    kill -KILL "$bounded_parent_owner"
+    wait "$bounded_parent_owner" 2>/dev/null || true
+    for _ in $(seq 1 100); do
+      if ! remote_fixture_pid_active "$bounded_parent_root" \
+        && ! remote_fixture_pid_active "$bounded_parent_child"; then
+        break
+      fi
+      sleep 0.05
+    done
+    remote_fixture_pid_active "$bounded_parent_root" \
+      && fail "bounded parent-death cleanup left its subreaper root alive"
+    remote_fixture_pid_active "$bounded_parent_child" \
+      && fail "bounded parent-death cleanup left its nested session alive"
+
+    # Preserve the primary overflow category and hard-cap the writers even when
+    # exact cleanup reports failure while the owned tree is still live.
+    cat >"$temporary/bounded-live-overflow.sh" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+trap '' XFSZ TERM
+printf '%s\n' "${DEVE_REMOTE_FIXTURE_BOUNDED_ROOT_PID:?}" >"$1"
+printf '%s\n' "$BASHPID" >"$2"
+chunk="$(printf 'x%.0s' {1..1024})"
+while :; do
+  printf '%s' "$chunk" || true
+  printf '%s' "$chunk" >&2 || true
+done
+SH
+    chmod +x "$temporary/bounded-live-overflow.sh"
+    stop_tree_definition="$(declare -f remote_fixture_stop_bounded_subreaper_tree)"
+    eval "$(declare -f remote_fixture_stop_bounded_subreaper_tree \
+      | sed '1s/remote_fixture_stop_bounded_subreaper_tree/remote_fixture_stop_bounded_subreaper_tree_actual/')"
+    self_cleanup_definition="$(declare -f remote_fixture_request_subreaper_self_cleanup)"
+    remote_fixture_stop_bounded_subreaper_tree() { return 9; }
+    remote_fixture_request_subreaper_self_cleanup() { return 8; }
+    combined_failure_status=0
+    remote_fixture_run_bounded "combined bounded failure test" 10 4096 \
+      "$temporary/bounded-combined.stdout" "$temporary/bounded-combined.stderr" -- \
+      "$temporary/bounded-live-overflow.sh" "$temporary/bounded-combined-leader.pid" \
+      "$temporary/bounded-combined-payload.pid" \
+      2>"$temporary/bounded-combined.diagnostic" || combined_failure_status=$?
+    eval "$stop_tree_definition"
+    eval "$self_cleanup_definition"
+    ((combined_failure_status != 0)) \
+      || fail "combined bounded primary/cleanup failure was accepted"
+    grep -Fq "exceeded the combined output limit" "$temporary/bounded-combined.diagnostic" \
+      || fail "combined bounded failure lost its primary output-overflow category"
+    grep -Fq "cleanup failed with status 9" "$temporary/bounded-combined.diagnostic" \
+      || fail "combined bounded failure lost its cleanup category"
+    bounded_combined_bytes=$(( $(wc -c <"$temporary/bounded-combined.stdout") + $(wc -c <"$temporary/bounded-combined.stderr") ))
+    ((bounded_combined_bytes <= 4096)) \
+      || fail "combined bounded failure retained output beyond its cap"
+    sleep 0.3
+    bounded_combined_later_bytes=$(( $(wc -c <"$temporary/bounded-combined.stdout") + $(wc -c <"$temporary/bounded-combined.stderr") ))
+    [[ "$bounded_combined_later_bytes" == "$bounded_combined_bytes" ]] \
+      || fail "live cleanup failure allowed bounded output to grow after return"
+    bounded_combined_leader="$(<"$temporary/bounded-combined-leader.pid")"
+    bounded_combined_token="$(remote_fixture_process_token "$bounded_combined_leader")"
+    remote_fixture_stop_bounded_subreaper_tree_actual \
+      "combined bounded failure recovery" "$bounded_combined_leader" \
+      "$bounded_combined_token" 1
+    wait "$bounded_combined_leader" 2>/dev/null || true
+    unset -f remote_fixture_stop_bounded_subreaper_tree_actual
+    rm -f -- "$temporary"/bounded-combined.stdout.bounded.*
+
+    cat >"$temporary/bounded-cancel-tree.sh" <<'SH'
+#!/usr/bin/env bash
+set -euo pipefail
+trap '' TERM
+setsid sleep 60 &
+printf '%s\n' "$!" >"$1"
+wait
+SH
+    chmod +x "$temporary/bounded-cancel-tree.sh"
+    (
+      remote_fixture_run_bounded "bounded cancellation test" 30 4096 \
+        "$temporary/bounded-cancel.stdout" "$temporary/bounded-cancel.stderr" -- \
+        "$temporary/bounded-cancel-tree.sh" "$temporary/bounded-cancel-child.pid"
+    ) &
+    bounded_cancel_owner="$!"
+    for _ in $(seq 1 100); do
+      [[ -f "$temporary/bounded-cancel-child.pid" ]] && break
+      sleep 0.02
+    done
+    [[ -f "$temporary/bounded-cancel-child.pid" ]] \
+      || fail "bounded cancellation test did not start its payload tree"
+    bounded_cancel_child="$(<"$temporary/bounded-cancel-child.pid")"
+    kill -TERM "$bounded_cancel_owner"
+    bounded_cancel_status=0
+    wait "$bounded_cancel_owner" || bounded_cancel_status=$?
+    [[ "$bounded_cancel_status" == 143 ]] \
+      || fail "bounded cancellation returned $bounded_cancel_status instead of 143"
+    sleep 0.2
+    remote_fixture_pid_active "$bounded_cancel_child" \
+      && fail "bounded cancellation propagated before reaping its nested session"
+    ;;
+esac
+
+grep -Fq -- '--env-file "$docker_env_file"' "$ROOT_DIR/scripts/lib/remote-browser-fixture-start-worker.sh" \
   || fail "Docker backend must consume secrets through an env file"
-if grep -Eq -- '--env "AUTH_(USER|PASS|SECRET)=' "$ROOT_DIR/scripts/remote-browser-fixture.sh"; then
+if grep -Eq -- '--env "AUTH_(USER|PASS|SECRET)=' "$ROOT_DIR/scripts/lib/remote-browser-fixture-start-worker.sh"; then
   fail "secret-bearing Docker argv regression"
 fi
-grep -Fq -- "serve --port '{port}' --loopback-only" "$ROOT_DIR/scripts/remote-browser-fixture.sh" \
+grep -Fq -- "serve --port '{port}' --loopback-only" "$ROOT_DIR/scripts/lib/remote-browser-fixture-start-worker.sh" \
   || fail "executable fixture must use loopback-only release serve"
-grep -Fq -- 'remote_fixture_run_bounded "password hasher"' "$ROOT_DIR/scripts/remote-browser-fixture.sh" \
+grep -Fq -- 'remote_fixture_run_bounded "password hasher"' "$ROOT_DIR/scripts/lib/remote-browser-fixture-start-worker.sh" \
   || fail "password hasher must use bounded process infra"
-grep -Fq -- 'remote_fixture_run_bounded "exact-HEAD backend init"' "$ROOT_DIR/scripts/remote-browser-fixture.sh" \
+grep -Fq -- 'remote_fixture_run_bounded "exact-HEAD backend init"' "$ROOT_DIR/scripts/lib/remote-browser-fixture-start-worker.sh" \
   || fail "backend init must use bounded process infra"
-grep -Fq -- 'tunnel --no-autoupdate --protocol http2' "$ROOT_DIR/scripts/remote-browser-fixture.sh" \
+grep -Fq -- 'tunnel --no-autoupdate --protocol http2' "$ROOT_DIR/scripts/lib/remote-browser-fixture-start-worker.sh" \
   || fail "quick tunnel must use deterministic HTTP/2 transport"
 grep -Fq -- '--max-time "$DEVE_REMOTE_FIXTURE_CLOUDFLARED_DOWNLOAD_TIMEOUT_SECONDS"' \
   "$ROOT_DIR/scripts/lib/remote-browser-fixture.sh" \
@@ -140,12 +650,12 @@ grep -Fq -- '--max-time "$DEVE_REMOTE_FIXTURE_CLOUDFLARED_DOWNLOAD_TIMEOUT_SECON
 grep -Fq -- '--max-filesize "$DEVE_REMOTE_FIXTURE_CLOUDFLARED_DOWNLOAD_LIMIT_BYTES"' \
   "$ROOT_DIR/scripts/lib/remote-browser-fixture.sh" \
   || fail "cloudflared download must have a bounded size"
-grep -Fq -- '[[ -n "$backend_pid" ]] && remote_fixture_pid_active "$backend_pid"' \
+grep -Fq -- '[[ -n "$backend_pid" ]] && remote_fixture_live_pid_matches_token "$backend_pid" "$backend_token"' \
   "$ROOT_DIR/scripts/remote-browser-fixture.sh" \
-  || fail "final backend cleanup proof must use the shared active-process classifier"
-grep -Fq -- '[[ -n "$tunnel_pid" ]] && remote_fixture_pid_active "$tunnel_pid"' \
+  || fail "final backend cleanup proof must use the token-bound active-process classifier"
+grep -Fq -- '[[ -n "$tunnel_pid" ]] && remote_fixture_live_pid_matches_token "$tunnel_pid" "$tunnel_token"' \
   "$ROOT_DIR/scripts/remote-browser-fixture.sh" \
-  || fail "final tunnel cleanup proof must use the shared active-process classifier"
+  || fail "final tunnel cleanup proof must use the token-bound active-process classifier"
 
 if [[ -r /proc/self/stat ]] && command -v python3 >/dev/null 2>&1 \
   && python3 -c 'import os, sys; sys.exit(0 if hasattr(os, "fork") else 1)'; then
@@ -236,8 +746,24 @@ printf '%s' "$(git -C "$ROOT_DIR" rev-parse HEAD)" >"$temporary/scope-head-proof
 
 usage_state="$temporary/usage-failed-start"
 mkdir -p -- "$usage_state"
+override_state="$temporary/override-rejected-start"
+mkdir -p -- "$override_state"
+override_status=0
+DEVE_REMOTE_FIXTURE_TEST_MODE=1 \
+  bash "$ROOT_DIR/scripts/remote-browser-fixture.sh" start \
+    --state-dir "$override_state" \
+    --expected-head "$(git -C "$ROOT_DIR" rev-parse HEAD)" \
+    >"$temporary/override-start.stdout" 2>"$temporary/override-start.stderr" \
+    || override_status=$?
+[[ "$override_status" != 0 ]] || fail "public start accepted an ambient test override"
+grep -Fq 'public fixture start/run rejects synthetic test overrides' \
+  "$temporary/override-start.stderr" \
+  || fail "public start did not classify the ambient test override"
+[[ ! -e "$override_state/.fixture-owner" && ! -e "$override_state/startup-state.json" ]] \
+  || fail "ambient test override reached resource admission"
+
 usage_status=0
-bash "$ROOT_DIR/scripts/remote-browser-fixture.sh" start \
+bash "$ROOT_DIR/scripts/remote-browser-fixture.sh" "$fixture_start_action" \
   --state-dir "$usage_state" \
   --expected-head "$(git -C "$ROOT_DIR" rev-parse HEAD)" \
   --external-origin "https://fixture.example.invalid" \
@@ -250,7 +776,7 @@ scope_status=0
 DEVE_REMOTE_FIXTURE_FAKE_PID_DIR="$scope_pids" \
 DEVE_REMOTE_FIXTURE_EDGE_PROPAGATION_WINDOW_SECS=1 \
 PATH="$scope_fake_bin:$PATH" \
-  bash "$ROOT_DIR/scripts/remote-browser-fixture.sh" start \
+  bash "$ROOT_DIR/scripts/remote-browser-fixture.sh" "$fixture_start_action" \
     --state-dir "$scope_state" \
     --expected-head "$(git -C "$ROOT_DIR" rev-parse HEAD)" \
     --backend-executable "$scope_fake_bin/backend" \
@@ -258,7 +784,13 @@ PATH="$scope_fake_bin:$PATH" \
     --password-hasher "$scope_fake_bin/password-hasher" \
     --cloudflared-executable "$scope_fake_bin/cloudflared" \
     >"$temporary/scope-start.stdout" 2>"$temporary/scope-start.stderr" || scope_status=$?
-[[ "$scope_status" != "0" ]] || fail "unready tunnel fixture unexpectedly started"
+if [[ "$scope_status" == "0" ]]; then
+  sed -n '1,120p' "$temporary/scope-start.stderr" >&2 || true
+  [[ ! -f "$scope_state/fixture-state.json" ]] \
+    || node -e 'const v=require(process.argv[1]);console.error(JSON.stringify({source_kind:v.source_kind,has_origin:Boolean(v.https_origin)}));' \
+      "$scope_state/fixture-state.json" >&2 || true
+  fail "unready tunnel fixture unexpectedly started"
+fi
 if [[ ! -f "$scope_pids/backend.pid" || ! -f "$scope_pids/tunnel.pid" ]]; then
   sed -n '1,80p' "$temporary/scope-start.stderr" >&2 || true
   fail "failed-start scope fixture did not launch both owned processes"
@@ -277,7 +809,7 @@ remote_fixture_pid_active "$owned_pid" && { sed -n '1,120p' "$temporary/scope-st
 remote_fixture_pid_active "$secondary_pid" && { sed -n '1,120p' "$temporary/scope-start.stderr" >&2; fail "failed-start fixture left its tunnel alive"; }
 owned_pid=""
 secondary_pid=""
-for leaked in .fixture-owner fixture-state.json fixture-env.json credentials.json .username .password .auth-secret .auth-pass .backend.env; do
+for leaked in .fixture-owner fixture-state.json startup-state.json .startup-admitted .startup-admission-decision fixture-env.json credentials.json .username .password .auth-secret .auth-pass .backend.env; do
   [[ ! -e "$scope_state/$leaked" ]] || fail "failed-start scope cleanup leaked $leaked"
 done
 
@@ -287,7 +819,7 @@ mkdir -p -- "$signal_state" "$signal_pids"
 DEVE_REMOTE_FIXTURE_FAKE_PID_DIR="$signal_pids" \
 DEVE_REMOTE_FIXTURE_EDGE_PROPAGATION_WINDOW_SECS=30 \
 PATH="$scope_fake_bin:$PATH" \
-  bash "$ROOT_DIR/scripts/remote-browser-fixture.sh" start \
+  bash "$ROOT_DIR/scripts/remote-browser-fixture.sh" "$fixture_start_action" \
     --state-dir "$signal_state" \
     --expected-head "$(git -C "$ROOT_DIR" rev-parse HEAD)" \
     --backend-executable "$scope_fake_bin/backend" \
@@ -303,10 +835,24 @@ for _ in $(seq 1 120); do
 done
 [[ -f "$signal_pids/backend.pid" && -f "$signal_pids/tunnel.pid" ]] \
   || fail "signal fixture did not launch both owned processes"
-kill -TERM "$owned_pid"
+if ! remote_fixture_pid_active "$owned_pid"; then
+  signal_status=0
+  wait "$owned_pid" || signal_status=$?
+  sed -n '1,120p' "$temporary/signal-start.stderr" >&2 || true
+  fail "signal fixture supervisor exited before TERM with status $signal_status"
+fi
+if ! kill -TERM "$owned_pid"; then
+  signal_status=0
+  wait "$owned_pid" || signal_status=$?
+  sed -n '1,120p' "$temporary/signal-start.stderr" >&2 || true
+  fail "signal fixture supervisor raced TERM with status $signal_status"
+fi
 signal_status=0
 wait "$owned_pid" || signal_status=$?
-[[ "$signal_status" == "143" ]] || fail "parent-only TERM returned $signal_status instead of 143"
+if [[ "$signal_status" != "143" ]]; then
+  sed -n '1,120p' "$temporary/signal-start.stderr" >&2 || true
+  fail "parent-only TERM returned $signal_status instead of 143"
+fi
 owned_pid=""
 signal_backend_pid="$(<"$signal_pids/backend.pid")"
 signal_tunnel_pid="$(<"$signal_pids/tunnel.pid")"
@@ -315,8 +861,54 @@ remote_fixture_pid_active "$signal_tunnel_pid" && { sed -n '1,120p' "$temporary/
 if grep -Fq 'unbound variable' "$temporary/signal-start.stderr"; then
   fail "parent-only TERM unwound ownership scope before cleanup"
 fi
-for leaked in .fixture-owner fixture-state.json fixture-env.json credentials.json .username .password .auth-secret .auth-pass .backend.env; do
+for leaked in .fixture-owner fixture-state.json startup-state.json .startup-admitted .startup-admission-decision fixture-env.json credentials.json .username .password .auth-secret .auth-pass .backend.env; do
   [[ ! -e "$signal_state/$leaked" ]] || fail "parent-only TERM cleanup leaked $leaked"
+done
+
+# TERM during the spawn-to-journal handoff is deferred until the child PID and
+# stable token are durable. Both backend and tunnel windows must then cleanly
+# consume the pending signal without orphaning the just-created resource.
+for handoff_phase in backend backend-finish tunnel tunnel-finish; do
+  handoff_state="$temporary/${handoff_phase}-handoff-state"
+  handoff_pids="$temporary/${handoff_phase}-handoff-pids"
+  mkdir -p -- "$handoff_state" "$handoff_pids"
+  handoff_status=0
+  DEVE_REMOTE_FIXTURE_TEST_MODE=1 \
+  DEVE_REMOTE_FIXTURE_TEST_RESOURCE_HANDOFF_SIGNAL="$handoff_phase" \
+  DEVE_REMOTE_FIXTURE_FAKE_PID_DIR="$handoff_pids" \
+  DEVE_REMOTE_FIXTURE_EDGE_PROPAGATION_WINDOW_SECS=30 \
+  PATH="$scope_fake_bin:$PATH" \
+    bash "$ROOT_DIR/scripts/remote-browser-fixture.sh" __test-start \
+      --state-dir "$handoff_state" \
+      --expected-head "$(git -C "$ROOT_DIR" rev-parse HEAD)" \
+      --backend-executable "$scope_fake_bin/backend" \
+      --backend-head-file "$temporary/scope-head-proof" \
+      --password-hasher "$scope_fake_bin/password-hasher" \
+      --cloudflared-executable "$scope_fake_bin/cloudflared" \
+      >"$temporary/${handoff_phase}-handoff.stdout" \
+      2>"$temporary/${handoff_phase}-handoff.stderr" || handoff_status=$?
+  [[ "$handoff_status" == 143 ]] || {
+    sed -n '1,120p' "$temporary/${handoff_phase}-handoff.stderr" >&2 || true
+    fail "$handoff_phase spawn handoff returned $handoff_status instead of 143"
+  }
+  [[ -f "$handoff_pids/backend.pid" ]] \
+    || fail "$handoff_phase spawn handoff did not create its backend child"
+  handoff_backend_pid="$(<"$handoff_pids/backend.pid")"
+  remote_fixture_pid_active "$handoff_backend_pid" \
+    && fail "$handoff_phase spawn handoff left its backend alive"
+  if [[ "$handoff_phase" == tunnel || "$handoff_phase" == tunnel-finish ]]; then
+    [[ -f "$handoff_pids/tunnel.pid" ]] \
+      || fail "tunnel spawn handoff did not create its tunnel child"
+    handoff_tunnel_pid="$(<"$handoff_pids/tunnel.pid")"
+    remote_fixture_pid_active "$handoff_tunnel_pid" \
+      && fail "tunnel spawn handoff left its tunnel alive"
+  fi
+  for leaked in .fixture-owner fixture-state.json startup-state.json .startup-admitted \
+    .startup-admission-decision \
+    fixture-env.json credentials.json .username .password .auth-secret .auth-pass .backend.env; do
+    [[ ! -e "$handoff_state/$leaked" ]] \
+      || fail "$handoff_phase spawn handoff cleanup leaked $leaked"
+  done
 done
 
 cleanup_failure_bin="$temporary/cleanup-failure-bin"
@@ -337,7 +929,7 @@ DEVE_REMOTE_FIXTURE_REAL_RM="$(command -v rm)" \
 DEVE_REMOTE_FIXTURE_FAKE_PID_DIR="$cleanup_failure_pids" \
 DEVE_REMOTE_FIXTURE_EDGE_PROPAGATION_WINDOW_SECS=1 \
 PATH="$cleanup_failure_bin:$scope_fake_bin:$PATH" \
-  "$ROOT_DIR/scripts/remote-browser-fixture.sh" start \
+  "$ROOT_DIR/scripts/remote-browser-fixture.sh" "$fixture_start_action" \
     --state-dir "$cleanup_failure_state" \
     --expected-head "$(git -C "$ROOT_DIR" rev-parse HEAD)" \
     --backend-executable "$scope_fake_bin/backend" \
@@ -366,13 +958,13 @@ printf '%s' "$(git -C "$ROOT_DIR" rev-parse HEAD)" >"$temporary/head-proof"
 printf '#!/usr/bin/env bash\nexit 1\n' >"$temporary/fail-hasher"
 printf '#!/usr/bin/env bash\nexit 0\n' >"$temporary/fake-backend"
 chmod +x "$temporary/fail-hasher" "$temporary/fake-backend"
-assert_fails "$ROOT_DIR/scripts/remote-browser-fixture.sh" start \
+assert_fails "$ROOT_DIR/scripts/remote-browser-fixture.sh" "$fixture_start_action" \
   --state-dir "$failure_state" \
   --expected-head "$(git -C "$ROOT_DIR" rev-parse HEAD)" \
   --backend-executable "$temporary/fake-backend" \
   --backend-head-file "$temporary/head-proof" \
   --password-hasher "$temporary/fail-hasher"
-for leaked in .fixture-owner fixture-state.json fixture-env.json credentials.json .username .password .auth-secret .auth-pass .backend.env; do
+for leaked in .fixture-owner fixture-state.json startup-state.json fixture-env.json credentials.json .username .password .auth-secret .auth-pass .backend.env; do
   [[ ! -e "$failure_state/$leaked" ]] || fail "failed start leaked $leaked"
 done
 

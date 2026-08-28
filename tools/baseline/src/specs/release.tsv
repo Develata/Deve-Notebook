@@ -256,9 +256,223 @@ contains	.github/workflows/native-target-host.yml	scripts/remote-browser-fixture
 contains	.github/workflows/native-target-host.yml	powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/webview2-cdp.test.ps1
 contains	.github/workflows/native-target-host.yml	pwsh -NoProfile -File scripts/webview2-cdp.test.ps1
 contains	.github/workflows/native-target-host.yml	scripts/remote-browser-fixture.test.sh
-contains	scripts/remote-browser-fixture.sh	serve --port '{port}' --loopback-only
-contains	scripts/remote-browser-fixture.sh	[[ -n "$backend_pid" ]] && remote_fixture_pid_active "$backend_pid"
-contains	scripts/remote-browser-fixture.test.sh	final backend cleanup proof must use the shared active-process classifier
+contains	scripts/lib/remote-browser-fixture-start-worker.sh	serve --port '{port}' --loopback-only
+contains	scripts/remote-browser-fixture.sh	[[ -n "$backend_pid" ]] && remote_fixture_live_pid_matches_token "$backend_pid" "$backend_token"
+contains	scripts/remote-browser-fixture.test.sh	final backend cleanup proof must use the token-bound active-process classifier
+contains	docs/plan/18_release.md	Bash 5.1+ retained child event
+contains	docs/features/15_release.md	token-bound 的有界状态机
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_signal_wait_reaps_worker_before_returning_cancel true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_signal_handoff_has_continuous_rollback_owner true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_worker_requires_bidirectional_token_admission true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_readiness_revalidates_direct_parent_and_supervisor_process_token true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_prepublished_admission_revalidates_parent_identity_before_and_after_consumption true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_production_worker_requires_isolated_verified_process_group true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_group_binding_failure_never_downgrades_to_ungrouped_recovery true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_bounded_payload_waits_for_token_bound_group_admission true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_bounded_subreaper_retains_live_group_leader_until_explicit_release true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_bounded_payload_background_descendants_are_reaped_before_return true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_bounded_cancel_reaps_nested_session_before_signal_propagation true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_output_cap_precedes_cleanup_failure_reporting true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_output_overflow_preserves_primary_and_cleanup_failures true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_kernel_output_budget_prevents_growth_after_live_cleanup_failure true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_live_cleanup_failure_preserves_leader_and_private_recovery_controls true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_subreaper_tracks_payload_nested_sessions true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_subreaper_cleanup_is_descendant_first_and_root_last true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_subreaper_self_cleanup_recovers_shell_cleanup_failure true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_subreaper_parent_death_cleanup_is_fail_closed true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_subreaper_rejects_reparenting_before_pdeathsig_binding true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_subreaper_parent_snapshot_is_token_bracketed true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_root_last_exit_is_not_token_mismatch true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_subreaper_incomplete_snapshot_cannot_authorize_empty true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_linux_process_token_handles_spaced_comm true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_proc_stat_disappearance_is_nonfatal_observation true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_preadmission_pgid_probe_failure_preserves_controls true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_signal_wait_uses_no_long_lived_wake_sentinel true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_signal_wait_uses_retained_bounded_observation_tick true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_observation_tick_reap_never_signals_consumed_pid true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_observation_tick_reap_failure_is_fail_closed true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_signal_trap_latches_raw_time_without_arithmetic_expansion true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_trap_cleanup_reuses_cached_platform_identity true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_public_start_rejects_ambient_test_overrides true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_macos_requires_verified_native_process_token_adapter true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_retained_group_requires_prebound_pid_token_pgid_capability true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_group_cleanup_rechecks_empty_pgid_after_dynamic_fork true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_root_reap_does_not_authorize_group_recovery true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_cancel_wins_coalesced_readiness_before_admission true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_cancel_inside_admission_atomically_prevents_marker true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_admission_publisher_is_retained_child true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_admission_publisher_exact_status_uses_no_job_table_poll true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_admission_publisher_is_token_bound_and_deadline_bounded true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_formal_admission_publisher_retires_group_capability true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_cancel_reaps_stuck_admission_publisher_tree true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_admission_publisher_deadline_precedes_spawn_and_identity_probes true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_admission_publisher_deadline_uses_shared_atomic_decision true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_admission_status_rechecks_independent_deadline_marker true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_admission_publisher_decision_without_status_still_times_out true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_consumed_admission_deadline_pid_is_never_signalled true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_subreaper_does_not_fork_publisher_before_parent_capability_admission true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_pretoken_root_exit_requires_empty_former_process_group true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_admission_publisher_preadmission_exit_fails_after_empty_group_proof true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_admission_publisher_cleanup_failure_never_returns_normally true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_admission_publisher_parent_death_self_cleanup_reaps_nested_descendants true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_admission_publisher_status_keeps_subreaper_live_until_root_last_reap true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_parent_token_probe_preserves_latched_signal_status true
+contains	docs/acceptance-cases/12_tech_release.md	candidate_bounded_fixture_producers_are_linux_tool_complete true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_spawn_identity_handoff_defers_cancel true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_int_to_term_upgrade_is_state_machine_ordered true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_formal_worker_resets_async_int_before_bash_entry true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_live_pid_probe_failure_never_enters_exact_wait true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_live_timer_probe_failure_never_enters_exact_wait true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_shell_tree_snapshot_binds_relation_and_token_atomically true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_status_acceptance_rechecks_deadline_marker true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_readiness_is_single_edge_and_cancel_fair true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_cancel_deadline_recovers_atomic_startup_ownership true
+contains	docs/acceptance-cases/12_tech_release.md	unix_remote_fixture_worker_pid_token_mismatch_fails_closed true
+contains	scripts/lib/remote-browser-fixture-start-process.sh	remote_fixture_start_worker_active
+contains	scripts/lib/remote-browser-fixture-start-process.sh	remote_fixture_spawn_start_worker
+contains	scripts/lib/remote-browser-fixture-start-process.sh	setsid python3 "$REMOTE_FIXTURE_SIGNAL_EXEC"
+absent	scripts/lib/remote-browser-fixture-start-process.sh	setsid bash "$entry_script" __start-worker
+contains	scripts/lib/remote-browser-fixture-signal-exec.py	signal.signal(signal.SIGINT, signal.SIG_DFL)
+contains	docs/registry/acceptance-producers.json	"scripts/lib/remote-browser-fixture-signal-exec.py"
+contains	docs/registry/acceptance-producers.json	"scripts/lib/remote-browser-fixture-start-process.sh"
+contains	scripts/lib/remote-browser-fixture-start-process.sh	macOS Unix fixture startup is unavailable until a stable native process-token adapter is verified
+contains	scripts/lib/remote-browser-fixture-process-table.sh	remote_fixture_assert_isolated_process_group
+contains	scripts/lib/remote-browser-fixture-process-table.sh	remote_fixture_tokenized_process_table
+contains	scripts/lib/remote-browser-fixture-process-table.sh	remote_fixture_tokenized_descendants_deepest
+contains	scripts/lib/remote-browser-fixture-process-table.sh	remote_fixture_tokenized_process_group_members
+contains	scripts/lib/remote-browser-fixture-process-table.sh	local supervisor_pid="$BASHPID"
+contains	scripts/lib/remote-browser-fixture-process-tree.sh	remote_fixture_bind_isolated_process_group
+contains	scripts/lib/remote-browser-fixture-process-tree.sh	remote_fixture_owned_process_group_status
+contains	scripts/lib/remote-browser-fixture-process-tree.sh	without a live leader or pinned kernel handle
+absent	scripts/lib/remote-browser-fixture-process-tree.sh	local -A
+absent	scripts/lib/remote-browser-fixture-start-supervisor.sh	remote_fixture_job_active "$worker_pid"
+contains	scripts/lib/remote-browser-fixture-start-supervisor.sh	remote_fixture_arm_outer_start_lifecycle "$state_dir"
+contains	scripts/lib/remote-browser-fixture-start-signals.sh	remote_fixture_latch_start_cancel
+contains	scripts/lib/remote-browser-fixture-start-signals.sh	cancel_started_realtime="$EPOCHREALTIME"
+contains	scripts/lib/remote-browser-fixture-start-signals.sh	wait -n -p completed_pid
+contains	scripts/lib/remote-browser-fixture-start-signals.sh	remote_fixture_supervisor_observation_delay
+contains	scripts/lib/remote-browser-fixture-start-signals.sh	remote_fixture_reap_observation_tick "$observation_pid"
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	publisher exact-status path used a job-table poll
+absent	scripts/lib/remote-browser-fixture-start-publisher.sh	remote_fixture_job_active "$publisher_pid"
+contains	scripts/lib/remote-browser-fixture-start-publisher.sh	remote_fixture_stop_admission_publisher
+contains	scripts/remote-browser-fixture.sh	__admit-startup)
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	formal stuck cancelled publisher returned
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	formal deadline publisher descendant
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	late publisher won admission after the atomic deadline
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	decision-only publisher returned
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	publisher token failure returned
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	parent-death publisher descendant
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	status-settled publisher descendant
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	pre-admission exited publisher returned
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	absent root with missing token evidence was classified as token mismatch
+absent	scripts/lib/remote-browser-fixture-start-signals.sh	wake_sentinel_pid
+absent	scripts/lib/remote-browser-fixture-start-publisher.sh	wake_sentinel_pid
+contains	scripts/lib/remote-browser-fixture-start-publisher.sh	set -o noclobber; : >"$decision_path"
+contains	scripts/lib/remote-browser-fixture-start-publisher.sh	REMOTE_FIXTURE_START_ADMISSION_OWNER_PID="$BASHPID"
+contains	scripts/lib/remote-browser-fixture-start-publisher.sh	The fixed deadline includes spawn plus every identity/group admission probe.
+contains	scripts/lib/remote-browser-fixture-start-publisher.sh	remote_fixture_start_admission_publisher_timer
+contains	scripts/lib/remote-browser-fixture-admission-deadline.py	os.O_EXCL
+contains	scripts/lib/remote-browser-fixture-admission-deadline.py	time.sleep(delay)
+contains	scripts/lib/remote-browser-fixture-admission-deadline.py	create_empty_capability(sys.argv[3])
+contains	scripts/lib/remote-browser-fixture-admission-deadline.py	PR_SET_PDEATHSIG
+contains	scripts/lib/remote-browser-fixture-admission-deadline.py	bind_parent_death(expected_parent)
+contains	scripts/lib/remote-browser-fixture-start-publisher.sh	post_status_deadline_probe
+contains	scripts/lib/remote-browser-fixture-start-signals.sh	remote_fixture_admission_deadline_status
+contains	scripts/lib/remote-browser-fixture-start-publisher.sh	DEVE_REMOTE_FIXTURE_SUBREAPER_ADMISSION_PATH=
+contains	scripts/lib/remote-browser-fixture-start-publisher.sh	cannot retire a pretoken publisher without an empty former process group
+contains	scripts/lib/remote-browser-fixture-start-publisher.sh	remote_fixture_abort_admission_publisher_lifecycle
+contains	scripts/lib/remote-browser-fixture-start-publisher.sh	setsid python3 "$REMOTE_FIXTURE_BOUNDED_SUBREAPER"
+contains	scripts/lib/remote-browser-fixture-startup-state.sh	REMOTE_FIXTURE_ADMISSION_DECISION_FILE
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	cancellation inside admission published a worker-visible marker
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	early parent-token $early_signal returned
+contains	scripts/lib/remote-browser-fixture-start-signals.sh	A >128 wait is never a completion proof
+contains	scripts/remote-browser-fixture.sh	Bash 5.1+ is required
+contains	scripts/lib/remote-browser-fixture-startup-state.sh	remote_fixture_validate_startup_state
+contains	scripts/lib/remote-browser-fixture-startup-state.sh	remote_fixture_recover_startup_state
+contains	scripts/lib/remote-browser-fixture-startup-state.sh	remote_fixture_admit_startup_state
+contains	scripts/lib/remote-browser-fixture-startup-state.sh	remote_fixture_wait_startup_admission
+contains	scripts/lib/remote-browser-fixture-startup-state.sh	local attempt observed actual_parent_token readiness_notified=0
+contains	scripts/lib/remote-browser-fixture-start-publisher.sh	remote_fixture_retire_consumed_admission_timer_identity
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	consumed admission deadline ownership was not retired atomically
+contains	scripts/lib/remote-browser-fixture-startup-state.sh	startup supervisor process token changed before ownership admission
+contains	scripts/lib/remote-browser-fixture-startup-state.sh	startup supervisor identity changed while consuming ownership admission
+contains	scripts/lib/remote-browser-fixture-bounded.sh	bounded-process admission
+contains	scripts/lib/remote-browser-fixture-bounded.sh	remote_fixture_limit_output_files "$output_limit_bytes" "$stdout_path" "$stderr_path"
+contains	scripts/lib/remote-browser-fixture-bounded.sh	retained descendants after payload exit
+contains	scripts/lib/remote-browser-fixture-bounded.sh	was cancelled by signal status
+contains	scripts/lib/remote-browser-fixture-bounded-control.sh	cleanup failed with status
+contains	scripts/lib/remote-browser-fixture-bounded-control.sh	remote_fixture_abort_unadmitted_subreaper
+contains	scripts/lib/remote-browser-fixture-bounded-control.sh	left a retained pre-admission process group
+contains	scripts/lib/remote-browser-fixture-bounded-control.sh	pre-admission process-group probe failed
+contains	scripts/remote-browser-fixture.test.sh	preadmission cleanup accepted a failed process-group probe
+contains	scripts/lib/remote-browser-fixture-bounded.sh	ulimit -f "$output_file_blocks"
+contains	scripts/lib/remote-browser-fixture-bounded.sh	remote_fixture_capture_bounded_payload_descendants
+contains	scripts/lib/remote-browser-fixture-bounded.sh	preserved live bounded leader and private recovery controls after cleanup failure
+contains	scripts/lib/remote-browser-fixture-subreaper.py	PR_SET_CHILD_SUBREAPER = 36
+contains	scripts/lib/remote-browser-fixture-subreaper.py	PR_SET_PDEATHSIG = 1
+contains	scripts/lib/remote-browser-fixture-subreaper.py	expected_parent_pid
+contains	scripts/lib/remote-browser-fixture-subreaper.py	process_token(descendant_pid) != expected_token
+contains	scripts/lib/remote-browser-fixture-subreaper.py	def observed_process_identity
+contains	scripts/lib/remote-browser-fixture-subreaper.py	if not descendants and scan_complete
+contains	scripts/lib/remote-browser-fixture-subreaper.py	wait_for_parent_admission()
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	formal-post-deadline-publisher
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	formal-pretoken-fork-subreaper.py
+contains	scripts/remote-browser-fixture.test.sh	subreaper ancestry/token bracket or incomplete-scan gate failed closed
+contains	scripts/remote-browser-fixture.test.sh	subreaper forked a launcher after expected-parent mismatch
+contains	scripts/lib/remote-browser-fixture.sh	process_tail="${process_stat##*) }"
+contains	scripts/lib/remote-browser-fixture.sh	if ! IFS= read -r -d '' process_stat 2>/dev/null <"/proc/$pid/stat"; then
+contains	scripts/lib/remote-browser-fixture.sh	REMOTE_FIXTURE_PLATFORM="$(uname -s)"
+absent	scripts/lib/remote-browser-fixture.sh	case "$(uname -s)" in
+absent	scripts/lib/remote-browser-fixture-start-supervisor.sh	$(uname -s)
+contains	scripts/lib/remote-browser-fixture-process-tree.sh	remote_fixture_pid_active "$pid" && return 2
+contains	scripts/remote-browser-fixture.test.sh	Linux process token was shifted by a spaced comm
+contains	scripts/lib/remote-browser-fixture-subreaper-tree.sh	remote_fixture_stop_bounded_subreaper_tree
+contains	scripts/lib/remote-browser-fixture-subreaper-tree.sh	remote_fixture_request_subreaper_self_cleanup
+contains	scripts/lib/remote-browser-fixture-subreaper-tree.sh	post-subreaper proof
+contains	scripts/lib/remote-browser-fixture-start-worker.sh	remote_fixture_initialize_startup_state "$state_dir" "$fixture_id"
+contains	scripts/lib/remote-browser-fixture-start-worker.sh	begin_resource_identity_handoff
+contains	scripts/lib/remote-browser-fixture-start-worker.sh	finish_resource_identity_handoff
+contains	scripts/remote-browser-fixture.sh	reject_public_test_overrides
+contains	scripts/remote-browser-fixture.test.sh	dynamic process-group descendant escaped final KILL
+contains	scripts/remote-browser-fixture.test.sh	unbound retained process group was accepted
+contains	scripts/remote-browser-fixture.test.sh	unbound empty process group authorized cleanup
+contains	scripts/remote-browser-fixture.test.sh	bounded payload ran before process-token admission
+contains	scripts/remote-browser-fixture.test.sh	bounded payload returned while its background child remained alive
+contains	scripts/remote-browser-fixture.test.sh	bounded subreaper crash path left a nested session alive
+contains	scripts/remote-browser-fixture.test.sh	bounded self-cleanup fallback left its nested session alive
+contains	scripts/remote-browser-fixture.test.sh	bounded parent-death cleanup left its nested session alive
+contains	scripts/remote-browser-fixture.test.sh	combined bounded failure lost its primary output-overflow category
+contains	scripts/remote-browser-fixture.test.sh	bounded cancellation propagated before reaping its nested session
+contains	scripts/remote-browser-fixture.test.sh	live cleanup failure allowed bounded output to grow after return
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	cooperative retained group was signalled after leader exit
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	failed group isolation was downgraded to successful ungrouped cleanup
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	failed group binding was downgraded to successful ungrouped cleanup
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	pre-wait cancellation exceeded its hard deadline
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	pre-outer handoff left retained supervisor event children
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	post-hard-check cancellation lost its repeated wake
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	pre-wait cancellation waited for its grace timer
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	wait-entry cancellation lost its retained deadline event
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	wait-check cancellation waited for its grace timer
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	ambient caller child corrupted exact supervisor waiting
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	for iteration in $(seq 1 25)
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	startup admission accepted a non-parent supervisor PID
+contains	scripts/remote-browser-fixture-start-supervisor.test.sh	prepublished admission bypassed final supervisor identity validation
+contains	docs/registry/acceptance-producers.json	"scripts/remote-browser-fixture.test.sh"
+contains	docs/registry/acceptance-producers.json	"scripts/remote-browser-fixture-start-supervisor.test.sh"
+contains	docs/registry/acceptance-producers.json	"scripts/lib/remote-browser-fixture-process-tree.sh"
+contains	docs/registry/acceptance-producers.json	"scripts/lib/remote-browser-fixture-process-table.sh"
+contains	docs/registry/acceptance-producers.json	"scripts/lib/remote-browser-fixture-bounded.sh"
+contains	docs/registry/acceptance-producers.json	"scripts/lib/remote-browser-fixture-bounded-control.sh"
+contains	docs/registry/acceptance-producers.json	"scripts/lib/remote-browser-fixture-subreaper.py"
+contains	docs/registry/acceptance-producers.json	"scripts/lib/remote-browser-fixture-subreaper-tree.sh"
+contains	tools/baseline/src/acceptance_matrix/producer/registry/producer_validation/tool_contract.rs	bounded Unix fixture requires required_tools
+contains	tools/baseline/src/acceptance_matrix/producer/registry/tests.rs	bounded_unix_fixture_metadata_is_linux_and_tool_complete
+contains	docs/registry/acceptance-producers.json	"scripts/lib/remote-browser-fixture-start-worker.sh"
+contains	docs/registry/acceptance-producers.json	"scripts/lib/remote-browser-fixture-start-signals.sh"
+contains	docs/registry/acceptance-producers.json	"scripts/lib/remote-browser-fixture-start-publisher.sh"
+contains	docs/registry/acceptance-producers.json	"scripts/lib/remote-browser-fixture-admission-deadline.py"
+contains	tools/baseline/src/acceptance_matrix/producer/registry.rs	validate_no_internal_fixture_test_commands
+contains	tools/baseline/src/acceptance_matrix/producer/registry/producer_validation.rs	may not invoke the internal fixture test command
 contains	scripts/remote-browser-fixture.ps1	"--loopback-only"
 absent	scripts/remote-browser-fixture.ps1	DEVE_PLUGIN_DIR
 absent	scripts/remote-browser-fixture.sh	DEVE_PLUGIN_DIR

@@ -10,6 +10,12 @@ readonly DEVE_REMOTE_FIXTURE_CLOUDFLARED_WINDOWS_AMD64_SHA256="cdb5d4432f6ae1595
 readonly DEVE_REMOTE_FIXTURE_CLOUDFLARED_DOWNLOAD_TIMEOUT_SECONDS="180"
 readonly DEVE_REMOTE_FIXTURE_CLOUDFLARED_DOWNLOAD_LIMIT_BYTES="134217728"
 
+REMOTE_FIXTURE_PLATFORM="$(uname -s)" || {
+  printf 'remote-browser-fixture: failed to read host platform identity\n' >&2
+  return 1
+}
+readonly REMOTE_FIXTURE_PLATFORM
+
 remote_fixture_fail() {
   printf 'remote-browser-fixture: %s\n' "$*" >&2
   return 1
@@ -87,9 +93,25 @@ remote_fixture_find_free_port() {
   node -e 'const n=require("net");const s=n.createServer();s.listen(0,"127.0.0.1",()=>{process.stdout.write(String(s.address().port));s.close();});'
 }
 
+REMOTE_FIXTURE_LINUX_PROCESS_STAT=""
+remote_fixture_read_linux_process_stat() {
+  local pid="$1"
+  local process_stat=""
+  REMOTE_FIXTURE_LINUX_PROCESS_STAT=""
+  [[ -r "/proc/$pid/stat" ]] || return 1
+  # read -d '' consumes the complete proc record, including a legal newline in
+  # comm. EOF is expected; an empty value means the PID disappeared before the
+  # guarded open/read completed.
+  if ! IFS= read -r -d '' process_stat 2>/dev/null <"/proc/$pid/stat"; then
+    [[ -n "$process_stat" ]] || return 1
+  fi
+  REMOTE_FIXTURE_LINUX_PROCESS_STAT="$process_stat"
+}
+
 remote_fixture_process_token() {
   local pid="$1"
-  if [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* || "$(uname -s)" == CYGWIN* ]]; then
+  if [[ "$REMOTE_FIXTURE_PLATFORM" == MINGW* || "$REMOTE_FIXTURE_PLATFORM" == MSYS* \
+    || "$REMOTE_FIXTURE_PLATFORM" == CYGWIN* ]]; then
     # MSYS synthesizes /proc start ticks from Windows data and the value can
     # drift for a live process. Bind the stable native PID, start time, and
     # executable path exposed by ps -W instead.
@@ -100,22 +122,81 @@ remote_fixture_process_token() {
     printf '%s\n' "$token"
     return 0
   fi
-  [[ -r "/proc/$pid/stat" ]] || return 1
-  awk '{print $22}' "/proc/$pid/stat"
+  local process_stat process_tail
+  local -a process_fields
+  remote_fixture_read_linux_process_stat "$pid" || return 1
+  process_stat="$REMOTE_FIXTURE_LINUX_PROCESS_STAT"
+  # comm is parenthesized and may legally contain whitespace or ')'. Fields
+  # after the final ") " have stable positions: state is field 3 and
+  # starttime is field 22, hence index 19 in this tail array.
+  process_tail="${process_stat##*) }"
+  read -r -a process_fields <<<"$process_tail"
+  [[ "${process_fields[0]:-}" =~ ^[A-Za-z]$ ]] || return 1
+  [[ "${process_fields[19]:-}" =~ ^[0-9]+$ ]] || return 1
+  printf '%s\n' "${process_fields[19]}"
+}
+
+remote_fixture_live_pid_matches_token() {
+  local pid="$1"
+  local token="$2"
+  remote_fixture_pid_active "$pid" || return 1
+  local actual_token
+  actual_token="$(remote_fixture_process_token "$pid" 2>/dev/null || true)"
+  [[ -n "$actual_token" && "$actual_token" == "$token" ]]
+}
+
+remote_fixture_wait_stable_process_token() {
+  local label="$1"
+  local pid="$2"
+  local previous=""
+  local current=""
+  local attempt
+  for attempt in $(seq 1 100); do
+    current="$(remote_fixture_process_token "$pid" 2>/dev/null || true)"
+    if [[ -n "$current" && "$current" == "$previous" ]]; then
+      printf '%s\n' "$current"
+      return 0
+    fi
+    previous="$current"
+    if ! remote_fixture_pid_active "$pid" && ! remote_fixture_job_active "$pid"; then
+      remote_fixture_fail "$label exited before its process identity stabilized"
+      return 1
+    fi
+    sleep 0.01
+  done
+  remote_fixture_fail "$label process identity did not stabilize before deadline"
+  return 1
+}
+
+remote_fixture_pid_exists() {
+  kill -0 "$1" 2>/dev/null
 }
 
 remote_fixture_pid_active() {
   local pid="$1"
-  kill -0 "$pid" 2>/dev/null || return 1
-  case "$(uname -s)" in
+  remote_fixture_pid_exists "$pid" || return 1
+  case "$REMOTE_FIXTURE_PLATFORM" in
     MINGW*|MSYS*|CYGWIN*) return 0 ;;
     *)
-      local state
-      state="$(awk '{print $3}' "/proc/$pid/stat" 2>/dev/null)" || return 1
-      [[ "$state" != "Z" ]] || return 1
+      local state process_stat process_tail
+      remote_fixture_read_linux_process_stat "$pid" || return 1
+      process_stat="$REMOTE_FIXTURE_LINUX_PROCESS_STAT"
+      process_tail="${process_stat##*) }"
+      state="${process_tail%% *}"
+      [[ "$state" != "Z" && "$state" != "X" ]] || return 1
       ;;
   esac
   return 0
+}
+
+remote_fixture_pid_terminal() {
+  local pid="$1"
+  local process_stat process_tail state
+  remote_fixture_read_linux_process_stat "$pid" || return 1
+  process_stat="$REMOTE_FIXTURE_LINUX_PROCESS_STAT"
+  process_tail="${process_stat##*) }"
+  state="${process_tail%% *}"
+  [[ "$state" == Z || "$state" == X ]]
 }
 
 remote_fixture_job_active() {
@@ -141,202 +222,51 @@ remote_fixture_stop_pid() {
     return 1
   fi
 
+  actual_token="$(remote_fixture_process_token "$pid" 2>/dev/null || true)"
+  if [[ -z "$actual_token" ]]; then
+    remote_fixture_fail "refusing to signal $label PID $pid without a live token proof"
+    return 1
+  fi
+  [[ "$actual_token" == "$expected_token" ]] || return 0
   kill -TERM "$pid" 2>/dev/null || true
   local attempt
   for attempt in $(seq 1 50); do
     remote_fixture_pid_active "$pid" || return 0
+    actual_token="$(remote_fixture_process_token "$pid" 2>/dev/null || true)"
+    if [[ -z "$actual_token" ]]; then
+      remote_fixture_fail "lost $label process token proof during bounded cleanup"
+      return 1
+    fi
+    [[ "$actual_token" == "$expected_token" ]] || return 0
     sleep 0.1
   done
+  actual_token="$(remote_fixture_process_token "$pid" 2>/dev/null || true)"
+  if [[ -z "$actual_token" ]]; then
+    remote_fixture_fail "refusing to force-stop $label PID $pid without a live token proof"
+    return 1
+  fi
+  [[ "$actual_token" == "$expected_token" ]] || return 0
   kill -KILL "$pid" 2>/dev/null || true
   for attempt in $(seq 1 20); do
     remote_fixture_pid_active "$pid" || return 0
+    actual_token="$(remote_fixture_process_token "$pid" 2>/dev/null || true)"
+    if [[ -z "$actual_token" ]]; then
+      remote_fixture_fail "lost $label process token proof after force-stop"
+      return 1
+    fi
+    [[ "$actual_token" == "$expected_token" ]] || return 0
     sleep 0.1
   done
   remote_fixture_fail "$label PID $pid survived bounded cleanup"
 }
 
-remote_fixture_stop_bounded_tree() {
-  local label="$1"
-  local pid="$2"
-  local process_group="$3"
-  remote_fixture_pid_active "$pid" || return 0
+REMOTE_FIXTURE_PROCESS_TREE_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)/remote-browser-fixture-process-tree.sh"
+# shellcheck source=scripts/lib/remote-browser-fixture-process-tree.sh
+source "$REMOTE_FIXTURE_PROCESS_TREE_LIB"
 
-  if [[ "$process_group" == "1" ]]; then
-    kill -TERM -- "-$pid" 2>/dev/null || true
-  elif [[ "$(uname -s)" == MINGW* || "$(uname -s)" == MSYS* || "$(uname -s)" == CYGWIN* ]]; then
-    local child winpid
-    # Windows does not expose MSYS fork children through the native parent
-    # relation used by taskkill /T. Enumerate the MSYS PPID tree explicitly,
-    # deepest first, and terminate each native process identity.
-    while read -r child; do
-      [[ -n "$child" ]] || continue
-      winpid="$(ps -W 2>/dev/null | awk -v pid="$child" 'NR > 1 && $1 == pid { print $4; exit }')"
-      [[ -z "$winpid" ]] || taskkill.exe //PID "$winpid" //T //F >/dev/null 2>&1 || true
-    done < <(remote_fixture_msys_descendants "$pid")
-    winpid="$(ps -W 2>/dev/null | awk -v pid="$pid" 'NR > 1 && $1 == pid { print $4; exit }')"
-    if [[ -n "$winpid" ]] && command -v taskkill.exe >/dev/null 2>&1; then
-      taskkill.exe //PID "$winpid" //T //F >/dev/null 2>&1 || true
-    else
-      kill -TERM "$pid" 2>/dev/null || true
-    fi
-  else
-    # This fallback is only for hosts without setsid. Kill known descendants
-    # before their parent so they cannot be orphaned by our own timeout path.
-    if command -v pgrep >/dev/null 2>&1; then
-      local child
-      while read -r child; do
-        [[ -n "$child" ]] || continue
-        remote_fixture_stop_bounded_tree "$label child" "$child" 0 || true
-      done < <(pgrep -P "$pid" 2>/dev/null || true)
-    fi
-    kill -TERM "$pid" 2>/dev/null || true
-  fi
-
-  local attempt
-  for attempt in $(seq 1 30); do
-    remote_fixture_pid_active "$pid" || return 0
-    sleep 0.1
-  done
-  if [[ "$process_group" == "1" ]]; then
-    kill -KILL -- "-$pid" 2>/dev/null || true
-  else
-    kill -KILL "$pid" 2>/dev/null || true
-  fi
-  for attempt in $(seq 1 20); do
-    remote_fixture_pid_active "$pid" || return 0
-    sleep 0.1
-  done
-  remote_fixture_fail "$label process tree survived bounded termination"
-}
-
-remote_fixture_stop_owned_job() {
-  local label="$1"
-  local pid="$2"
-  local expected_token="${3:-}"
-  [[ "$pid" =~ ^[0-9]+$ ]] || return 0
-
-  if ! remote_fixture_job_active "$pid"; then
-    if ! remote_fixture_pid_active "$pid"; then
-      wait "$pid" 2>/dev/null || true
-      return 0
-    fi
-    local actual_token
-    actual_token="$(remote_fixture_process_token "$pid" || true)"
-    if [[ -z "$expected_token" || "$actual_token" != "$expected_token" ]]; then
-      remote_fixture_fail "refusing to stop reused or unowned $label PID $pid"
-      return 1
-    fi
-  fi
-
-  remote_fixture_stop_bounded_tree "$label" "$pid" 0 || return 1
-  wait "$pid" 2>/dev/null || true
-  if remote_fixture_pid_active "$pid" || remote_fixture_job_active "$pid"; then
-    remote_fixture_fail "$label job survived verified cleanup"
-    return 1
-  fi
-}
-
-remote_fixture_msys_descendants() {
-  local parent_pid="$1"
-  local child_pid
-  while read -r child_pid; do
-    [[ -n "$child_pid" ]] || continue
-    remote_fixture_msys_descendants "$child_pid"
-    printf '%s\n' "$child_pid"
-  done < <(ps -W 2>/dev/null | awk -v parent="$parent_pid" 'NR > 1 && $2 == parent { print $1 }')
-}
-
-remote_fixture_run_bounded() {
-  local label="$1"
-  local timeout_seconds="$2"
-  local output_limit_bytes="$3"
-  local stdout_path="$4"
-  local stderr_path="$5"
-  shift 5
-  [[ "${1:-}" == "--" ]] || {
-    remote_fixture_fail "bounded process command separator is missing"
-    return 1
-  }
-  shift
-  [[ "$timeout_seconds" =~ ^[0-9]+$ && "$timeout_seconds" -gt 0 ]] || {
-    remote_fixture_fail "$label timeout must be a positive integer"
-    return 1
-  }
-  [[ "$output_limit_bytes" =~ ^[0-9]+$ && "$output_limit_bytes" -ge 1024 ]] || {
-    remote_fixture_fail "$label output limit must be at least 1024 bytes"
-    return 1
-  }
-  (($# > 0)) || {
-    remote_fixture_fail "$label command is empty"
-    return 1
-  }
-
-  rm -f -- "$stdout_path" "$stderr_path"
-  : >"$stdout_path"
-  : >"$stderr_path"
-  chmod 0600 "$stdout_path" "$stderr_path"
-
-  local process_group=0
-  if command -v setsid >/dev/null 2>&1 && [[ "$(uname -s)" != MINGW* && "$(uname -s)" != MSYS* && "$(uname -s)" != CYGWIN* ]]; then
-    setsid "$@" >"$stdout_path" 2>"$stderr_path" &
-    process_group=1
-  else
-    "$@" >"$stdout_path" 2>"$stderr_path" &
-  fi
-  local pid="$!"
-  local started_at="$SECONDS"
-  local failure=""
-  local output_bytes
-  # Git Bash can briefly expose a shebang child in the shell job table before
-  # kill -0 can resolve its MSYS PID. Treat either observation as active so a
-  # synchronous wait can never bypass the deadline.
-  while remote_fixture_pid_active "$pid" || remote_fixture_job_active "$pid"; do
-    output_bytes=$(( $(wc -c <"$stdout_path") + $(wc -c <"$stderr_path") ))
-    if ((output_bytes > output_limit_bytes)); then
-      failure="exceeded the combined output limit of $output_limit_bytes bytes"
-      break
-    fi
-    if ((SECONDS - started_at >= timeout_seconds)); then
-      failure="timed out after $timeout_seconds seconds"
-      break
-    fi
-    sleep 0.05
-  done
-
-  if [[ -n "$failure" ]]; then
-    remote_fixture_stop_bounded_tree "$label" "$pid" "$process_group" || return 1
-    wait "$pid" 2>/dev/null || true
-    if [[ "$failure" == exceeded* ]]; then
-      remote_fixture_limit_output_files "$output_limit_bytes" "$stdout_path" "$stderr_path" || return 1
-    fi
-    remote_fixture_fail "$label $failure"
-    return 1
-  fi
-
-  local status
-  if wait "$pid"; then status=0; else status=$?; fi
-  output_bytes=$(( $(wc -c <"$stdout_path") + $(wc -c <"$stderr_path") ))
-  if ((output_bytes > output_limit_bytes)); then
-    remote_fixture_limit_output_files "$output_limit_bytes" "$stdout_path" "$stderr_path" || return 1
-    remote_fixture_fail "$label exceeded the combined output limit of $output_limit_bytes bytes"
-    return 1
-  fi
-  return "$status"
-}
-
-remote_fixture_limit_output_files() {
-  local combined_limit_bytes="$1"
-  shift
-  remote_fixture_require_command truncate
-  local per_file_limit=$((combined_limit_bytes / $#))
-  local path
-  for path in "$@"; do
-    [[ -f "$path" ]] || continue
-    if (($(wc -c <"$path") > per_file_limit)); then
-      truncate -s "$per_file_limit" -- "$path"
-    fi
-  done
-}
+REMOTE_FIXTURE_BOUNDED_LIB="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)/remote-browser-fixture-bounded.sh"
+# shellcheck source=scripts/lib/remote-browser-fixture-bounded.sh
+source "$REMOTE_FIXTURE_BOUNDED_LIB"
 
 remote_fixture_sha256() {
   local path="$1"
@@ -353,7 +283,7 @@ remote_fixture_install_cloudflared() {
   local state_dir="$1"
   local supplied_path="${2:-}"
   local platform executable expected asset
-  platform="$(uname -s)"
+  platform="$REMOTE_FIXTURE_PLATFORM"
   case "$platform:$(uname -m)" in
     Linux:x86_64)
       executable="$state_dir/tools/cloudflared"

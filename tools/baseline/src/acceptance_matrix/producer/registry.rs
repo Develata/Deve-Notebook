@@ -44,6 +44,7 @@ fn validate(root: &Path, rows: &[MatrixRow], registry: &ProducerRegistry) -> Res
             registry.schema
         );
     }
+    validate_no_internal_fixture_test_commands(root)?;
     let matrix_evidence = matrix_executable_evidence(rows)?;
     let required: BTreeSet<_> = rows
         .iter()
@@ -101,6 +102,31 @@ fn validate(root: &Path, rows: &[MatrixRow], registry: &ProducerRegistry) -> Res
             "acceptance producers: required executable evidence has no producer: {}",
             missing.join(", ")
         );
+    }
+    Ok(())
+}
+
+fn validate_no_internal_fixture_test_commands(root: &Path) -> Result<()> {
+    let workflow_root = root.join(".github/workflows");
+    let entries = fs::read_dir(&workflow_root)
+        .with_context(|| format!("failed to read {}", workflow_root.display()))?;
+    let mut paths = entries
+        .map(|entry| entry.map(|value| value.path()))
+        .collect::<std::io::Result<Vec<_>>>()?;
+    paths.sort();
+    for path in paths {
+        let extension = path.extension().and_then(|value| value.to_str());
+        if !matches!(extension, Some("yml" | "yaml")) {
+            continue;
+        }
+        let content = fs::read_to_string(&path)
+            .with_context(|| format!("failed to read {}", path.display()))?;
+        if content.contains("__test-start") {
+            bail!(
+                "acceptance producers: workflow {} invokes the internal fixture test command",
+                path.display()
+            );
+        }
     }
     Ok(())
 }
