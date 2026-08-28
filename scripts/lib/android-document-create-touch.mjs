@@ -9,7 +9,7 @@ import {
   waitExactCreateDocumentClickSettlement,
 } from "./android-document-create-observation.mjs";
 
-const CREATE_CLICK_SETTLEMENT_MS = 2000;
+const CREATE_CLICK_SETTLEMENT_MS = 5000;
 const CREATE_TOUCH_TRANSPORT_LEASE_MS = 5000;
 const CREATE_LATE_CLICK_DIAGNOSTIC_MS = 8000;
 const CREATE_TARGET_OBSERVATION_FAILED = "android_document_create_target_observation_failed";
@@ -226,6 +226,7 @@ export async function clickExactCreateDocument(
   expectedWriterScope,
   tap = tapWebViewPoint,
   lateClickDiagnosticMs = CREATE_LATE_CLICK_DIAGNOSTIC_MS,
+  settlementTimeoutMs = CREATE_CLICK_SETTLEMENT_MS,
 ) {
   const attemptNonce = `${Date.now()}-${clickExactCreateDocument.nextAttemptId}`;
   clickExactCreateDocument.nextAttemptId += 1;
@@ -294,7 +295,7 @@ export async function clickExactCreateDocument(
     const started = await page.call(
       beginExactCreateDocumentClickSettlement,
       armed.token,
-      CREATE_CLICK_SETTLEMENT_MS,
+      settlementTimeoutMs,
     );
     if (started?.kind !== "settling" || started.token !== armed.token) {
       throw new Error(CREATE_SETTLEMENT_TRANSPORT_FAILED);

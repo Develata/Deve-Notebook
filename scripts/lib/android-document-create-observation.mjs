@@ -40,7 +40,7 @@ export function armExactCreateDocumentClickObservation(
     sealed: false,
     sealListener: null,
     lateClick: null,
-    finalTouchEndTimeStamp: null,
+    finalTouchEndObservedAtMs: null,
   };
   if (lane.documentRoot !== document) return { kind: "document-mismatch" };
   if (lane.sealed) return { kind: "sealed" };
@@ -75,8 +75,7 @@ export function armExactCreateDocumentClickObservation(
       pointerup: false,
       click: false,
     },
-    touchStartTimeStamp: null,
-    touchEndTimeStamp: null,
+    touchEndObservedAtMs: null,
     scrollEvidence: {
       scrollEvents: 0,
       documentScrollTopAtArm: typeof scrolling?.scrollTop === "number"
@@ -113,7 +112,7 @@ export function armExactCreateDocumentClickObservation(
         if (!target) return;
         if (!lane.lateClick) {
           lane.lateClick = {
-            timeStamp: typeof event.timeStamp === "number" ? event.timeStamp : null,
+            observedAtMs: Date.now(),
           };
         }
         event.preventDefault();
@@ -138,15 +137,8 @@ export function armExactCreateDocumentClickObservation(
       if (globalThis.__deveAndroidCreatePointerObservation !== observation) return;
       if (matchesCurrentTargetAndScope(event)) {
         observation.inputPhases[phase] = true;
-        if (phase === "touchstart") {
-          observation.touchStartTimeStamp = typeof event.timeStamp === "number"
-            ? event.timeStamp
-            : null;
-        }
         if (phase === "touchend") {
-          observation.touchEndTimeStamp = typeof event.timeStamp === "number"
-            ? event.timeStamp
-            : null;
+          observation.touchEndObservedAtMs = Date.now();
         }
       }
     };
@@ -221,7 +213,7 @@ export function armExactCreateDocumentClickObservation(
       scrollEvidence: { ...observation.scrollEvidence },
       laneSealed: lane.sealed === true,
     };
-    lane.finalTouchEndTimeStamp = observation.touchEndTimeStamp;
+    lane.finalTouchEndObservedAtMs = observation.touchEndObservedAtMs;
     delete globalThis.__deveAndroidCreatePointerObservation;
     observation.settlementResolve?.();
   }, settlementTimeoutMs);
@@ -267,7 +259,7 @@ export function beginExactCreateDocumentClickSettlement(token, settlementTimeout
         if (!target) return;
         if (!lane.lateClick) {
           lane.lateClick = {
-            timeStamp: typeof event.timeStamp === "number" ? event.timeStamp : null,
+            observedAtMs: Date.now(),
           };
         }
         event.preventDefault();
@@ -286,7 +278,7 @@ export function beginExactCreateDocumentClickSettlement(token, settlementTimeout
       scrollEvidence: { ...observation.scrollEvidence },
       laneSealed: lane.sealed === true,
     };
-    lane.finalTouchEndTimeStamp = observation.touchEndTimeStamp;
+    lane.finalTouchEndObservedAtMs = observation.touchEndObservedAtMs;
     delete globalThis.__deveAndroidCreatePointerObservation;
     observation.settlementResolve?.();
   };
@@ -340,7 +332,7 @@ export function finalizeExactCreateDocumentClickObservation(token) {
         if (!target) return;
         if (!lane.lateClick) {
           lane.lateClick = {
-            timeStamp: typeof event.timeStamp === "number" ? event.timeStamp : null,
+            observedAtMs: Date.now(),
           };
         }
         event.preventDefault();
@@ -378,9 +370,9 @@ export function readExactCreateDocumentLateClick() {
   }
   const lateClick = lane.lateClick ?? null;
   const rawDelay = lateClick
-    && typeof lateClick.timeStamp === "number"
-    && typeof lane.finalTouchEndTimeStamp === "number"
-    ? lateClick.timeStamp - lane.finalTouchEndTimeStamp
+    && typeof lateClick.observedAtMs === "number"
+    && typeof lane.finalTouchEndObservedAtMs === "number"
+    ? lateClick.observedAtMs - lane.finalTouchEndObservedAtMs
     : null;
   const lateClickDelayMs = Number.isFinite(rawDelay)
     && rawDelay >= 0

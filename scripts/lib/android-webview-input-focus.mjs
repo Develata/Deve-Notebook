@@ -1,87 +1,19 @@
+import {
+  classifyAndroidNativeInputTargetObservation,
+} from "./android-native-input-observation.mjs";
+
+export {
+  classifyAndroidActivityResumed,
+  classifyAndroidInputDispatcherFocused,
+  classifyAndroidNativeInputTarget,
+  classifyAndroidNativeInputTargetObservation,
+  classifyAndroidWindowFocused,
+} from "./android-native-input-observation.mjs";
+
 const WEBVIEW_INPUT_FOCUS_SETTLE_MS = 250;
 const NATIVE_INPUT_PASSIVE_TIMEOUT_MS = 1_500;
 const NATIVE_INPUT_REENTRY_TIMEOUT_MS = 30_000;
 const ANDROID_APP_ID_PATTERN = /^[A-Za-z][A-Za-z0-9_]*(\.[A-Za-z][A-Za-z0-9_]*)+$/;
-const ANDROID_COMPONENT_PATTERN =
-  /(?:^|[\s{])([A-Za-z][A-Za-z0-9_]*(?:\.[A-Za-z][A-Za-z0-9_]*)+)\/([A-Za-z0-9_.$]+)(?=[\s}]|$)/g;
-
-function classifyExactPackageComponent(
-  records,
-  appId,
-  containerPattern,
-  matchedState,
-  otherState,
-) {
-  const components = records.map((line) => {
-    const containers = [...line.matchAll(containerPattern)];
-    if (containers.length !== 1) return null;
-    const matches = [...containers[0][1].matchAll(ANDROID_COMPONENT_PATTERN)];
-    return matches.length === 1 ? `${matches[0][1]}/${matches[0][2]}` : null;
-  });
-  if (components.some((component) => component === null)) return "unavailable";
-  const uniqueComponents = new Set(components);
-  if (uniqueComponents.size !== 1) return "unavailable";
-  const [component] = uniqueComponents;
-  const packageName = component.slice(0, component.indexOf("/"));
-  if (packageName === appId) return matchedState;
-  if (packageName.startsWith(`${appId}.`) || appId.startsWith(`${packageName}.`)) {
-    return "unavailable";
-  }
-  return otherState;
-}
-
-export function classifyAndroidActivityResumed(output, appId) {
-  if (typeof output !== "string"
-    || typeof appId !== "string"
-    || !ANDROID_APP_ID_PATTERN.test(appId)) {
-    return "unavailable";
-  }
-  const records = output.replaceAll("\r", "").split("\n").filter((line) => {
-    const normalized = line.trim();
-    return /^(?:mResumedActivity|topResumedActivity)\s*[:=]/.test(normalized)
-      || /^ResumedActivity\s*:/.test(normalized);
-  });
-  if (records.length === 0) return "unavailable";
-  return classifyExactPackageComponent(
-    records,
-    appId,
-    /ActivityRecord\{([^{}]+)\}/g,
-    "resumed",
-    "not-resumed",
-  );
-}
-
-export function classifyAndroidWindowFocused(output, appId) {
-  if (typeof output !== "string"
-    || typeof appId !== "string"
-    || !ANDROID_APP_ID_PATTERN.test(appId)) {
-    return "unavailable";
-  }
-  const records = output.replaceAll("\r", "").split("\n").filter((line) =>
-    /^mCurrentFocus\s*[:=]/.test(line.trim()));
-  if (records.length === 0) return "unavailable";
-  return classifyExactPackageComponent(
-    records,
-    appId,
-    /Window\{([^{}]+)\}/g,
-    "focused",
-    "not-focused",
-  );
-}
-
-export function classifyAndroidNativeInputTargetObservation(activityOutput, windowOutput, appId) {
-  const activityState = classifyAndroidActivityResumed(activityOutput, appId);
-  const windowState = classifyAndroidWindowFocused(windowOutput, appId);
-  const nativeTargetState = activityState === "unavailable" || windowState === "unavailable"
-    ? "unavailable"
-    : activityState === "resumed" && windowState === "focused" ? "ready" : "not-ready";
-  return { activityState, windowState, nativeTargetState };
-}
-
-export function classifyAndroidNativeInputTarget(activityOutput, windowOutput, appId) {
-  return classifyAndroidNativeInputTargetObservation(activityOutput, windowOutput, appId)
-    .nativeTargetState;
-}
 
 async function waitForInputTarget(
   page,
@@ -112,6 +44,8 @@ async function waitForInputTarget(
         mobileLayout: false,
         nativeActivityState: "not-sampled",
         nativeWindowState: "not-sampled",
+        nativeInputDispatcherState: "not-sampled",
+        nativeFocusState: "not-sampled",
         nativeTargetState: "not-sampled",
       });
       throw new Error("android_webview_input_focus_sample_failed");
@@ -119,6 +53,8 @@ async function waitForInputTarget(
     let nativeTargetState = "ready";
     let nativeActivityState = "not-sampled";
     let nativeWindowState = "not-sampled";
+    let nativeInputDispatcherState = "not-sampled";
+    let nativeFocusState = "not-sampled";
     let structuredNativeObservation = false;
     if (readNativeTargetState) {
       try {
@@ -130,6 +66,8 @@ async function waitForInputTarget(
           nativeTargetState = nativeObservation?.nativeTargetState;
           nativeActivityState = nativeObservation?.activityState;
           nativeWindowState = nativeObservation?.windowState;
+          nativeInputDispatcherState = nativeObservation?.dispatcherState;
+          nativeFocusState = nativeObservation?.focusState;
         }
       } catch {
         matchedSince = null;
@@ -141,6 +79,8 @@ async function waitForInputTarget(
           mobileLayout: state?.mobile === true,
           nativeActivityState: "probe-failed",
           nativeWindowState: "probe-failed",
+          nativeInputDispatcherState: "probe-failed",
+          nativeFocusState: "probe-failed",
           nativeTargetState: "probe-failed",
         });
         throw new Error("android_native_input_target_sample_failed");
@@ -152,21 +92,38 @@ async function waitForInputTarget(
       .includes(nativeActivityState) ? nativeActivityState : "invalid";
     const projectedWindowState = ["focused", "not-focused", "unavailable", "not-sampled"]
       .includes(nativeWindowState) ? nativeWindowState : "invalid";
+    const projectedInputDispatcherState = [
+      "focused", "not-focused", "unavailable", "not-sampled",
+    ].includes(nativeInputDispatcherState) ? nativeInputDispatcherState : "invalid";
+    const projectedFocusState = ["focused", "not-focused", "unavailable", "not-sampled"]
+      .includes(nativeFocusState) ? nativeFocusState : "invalid";
     if (structuredNativeObservation) {
       const activitySampled = ["resumed", "not-resumed", "unavailable"]
         .includes(projectedActivityState);
       const windowSampled = ["focused", "not-focused", "unavailable"]
         .includes(projectedWindowState);
-      if (!activitySampled || !windowSampled) {
+      const dispatcherSampled = ["focused", "not-focused", "unavailable"]
+        .includes(projectedInputDispatcherState);
+      const focusSampled = ["focused", "not-focused", "unavailable"]
+        .includes(projectedFocusState);
+      if (!activitySampled || !windowSampled || !dispatcherSampled || !focusSampled) {
         projectedNativeTargetState = "invalid";
       } else {
+        const derivedFocusState = projectedWindowState === "unavailable"
+          ? projectedInputDispatcherState
+          : projectedInputDispatcherState === "unavailable"
+            ? projectedWindowState
+            : projectedWindowState === projectedInputDispatcherState
+              ? projectedWindowState
+              : "unavailable";
         const derivedNativeTargetState = projectedActivityState === "unavailable"
-          || projectedWindowState === "unavailable"
+          || derivedFocusState === "unavailable"
           ? "unavailable"
-          : projectedActivityState === "resumed" && projectedWindowState === "focused"
+          : projectedActivityState === "resumed" && derivedFocusState === "focused"
             ? "ready"
             : "not-ready";
-        if (projectedNativeTargetState !== derivedNativeTargetState) {
+        if (projectedFocusState !== derivedFocusState
+          || projectedNativeTargetState !== derivedNativeTargetState) {
           projectedNativeTargetState = "invalid";
         }
       }
@@ -178,6 +135,8 @@ async function waitForInputTarget(
       mobileLayout: state?.mobile === true,
       nativeActivityState: projectedActivityState,
       nativeWindowState: projectedWindowState,
+      nativeInputDispatcherState: projectedInputDispatcherState,
+      nativeFocusState: projectedFocusState,
       nativeTargetState: projectedNativeTargetState,
     });
     if (!Number.isFinite(state?.documentTimeOrigin)
@@ -255,9 +214,17 @@ export function createAndroidWebViewInputTargetGate(
     || (allowForegroundReentry ? !reentryTimeoutsValid : !strictTimeoutValid)) {
     throw new Error("android_native_input_target_gate_config_invalid");
   }
+  const readOptionalFocusProbe = (...args) => {
+    try {
+      return adbOutput(...args);
+    } catch {
+      return null;
+    }
+  };
   const readNativeTargetState = () => classifyAndroidNativeInputTargetObservation(
     adbOutput("shell", "dumpsys", "activity", "activities"),
-    adbOutput("shell", "dumpsys", "window"),
+    readOptionalFocusProbe("shell", "dumpsys", "window"),
+    readOptionalFocusProbe("shell", "dumpsys", "input"),
     appId,
   );
   return async (page, waitUntil) => {

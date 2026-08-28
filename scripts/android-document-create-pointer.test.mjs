@@ -180,7 +180,7 @@ test("exact Create production wiring reports fixed native input phases and one g
 test("final atomic observation confirms the page-side click settlement", async () => {
   const calls = [];
   const page = {
-    async call(fn) {
+    async call(fn, ...args) {
       calls.push(fn);
       if (fn === readExactCreateDocumentPointer) {
         return { kind: "ready", count: 1, point: { x: 17, y: 23 } };
@@ -190,6 +190,7 @@ test("final atomic observation confirms the page-side click settlement", async (
         return closedObservation();
       }
       if (fn === beginExactCreateDocumentClickSettlement) {
+        assert.equal(args[1], 5000);
         return { kind: "settling", token: 7 };
       }
       if (fn === finalizeExactCreateDocumentClickObservation) {
@@ -261,10 +262,17 @@ test("lost finalize transport still expires and seals inside the WebView", async
     };
 
     await assert.rejects(
-      clickExactCreateDocument(page, exactPath, admittedWriterScope),
+      clickExactCreateDocument(
+        page,
+        exactPath,
+        admittedWriterScope,
+        undefined,
+        0,
+        25,
+      ),
       /android_document_create_click_settlement_transport_failed/,
     );
-    await new Promise((resolve) => setTimeout(resolve, 2025));
+    await new Promise((resolve) => setTimeout(resolve, 50));
     const late = exact.emitClick();
     const second = armExactCreateDocumentClickObservation(
       exactPath,

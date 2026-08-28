@@ -326,7 +326,7 @@ test("exact Create click settlement timeout never retransmits the committed touc
     };
 
     await assert.rejects(
-      clickExactCreateDocument(page, exactPath, admittedWriterScope, undefined, 25),
+      clickExactCreateDocument(page, exactPath, admittedWriterScope, undefined, 25, 25),
       /click settlement timed out/,
     );
 
@@ -351,7 +351,7 @@ test("committed-unknown Create seals the document lane against a late click and 
     };
 
     await assert.rejects(
-      clickExactCreateDocument(page, exactPath, admittedWriterScope, undefined, 25),
+      clickExactCreateDocument(page, exactPath, admittedWriterScope, undefined, 25, 25),
       /settlement timed out/,
     );
     await assert.rejects(
@@ -372,7 +372,7 @@ test("committed-unknown Create seals the document lane against a late click and 
   });
 });
 
-test("exact Create settlement timeout captures sealed late-click delay evidence", async () => {
+test("exact Create accepts a delayed click beyond two seconds inside the bounded lease", async () => {
   let commits = 0;
   const exact = createResult(exactPath, { onCommit: () => { commits += 1; } });
   await withCreateDom([exact], exact, async () => {
@@ -391,14 +391,47 @@ test("exact Create settlement timeout captures sealed late-click delay evidence"
       },
     };
 
-    const failure = await clickExactCreateDocument(page, exactPath, admittedWriterScope)
-      .then(() => null, (error) => error);
+    const observation = await clickExactCreateDocument(page, exactPath, admittedWriterScope);
+
+    assert.equal(observation.clicked, true);
+    assert.equal(commits, 1);
+    assert.equal(globalThis.document.clickListenerCount(), 1);
+  });
+});
+
+test("sealed late-click delay uses delivery wall clock when DOM timestamps are reused", async () => {
+  let commits = 0;
+  const exact = createResult(exactPath, { onCommit: () => { commits += 1; } });
+  await withCreateDom([exact], exact, async () => {
+    let resolveTouchEnd;
+    const touchEnded = new Promise((resolve) => { resolveTouchEnd = resolve; });
+    const page = {
+      async call(fn, ...args) { return fn(...args); },
+      async send(_method, params) {
+        if (params.type === "touchEnd") {
+          exact.emitEvent("touchend", 100);
+          resolveTouchEnd();
+        }
+      },
+    };
+
+    const pending = clickExactCreateDocument(
+      page,
+      exactPath,
+      admittedWriterScope,
+      undefined,
+      100,
+      25,
+    ).then(() => null, (error) => error);
+    await touchEnded;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    exact.emitClick(100);
+    const failure = await pending;
 
     assert.match(failure.message, /click settlement timed out/);
     assert.match(failure.message, /"lateClickObserved":true/);
-    assert.match(failure.message, /"lateClickDelayMs":\d+/);
-    assert.doesNotMatch(failure.message, /"at":|"timeStamp":/);
+    const delay = JSON.parse(failure.message.match(/late_click=(\{.*\})$/)[1]).lateClickDelayMs;
+    assert.ok(delay >= 20, `expected delivery delay, got ${delay}`);
     assert.equal(commits, 0);
-    assert.equal(globalThis.document.clickListenerCount(), 1);
   });
 });

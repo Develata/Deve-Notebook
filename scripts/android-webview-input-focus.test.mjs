@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  classifyAndroidInputDispatcherFocused,
   classifyAndroidNativeInputTarget,
   classifyAndroidNativeInputTargetObservation,
   classifyAndroidWindowFocused,
@@ -112,6 +113,10 @@ test("Android current window classifier admits only the exact focused app compon
     "  mCurrentFocus=Window{b6877d0 u0 dev.deve.notebook.mobile/dev.deve.notebook.mobile.MainActivity}",
     appId,
   ), "focused");
+  assert.equal(classifyAndroidWindowFocused([
+    "mCurrentFocus=Window{a u0 dev.deve.notebook.mobile/.MainActivity}",
+    "mCurrentFocus=Window{a u0 dev.deve.notebook.mobile/.MainActivity}",
+  ].join("\n"), appId), "focused");
   assert.equal(classifyAndroidWindowFocused(
     "  mCurrentFocus=Window{b6877d0 u0 com.android.systemui/.statusbar.StatusBar}",
     appId,
@@ -127,30 +132,237 @@ test("Android current window classifier admits only the exact focused app compon
   ].join("\n"), appId), "unavailable");
 });
 
-test("Android native input classifier requires resumed Activity and exact current window", () => {
+test("Android InputDispatcher classifier accepts current, single-display, and legacy AOSP focus", () => {
+  const appId = "dev.deve.notebook.mobile";
+  const exactName = `${appId}/${appId}.MainActivity`;
+  assert.equal(classifyAndroidInputDispatcherFocused([
+    "Input Dispatcher State:",
+    "  FocusedDisplayId: 0",
+    "  FocusedWindows:",
+    `    displayId=0, name='7fa1 ${exactName}'`,
+    "  TouchStatesByDisplay: <no displays touched>",
+  ].join("\n"), appId), "focused");
+  assert.equal(classifyAndroidInputDispatcherFocused([
+    "Input Dispatcher State:",
+    "  FocusedWindows:",
+    `    displayId=0, name='7fa1 ${exactName}'`,
+    "  TouchStatesByDisplay: <no displays touched>",
+  ].join("\n"), appId), "focused");
+  assert.equal(classifyAndroidInputDispatcherFocused(
+    `FocusedWindow: name='Window{7fa1 ${exactName} paused=false}'`,
+    appId,
+  ), "focused");
+  assert.equal(classifyAndroidInputDispatcherFocused(
+    "FocusedWindow: name='Window{7fa1 com.android.launcher3/.MainActivity paused=false}'",
+    appId,
+  ), "not-focused");
+});
+
+test("Android InputDispatcher classifier excludes the historical last-ANR snapshot", () => {
+  const appId = "dev.deve.notebook.mobile";
+  assert.equal(classifyAndroidInputDispatcherFocused([
+    "Input Dispatcher State:",
+    "  FocusedDisplayId: 0",
+    "  FocusedWindows:",
+    `    displayId=0, name='a ${appId}/.MainActivity'`,
+    "  TouchStatesByDisplay: <no displays touched>",
+    "Input Dispatcher State at time of last ANR:",
+    "  FocusedDisplayId: 0",
+    "  FocusedWindows:",
+    "    displayId=0, name='b com.android.launcher3/.MainActivity'",
+  ].join("\n"), appId), "focused");
+  assert.equal(classifyAndroidInputDispatcherFocused([
+    "Input Dispatcher State at time of last ANR:",
+    "  FocusedDisplayId: 0",
+    "  FocusedWindows:",
+    `    displayId=0, name='stale ${appId}/.MainActivity'`,
+  ].join("\n"), appId), "unavailable");
+});
+
+test("Android InputDispatcher classifier fails closed on ambiguity and prefix collision", () => {
+  const appId = "dev.deve.notebook.mobile";
+  assert.equal(classifyAndroidInputDispatcherFocused([
+    "FocusedWindows:",
+    `  displayId=0, name='a ${appId}/.MainActivity'`,
+    "  displayId=1, name='b com.android.launcher3/.MainActivity'",
+    "TouchStatesByDisplay: <no displays touched>",
+  ].join("\n"), appId), "unavailable");
+  assert.equal(classifyAndroidInputDispatcherFocused([
+    "FocusedDisplayId: 0",
+    "FocusedWindows:",
+    `  displayId=0, name='a ${appId}/.MainActivity'`,
+    "  displayId=0, name='b com.android.launcher3/.MainActivity'",
+    "TouchStatesByDisplay: <no displays touched>",
+  ].join("\n"), appId), "unavailable");
+  assert.equal(classifyAndroidInputDispatcherFocused([
+    "FocusedDisplayId: 0",
+    "FocusedWindows:",
+    `  displayId=0, name='a ${appId}.preview/.MainActivity'`,
+    "TouchStatesByDisplay: <no displays touched>",
+  ].join("\n"), appId), "unavailable");
+  assert.equal(classifyAndroidInputDispatcherFocused(
+    "FocusedWindows: <none>",
+    appId,
+  ), "unavailable");
+  assert.equal(classifyAndroidInputDispatcherFocused([
+    "FocusedDisplayId: -1",
+    "FocusedWindows:",
+    `  displayId=-1, name='invalid ${appId}/.MainActivity'`,
+  ].join("\n"), appId), "unavailable");
+});
+
+test("Android native input classifier requires resumed Activity and focus consensus", () => {
   const appId = "dev.deve.notebook.mobile";
   const resumed =
     "topResumedActivity=ActivityRecord{8ea2038 u0 dev.deve.notebook.mobile/.MainActivity t7061}";
   const focused =
     "mCurrentFocus=Window{b6877d0 u0 dev.deve.notebook.mobile/dev.deve.notebook.mobile.MainActivity}";
-  assert.equal(classifyAndroidNativeInputTarget(resumed, focused, appId), "ready");
+  const dispatcherFocused =
+    "FocusedWindow: name='Window{b6877d0 dev.deve.notebook.mobile/dev.deve.notebook.mobile.MainActivity}'";
+  assert.equal(
+    classifyAndroidNativeInputTarget(resumed, focused, dispatcherFocused, appId),
+    "ready",
+  );
   assert.equal(classifyAndroidNativeInputTarget(
     resumed,
     "mCurrentFocus=Window{b6877d0 u0 com.android.systemui/.statusbar.StatusBar}",
+    dispatcherFocused,
     appId,
-  ), "not-ready");
-  assert.equal(classifyAndroidNativeInputTarget(resumed, "mCurrentFocus=null", appId), "unavailable");
+  ), "unavailable");
+  assert.equal(classifyAndroidNativeInputTarget(
+    resumed,
+    "mCurrentFocus=null",
+    dispatcherFocused,
+    appId,
+  ), "ready");
+  assert.equal(classifyAndroidNativeInputTarget(
+    resumed,
+    "mCurrentFocus=null",
+    "FocusedWindows: <none>",
+    appId,
+  ), "unavailable");
   assert.deepEqual(
-    classifyAndroidNativeInputTargetObservation(resumed, "mCurrentFocus=null", appId),
+    classifyAndroidNativeInputTargetObservation(
+      resumed,
+      "mCurrentFocus=null",
+      dispatcherFocused,
+      appId,
+    ),
     {
       activityState: "resumed",
       windowState: "unavailable",
-      nativeTargetState: "unavailable",
+      dispatcherState: "focused",
+      focusState: "focused",
+      nativeTargetState: "ready",
     },
   );
 });
 
-test("Android native input gate samples resumed Activity and current window together", async () => {
+test("Android native input consensus never lets an exact probe cover hard-invalid focus evidence", () => {
+  const appId = "dev.deve.notebook.mobile";
+  const resumed =
+    `topResumedActivity=ActivityRecord{8ea2038 u0 ${appId}/.MainActivity t7061}`;
+  const dispatcherFocused =
+    `FocusedWindow: name='Window{b6877d0 ${appId}/${appId}.MainActivity}'`;
+  const windowFocused =
+    `mCurrentFocus=Window{b6877d0 u0 ${appId}/${appId}.MainActivity}`;
+  const invalidWindowSamples = [
+    `mCurrentFocus=Window{b6877d0 u0 ${appId}.preview/.MainActivity}`,
+    [windowFocused, "mCurrentFocus=Window{c u0 com.android.systemui/.statusbar.StatusBar}"].join("\n"),
+    "mCurrentFocus=garbled",
+    "mCurrentFocus malformed",
+  ];
+  for (const invalidWindow of invalidWindowSamples) {
+    assert.equal(
+      classifyAndroidNativeInputTarget(resumed, invalidWindow, dispatcherFocused, appId),
+      "unavailable",
+    );
+  }
+
+  const invalidDispatcherSamples = [
+    [
+      "Input Dispatcher State at time of last ANR:",
+      "  FocusedDisplayId: 0",
+      "  FocusedWindows:",
+      `    displayId=0, name='stale ${appId}/.MainActivity'`,
+    ].join("\n"),
+    [
+      "FocusedDisplayId: -1",
+      "FocusedWindows:",
+      `  displayId=-1, name='invalid ${appId}/.MainActivity'`,
+    ].join("\n"),
+    "FocusedDisplayId: -1\nFocusedWindows: <none>",
+    "FocusedDisplayId: malformed\nFocusedWindows: <none>",
+    "FocusedDisplayId: 0\nFocusedDisplayId: 1\nFocusedWindows: <none>",
+    `FocusedDisplayId: -1\nFocusedWindow: name='Window{stale ${appId}/.MainActivity}'`,
+    [
+      "Input Dispatcher State at time of last ANR: stale",
+      "FocusedWindows:",
+      `  displayId=0, name='stale ${appId}/.MainActivity'`,
+    ].join("\n"),
+    [
+      "Input Dispatcher State: malformed",
+      "FocusedWindows:",
+      `  displayId=0, name='invalid ${appId}/.MainActivity'`,
+    ].join("\n"),
+    "FocusedWindows: <null>",
+    "FocusedWindows: malformed",
+    "FocusedWindows = <none>",
+    [
+      "FocusedDisplayId: 0",
+      "FocusedWindows: <none>",
+      `displayId=0, name='contradiction ${appId}/.MainActivity'`,
+    ].join("\n"),
+    `FocusedWindow = name='Window{invalid ${appId}/.MainActivity}'`,
+    [
+      "FocusedDisplayId: 0",
+      "FocusedWindows:",
+      `  displayId=0, name='valid ${appId}/.MainActivity'`,
+      "  displayId = 1, name='malformed com.android.launcher3/.MainActivity'",
+    ].join("\n"),
+    "FocusedWindow: garbled",
+  ];
+  for (const invalidDispatcher of invalidDispatcherSamples) {
+    assert.equal(
+      classifyAndroidNativeInputTarget(resumed, windowFocused, invalidDispatcher, appId),
+      "unavailable",
+    );
+  }
+});
+
+test("Android native input consensus lets an exact probe cover only missing focus evidence", () => {
+  const appId = "dev.deve.notebook.mobile";
+  const resumed =
+    `topResumedActivity=ActivityRecord{8ea2038 u0 ${appId}/.MainActivity t7061}`;
+  const dispatcherFocused =
+    `FocusedWindow: name='Window{b6877d0 ${appId}/${appId}.MainActivity}'`;
+  const windowFocused =
+    `mCurrentFocus=Window{b6877d0 u0 ${appId}/${appId}.MainActivity}`;
+  for (const missingWindowEvidence of [null, "", "WINDOW MANAGER STATE"]) {
+    assert.equal(
+      classifyAndroidNativeInputTarget(
+        resumed,
+        missingWindowEvidence,
+        dispatcherFocused,
+        appId,
+      ),
+      "ready",
+    );
+  }
+  for (const missingDispatcherEvidence of [null, "", "INPUT MANAGER STATE"]) {
+    assert.equal(
+      classifyAndroidNativeInputTarget(
+        resumed,
+        windowFocused,
+        missingDispatcherEvidence,
+        appId,
+      ),
+      "ready",
+    );
+  }
+});
+
+test("Android native input gate uses exact dispatcher focus when current window is unavailable", async () => {
   const originalNow = Date.now;
   let now = 0;
   Date.now = () => now;
@@ -162,7 +374,10 @@ test("Android native input gate samples resumed Activity and current window toge
       return `topResumedActivity=ActivityRecord{8ea2038 u0 ${appId}/.MainActivity t7061}`;
     }
     if (args.join(" ") === "shell dumpsys window") {
-      return `mCurrentFocus=Window{b6877d0 u0 ${appId}/${appId}.MainActivity}`;
+      throw new Error("window probe unavailable");
+    }
+    if (args.join(" ") === "shell dumpsys input") {
+      return `FocusedWindow: name='Window{b6877d0 ${appId}/${appId}.MainActivity}'`;
     }
     throw new Error("unexpected ADB probe");
   };
@@ -183,10 +398,11 @@ test("Android native input gate samples resumed Activity and current window toge
     await createAndroidWebViewInputTargetGate(adbOutput, appId, () => {
       throw new Error("foreground reentry must not run for an admitted target");
     })(page, waitUntil);
-    assert.equal(adbCalls.length, 6);
-    assert.deepEqual(adbCalls.slice(0, 2), [
+    assert.equal(adbCalls.length, 9);
+    assert.deepEqual(adbCalls.slice(0, 3), [
       ["shell", "dumpsys", "activity", "activities"],
       ["shell", "dumpsys", "window"],
+      ["shell", "dumpsys", "input"],
     ]);
   } finally {
     Date.now = originalNow;
@@ -211,6 +427,7 @@ test("Android strict native input gate waits without launcher reentry", async ()
     if (command === "shell dumpsys window") {
       return `mCurrentFocus=Window{b u0 ${packageName}/${packageName}.MainActivity}`;
     }
+    if (command === "shell dumpsys input") throw new Error("dispatcher probe unavailable");
     throw new Error("unexpected ADB probe");
   };
   const page = {
@@ -257,7 +474,9 @@ test("Android native input gate reports split fixed Activity and window categori
     if (command === "shell dumpsys activity activities") {
       return `topResumedActivity=ActivityRecord{a u0 ${appId}/.MainActivity t1}`;
     }
-    if (command === "shell dumpsys window") return "mCurrentFocus=null";
+    if (command === "shell dumpsys window" || command === "shell dumpsys input") {
+      throw new Error(secretSentinel);
+    }
     throw new Error(secretSentinel);
   };
   const page = {
@@ -274,7 +493,7 @@ test("Android native input gate reports split fixed Activity and window categori
     (error) => {
       assert.match(
         error.message,
-        /"nativeActivityState":"resumed","nativeWindowState":"unavailable","nativeTargetState":"unavailable"/,
+        /"nativeActivityState":"resumed","nativeWindowState":"unavailable","nativeInputDispatcherState":"unavailable","nativeFocusState":"unavailable","nativeTargetState":"unavailable"/,
       );
       assert.doesNotMatch(error.message, /secret|private|input\/window/);
       return true;
@@ -300,6 +519,7 @@ test("Android native input gate allows one PID-stable launcher reentry", async (
       const packageName = foregrounded ? appId : "com.android.launcher3";
       return `mCurrentFocus=Window{b u0 ${packageName}/${packageName}.MainActivity}`;
     }
+    if (command === "shell dumpsys input") return "FocusedWindows: <none>";
     throw new Error("unexpected ADB probe");
   };
   const adbCommand = (...args) => {
@@ -350,6 +570,7 @@ test("Android native input reentry failure reports only fixed target categories"
     if (command === "shell dumpsys window") {
       return "mCurrentFocus=Window{b u0 com.android.launcher3/.MainActivity}";
     }
+    if (command === "shell dumpsys input") return "FocusedWindows: <none>";
     throw new Error(secretSentinel);
   };
   const page = {
@@ -399,6 +620,7 @@ test("Android native input reentry rejects PID replacement", async () => {
     if (command === "shell dumpsys window") {
       return `mCurrentFocus=Window{b u0 ${packageName}/${packageName}.MainActivity}`;
     }
+    if (command === "shell dumpsys input") return "FocusedWindows: <none>";
     throw new Error("unexpected ADB probe");
   };
   const page = {
@@ -519,6 +741,8 @@ test("Android native input target classifies page sampling failure without platf
     (error) => {
       assert.match(error.message, /"nativeActivityState":"not-sampled"/);
       assert.match(error.message, /"nativeWindowState":"not-sampled"/);
+      assert.match(error.message, /"nativeInputDispatcherState":"not-sampled"/);
+      assert.match(error.message, /"nativeFocusState":"not-sampled"/);
       assert.match(error.message, /"nativeTargetState":"not-sampled"/);
       assert.doesNotMatch(error.message, /secret|private|webview\/context/);
       return true;
@@ -533,23 +757,27 @@ test("Android native input target rejects malformed or contradictory structured 
       observation: {
         activityState: "bogus",
         windowState: "bogus",
+        dispatcherState: "bogus",
+        focusState: "bogus",
         nativeTargetState: "ready",
       },
-      expected: /"nativeActivityState":"invalid","nativeWindowState":"invalid","nativeTargetState":"invalid"/,
+      expected: /"nativeActivityState":"invalid","nativeWindowState":"invalid","nativeInputDispatcherState":"invalid","nativeFocusState":"invalid","nativeTargetState":"invalid"/,
     },
     {
       label: "missing",
       observation: { nativeTargetState: "ready" },
-      expected: /"nativeActivityState":"invalid","nativeWindowState":"invalid","nativeTargetState":"invalid"/,
+      expected: /"nativeActivityState":"invalid","nativeWindowState":"invalid","nativeInputDispatcherState":"invalid","nativeFocusState":"invalid","nativeTargetState":"invalid"/,
     },
     {
       label: "contradictory",
       observation: {
         activityState: "not-resumed",
         windowState: "focused",
+        dispatcherState: "focused",
+        focusState: "focused",
         nativeTargetState: "ready",
       },
-      expected: /"nativeActivityState":"not-resumed","nativeWindowState":"focused","nativeTargetState":"invalid"/,
+      expected: /"nativeActivityState":"not-resumed","nativeWindowState":"focused","nativeInputDispatcherState":"focused","nativeFocusState":"focused","nativeTargetState":"invalid"/,
     },
   ];
   for (const { label, observation, expected } of cases) {

@@ -53,11 +53,14 @@ case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: zero_repo
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: app_activation_bands_begin_inside_system_gesture_insets true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_swipe_point_is_hit_tested_outside_action_controls true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_adb_swipe_waits_for_stable_current_webview_input_focus true
-case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_native_input_requires_exact_current_window_resumed_activity_and_webview_focus true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_native_input_requires_resumed_activity_exact_native_focus_consensus_and_webview_focus true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_local_drawer_input_allows_one_pid_stable_launcher_reentry_before_failing_closed true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_create_and_remote_browser_input_never_use_launcher_reentry true
-case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_native_input_failure_projects_only_fixed_page_activity_window_categories true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_native_input_failure_projects_only_fixed_page_activity_window_dispatcher_focus_categories true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_input_dispatcher_ignores_historical_last_anr_snapshot true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: target_host_input_focus_settlement_restarts_after_document_replacement true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: only_soft_unavailable_native_focus_probe_can_be_covered true
+case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: hard_invalid_native_focus_probe_blocks_exact_peer_probe true
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: node --test scripts/android-webview-input-focus.test.mjs
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	run: node --test scripts/android-native-back-observation.test.mjs
 case_contains	docs/acceptance-cases/05_ui.md	UI-MOB-002	native_assert: semantically_open_reload_drawer_waits_for_current_webview_input_focus_then_allows_one_observed_web_back_and_requires_closed_settlement true
@@ -238,8 +241,12 @@ contains	scripts/android-webview-input-focus.test.mjs	Android WebView native inp
 contains	scripts/android-webview-input-focus.test.mjs	Android WebView input focus settlement restarts after document replacement
 contains	scripts/android-webview-input-focus.test.mjs	Android WebView input focus settlement restarts after a redacted sample failure
 contains	scripts/android-webview-input-focus.test.mjs	Android current window classifier admits only the exact focused app component
-contains	scripts/android-webview-input-focus.test.mjs	Android native input classifier requires resumed Activity and exact current window
-contains	scripts/android-webview-input-focus.test.mjs	Android native input gate samples resumed Activity and current window together
+contains	scripts/android-webview-input-focus.test.mjs	Android InputDispatcher classifier accepts current, single-display, and legacy AOSP focus
+contains	scripts/android-webview-input-focus.test.mjs	Android InputDispatcher classifier excludes the historical last-ANR snapshot
+contains	scripts/android-webview-input-focus.test.mjs	Android native input classifier requires resumed Activity and focus consensus
+contains	scripts/android-webview-input-focus.test.mjs	Android native input consensus never lets an exact probe cover hard-invalid focus evidence
+contains	scripts/android-webview-input-focus.test.mjs	Android native input consensus lets an exact probe cover only missing focus evidence
+contains	scripts/android-webview-input-focus.test.mjs	Android native input gate uses exact dispatcher focus when current window is unavailable
 contains	scripts/android-webview-input-focus.test.mjs	Android native input gate rejects a missing ADB probe with a fixed category
 contains	scripts/android-webview-input-focus.test.mjs	Android strict native input gate waits without launcher reentry
 contains	scripts/android-webview-input-focus.test.mjs	Android native input gate allows one PID-stable launcher reentry
@@ -249,8 +256,12 @@ contains	scripts/android-webview-input-focus.test.mjs	Android native input targe
 contains	scripts/android-webview-input-focus.test.mjs	Android native input target redacts platform probe failures
 contains	scripts/lib/android-webview-input-focus.mjs	createAndroidWebViewInputTargetGate
 contains	scripts/lib/android-webview-input-focus.mjs	allowForegroundReentry = false
-contains	scripts/lib/android-webview-input-focus.mjs	classifyAndroidWindowFocused
-contains	scripts/lib/android-webview-input-focus.mjs	adbOutput("shell", "dumpsys", "window")
+contains	scripts/lib/android-native-input-observation.mjs	export function classifyAndroidWindowFocused
+contains	scripts/lib/android-native-input-observation.mjs	export function classifyAndroidInputDispatcherFocused
+contains	scripts/lib/android-native-input-observation.mjs	Input Dispatcher State at time of last ANR
+contains	scripts/lib/android-webview-input-focus.mjs	const readOptionalFocusProbe = (...args) => {
+contains	scripts/lib/android-webview-input-focus.mjs	readOptionalFocusProbe("shell", "dumpsys", "window")
+contains	scripts/lib/android-webview-input-focus.mjs	readOptionalFocusProbe("shell", "dumpsys", "input")
 contains	scripts/lib/android-webview-input-focus.mjs	"shell", "monkey", "-p", appId
 contains	scripts/lib/android-webview-input-focus.mjs	android_native_input_target_reentry_pid_unstable
 contains	scripts/smoke-mobile-android-lifecycle.mjs	waitForInputFocus: waitForNativeInputTarget
@@ -1209,12 +1220,15 @@ contains	scripts/android-document-create-settlement.test.mjs	Create target obser
 contains	scripts/android-document-create-settlement.test.mjs	Create malformed renderer returns expose only closed evidence
 contains	scripts/android-document-create-settlement.test.mjs	Create contradictory observed evidence always fails closed
 contains	scripts/android-document-create-settlement.test.mjs	Create native touch remains the primary category when compensation cleanup also fails
-contains	scripts/lib/android-document-create-touch.mjs	const CREATE_CLICK_SETTLEMENT_MS = 2000
+contains	scripts/lib/android-document-create-touch.mjs	const CREATE_CLICK_SETTLEMENT_MS = 5000
 contains	scripts/lib/android-document-create-touch.mjs	const CREATE_LATE_CLICK_DIAGNOSTIC_MS = 8000
 contains	scripts/lib/android-document-create-observation.mjs	inputPhases: {
 contains	scripts/lib/android-document-create-observation.mjs	readExactCreateDocumentLateClick
+contains	scripts/lib/android-document-create-observation.mjs	finalTouchEndObservedAtMs
+contains	scripts/lib/android-document-create-observation.mjs	observedAtMs: Date.now()
+contains	scripts/android-document-create-settlement.test.mjs	exact Create accepts a delayed click beyond two seconds inside the bounded lease
+contains	scripts/android-document-create-settlement.test.mjs	sealed late-click delay uses delivery wall clock when DOM timestamps are reused
 contains	scripts/android-document-create-observation.test.mjs	Create observation projects scroll evidence without absolute gesture timestamps
-contains	scripts/android-document-create-settlement.test.mjs	exact Create settlement timeout captures sealed late-click delay evidence
 contains	scripts/android-document-create-settlement.test.mjs	exact Create click settlement timeout never retransmits the committed touch
 contains	scripts/android-document-create-settlement.test.mjs	committed-unknown Create seals the document lane against a late click and retry
 contains	scripts/android-document-create-pointer.test.mjs	final atomic observation confirms the page-side click settlement

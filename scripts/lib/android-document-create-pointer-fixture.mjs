@@ -29,11 +29,11 @@ export function withCreateDom(elements, hit, run) {
     removeEventListener: (type, listener) => {
       listeners.get(type)?.delete(listener);
     },
-    emitEvent(type, target) {
+    emitEvent(type, target, timeStamp = Date.now()) {
       const event = {
         type,
         target,
-        timeStamp: Date.now(),
+        timeStamp,
         defaultPrevented: false,
         immediatePropagationStopped: false,
         preventDefault() { this.defaultPrevented = true; },
@@ -48,7 +48,7 @@ export function withCreateDom(elements, hit, run) {
       if (type === "click" && !event.immediatePropagationStopped) target.commitClick();
       return event;
     },
-    emitClick(target) { return this.emitEvent("click", target); },
+    emitClick(target, timeStamp) { return this.emitEvent("click", target, timeStamp); },
     listenerCount: (type) => listeners.get(type)?.size ?? 0,
     clickListenerCount: () => listeners.get("click")?.size ?? 0,
   };
@@ -78,8 +78,8 @@ export function createResult(target, { left = 10, onCommit = () => {} } = {}) {
     contains: () => false,
     closest: () => element,
     commitClick: onCommit,
-    emitEvent: (type) => globalThis.document.emitEvent(type, element),
-    emitClick: () => globalThis.document.emitClick(element),
+    emitEvent: (type, timeStamp) => globalThis.document.emitEvent(type, element, timeStamp),
+    emitClick: (timeStamp) => globalThis.document.emitClick(element, timeStamp),
     getLeft: () => currentLeft,
     setLeft: (nextLeft) => { currentLeft = nextLeft; },
   };
